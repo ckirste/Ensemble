@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble_v24</title>
+<title>Ensemble</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -970,7 +970,7 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;background:var(--acce
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v24</h1>
+    <h1>Ensemble_v40</h1>
     <div class="sub">Offline · Keine Abhängigkeiten</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -1460,7 +1460,7 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;background:var(--acce
 </div>
 
 <script type="module">
-import { WorkletSynthesizer } from "spessasynth_lib";
+import { WorkletSynthesizer, audioBufferToWav } from "spessasynth_lib";
 
 // --- MOBILE DEBUGGER ---
 const debugDiv = document.createElement('div');
@@ -1909,11 +1909,11 @@ class SF2Parser {
 class AudioEngine {
   constructor() {
     this.ctx          = null;
-    this.synth        = null;          // SpessaSynth instance
+    this.synth        = null;
     this.masterGain   = null;
-    this.soundfonts   = [];            // [{name, sfId, presets, expandedZones, bufferCache}]
-    this.voices       = new Map();     // kept for compat but unused (SpessaSynth manages internally)
-    this.layerNodes   = new Map();     // unused but kept for compat
+    this.soundfonts   = [];
+    this.voices       = new Map();
+    this.layerNodes   = new Map();
     this._vol         = 0.75;
     this._reverbWet   = 0;
     this._reverbSize  = 0.5;
@@ -1926,6 +1926,8 @@ class AudioEngine {
     this._pendingLoad = [];
     this._channels    = new Map(); // layerId_sfIdx_presetIdx → ch
     this._nextCh      = 0;
+    // Per-channel WaveShapers für Saturation/Buzz (ch → {shaper, wetGain})
+    this._channelSaturators = new Map();
   }
 
   // ── Init SpessaSynth ─────────────────────────────────────────
@@ -2050,33 +2052,42 @@ async ensureCtx() {
 
     onProgress('Presets werden gelesen…', 90);
 
-    // Build preset list (matching our existing format)
+    // Build preset list (matching our existing format).
+    // v4 merges alle geladenen SF2s in eine globale presetList —
+    // deshalb nach jedem Load ALLE soundfonts neu aufbauen.
     const sfIdx = this.soundfonts.length;
     const presets = this._buildPresetList();
 
-    // Store minimal compat object (no parser/bufferCache needed — SpessaSynth handles it)
     this.soundfonts.push({
       name,
       sfId,
       presets,
       expandedZones: new Array(presets.length).fill(null),
-      bufferCache:   new Map(), // unused but keeps compat
-      parser:        null,      // unused
+      bufferCache:   new Map(),
+      parser:        null,
     });
+
+    // Alle bisherigen soundfonts bekommen ebenfalls die aktualisierte Liste
+    // (v4-Merger enthält nun Presets aller geladenen SF2s)
+    for (let i = 0; i < sfIdx; i++) {
+      this.soundfonts[i].presets         = presets;
+      this.soundfonts[i].expandedZones   = new Array(presets.length).fill(null);
+    }
 
     onProgress('Fertig!', 100);
     return { sfIdx, presets };
   }
 
-  // Build preset list in our format from SpessaSynth v3
   _buildPresetList() {
     try {
       const rawPresets = this.synth.presetList ?? [];
       console.log("presetList Länge:", rawPresets.length);
       return rawPresets.map((p, i) => ({
-        name:    p.presetName ?? ('Preset ' + i),
-        program: p.program    ?? i,
-        bank:    p.bank       ?? 0,
+        name:    p.name     ?? ('Preset ' + i),  // v4: name statt presetName
+        program: p.program  ?? i,
+        bank:    p.bankMSB  ?? 0,                 // v4: bankMSB statt bank
+        bankLSB: p.bankLSB  ?? 0,
+        isDrum:  p.isAnyDrums ?? false,           // v4: direktes Drum-Flag
         zones:   [],
       }));
     } catch(e) {
@@ -2200,16 +2211,22 @@ async ensureCtx() {
     if (this._nextCh === 9) this._nextCh = 10;
     this._channels.set(key, ch);
 
-    // Set preset on this channel (v3)
     const sf = this.soundfonts[sfIdx];
     if (sf && sf.presets[presetIdx]) {
       const p = sf.presets[presetIdx];
       try {
-        if (p.bank) this.synth.controllerChange(ch, 0, p.bank);
+        // v4: bankMSB → CC0, bankLSB → CC32
+        engine.synth.controllerChange(ch, 0,  p.bank   ?? 0);
+        engine.synth.controllerChange(ch, 32, p.bankLSB ?? 0);
         this.synth.programChange(ch, p.program);
       } catch(e) { console.warn('programChange error:', e); }
     }
     return ch;
+  }
+
+  // Kanal vorab zuweisen (z.B. für Saturation vor erstem noteOn)
+  ensureChannel(layerId, sfIdx, presetIdx) {
+    return this._getChannel(layerId, sfIdx, presetIdx);
   }
 
   // Reset channel when layer changes preset
@@ -2290,30 +2307,57 @@ async ensureCtx() {
     this.filterNode.frequency.value = freq;
   }
 
-  setSaturation(v) {
-    this._saturation = v;
-    if (!this.ctx) return;
-    // WaveShaper für Saturation — lazy erstellen
-    if (!this._saturator) {
-      this._saturator = this.ctx.createWaveShaper();
-      this._saturatorGain = this.ctx.createGain();
-      this._saturatorGain.gain.value = 0; // start dry
-      // In die Kette: filterNode → saturator → destination (parallel zu dry)
-      this.filterNode.connect(this._saturator);
-      this._saturator.connect(this._saturatorGain);
-      this._saturatorGain.connect(this.ctx.destination);
+  // ── Per-channel Saturation (Soft-Clipping WaveShaper) ────────
+  // v4: synth.connectChannel(node, ch) leitet den Channel-Output durch node.
+  // Für jeden Channel wird lazy ein WaveShaper + paralleler Wet-Gain erstellt.
+  setChannelSaturation(ch, v) {
+    if (!this.synth || !this.ctx) return;
+    v = Math.max(0, Math.min(1, v));
+
+    if (!this._channelSaturators.has(ch)) {
+      // Merge-Gain: Channel-Output → hier sammeln
+      const merge = this.ctx.createGain();
+      merge.gain.value = 1;
+
+      // Dry-Pfad: merge → masterGain (direkt)
+      merge.connect(this.masterGain);
+
+      // WaveShaper (Soft-Clip)
+      const shaper = this.ctx.createWaveShaper();
+      shaper.oversample = '4x';
+
+      // Wet-Gain: shaper-Ausgang → masterGain (parallel zum dry)
+      const wetGain = this.ctx.createGain();
+      wetGain.gain.value = 0;
+      merge.connect(shaper);
+      shaper.connect(wetGain);
+      wetGain.connect(this.masterGain);
+
+      // SpessaSynth v4: Channel-Output in unseren Merge-Gain leiten
+      // (connectChannel liefert den Ziel-Node zurück)
+      try { this.synth.connectChannel(merge, ch); } catch(e) {
+        console.warn('connectChannel ch', ch, e);
+      }
+
+      this._channelSaturators.set(ch, { shaper, wetGain });
     }
-    // Saturation-Kurve (Soft-Clipping)
-    const k = v * 100;
-    const n = 256;
+
+    const { shaper, wetGain } = this._channelSaturators.get(ch);
+
+    // Soft-Clip Kurve berechnen
+    const k = v * 120;
+    const n = 512;
     const curve = new Float32Array(n);
     for (let i = 0; i < n; i++) {
       const x = (i * 2) / n - 1;
       curve[i] = k > 0 ? (Math.PI + k) * x / (Math.PI + k * Math.abs(x)) : x;
     }
-    this._saturator.curve = curve;
-    this._saturatorGain.gain.value = v * 0.6; // wet mix
+    shaper.curve = curve;
+    wetGain.gain.setTargetAtTime(v * 0.7, this.ctx.currentTime, 0.02);
   }
+
+  // Globales setSaturation bleibt als Compat-Stub (wird nicht mehr genutzt)
+  setSaturation(v) { /* per-layer via setChannelSaturation — siehe _applyBuzz */ }
   setWidth(v)      { /* nicht implementiert */ }
 
   // ── Compat stubs (UI calls these) ────────────────────────────
@@ -3106,18 +3150,27 @@ function renderDrawbars() {
   });
 }
 
-// Buzz: kombiniert Saturation aller Buzz-aktiven Layer
+// Buzz + Saturation: pro Layer den zugehörigen MIDI-Channel mit WaveShaper versorgen
 function _applyBuzz() {
-  const buzzLayers = layers.filter(l => l.buzzEnabled && !l.muted);
-  if (!buzzLayers.length) {
-    // Nur layer-saturation anwenden
-    const maxSat = Math.max(0, ...layers.map(l => l.saturation ?? 0)) / 100;
-    engine.setSaturation(maxSat);
-    return;
-  }
-  const maxIntensity = Math.max(...buzzLayers.map(l => (l.buzzIntensity ?? 70))) / 100;
-  // Buzz = starke Saturation (0.4 base + intensity)
-  engine.setSaturation(0.4 + maxIntensity * 0.5);
+  layers.forEach(layer => {
+    // Channel vorab sicherstellen (lazy, falls noch kein noteOn erfolgte)
+    if (engine._spessaReady && engine.soundfonts[layer.sfIdx]) {
+      engine.ensureChannel(layer.id, layer.sfIdx, layer.presetIdx);
+    }
+
+    // Alle Channels die diesem Layer gehören ermitteln
+    const layerChannels = [...engine._channels.entries()]
+      .filter(([k]) => k.startsWith(layer.id + '_'))
+      .map(([, ch]) => ch);
+    if (!layerChannels.length) return;
+
+    const sat    = (layer.saturation ?? 0) / 100;
+    const buzzOn = layer.buzzEnabled && !layer.muted;
+    const buzz   = buzzOn ? 0.4 + (layer.buzzIntensity ?? 70) / 100 * 0.55 : 0;
+    const total  = Math.min(1, Math.max(sat, buzz));
+
+    layerChannels.forEach(ch => engine.setChannelSaturation(ch, total));
+  });
 }
 
 function renderLayers() {
@@ -4032,9 +4085,8 @@ function renderLayers() {
     satSl.addEventListener('input', function() {
       layer.saturation = parseInt(this.value);
       satValEl.textContent = this.value + '%';
-      // Max-Saturation aller Layer anwenden
-      const maxSat = Math.max(...layers.map(l => l.saturation ?? 0)) / 100;
-      engine.setSaturation(maxSat);
+      // Per-Channel Saturation anwenden (via _applyBuzz, der alle Layer kennt)
+      _applyBuzz();
     });
     satRow.appendChild(satLbl); satRow.appendChild(satSl); satRow.appendChild(satValEl);
     details.appendChild(satRow);
@@ -4332,10 +4384,12 @@ async function renderCachedSF2s() {
 }
 
 async function loadFile(file) {
-  if (!file||!file.name.toLowerCase().endsWith('.sf2')){setStatus('error','Nur .sf2-Dateien erlaubt');return;}
+  const _sfName = file ? file.name.toLowerCase() : '';
+  const _isSF = _sfName.endsWith('.sf2') || _sfName.endsWith('.sf3') || _sfName.endsWith('.dls');
+  if (!file || !_isSF) { setStatus('error', 'Nur .sf2 / .sf3 / .dls-Dateien erlaubt'); return; }
   // If a session is pending, only accept the expected SF2s
   if (window._pendingSession) {
-    const shortName = file.name.replace(/\.sf2$/i,'');
+    const shortName = file.name.replace(/\.(sf2|sf3|dls)$/i,'');
     const needed = (window._pendingSession.soundfonts??[]).map(s=>s.name);
     if (needed.length && !needed.includes(shortName)) {
       document.getElementById('sessionInfo').textContent =
@@ -4351,7 +4405,7 @@ async function loadFile(file) {
       await new Promise(r => setTimeout(r, 100)); // UI updaten lassen
     }
     const ab = await file.arrayBuffer();
-    const shortName = file.name.replace(/\.sf2$/i,'');
+    const shortName = file.name.replace(/\.(sf2|sf3|dls)$/i,'');
     const { sfIdx, presets } = await engine.load(ab, shortName, (lbl,pct)=>{showProg(lbl,pct);setStatus('loading',lbl);});
     // Save to IndexedDB in background (don't await — don't block UI)
     // Nur kleine SF2s (< 150MB) im Browser-Speicher cachen
@@ -4705,7 +4759,7 @@ sfLoaderPanel.addEventListener('dragover', e => { e.preventDefault(); sfLoaderPa
 sfLoaderPanel.addEventListener('dragleave', () => sfLoaderPanel.classList.remove('dragover'));
 sfLoaderPanel.addEventListener('drop', e => {
   e.preventDefault(); sfLoaderPanel.classList.remove('dragover');
-  Array.from(e.dataTransfer.files).filter(f => f.name.toLowerCase().endsWith('.sf2')).forEach(f => window.loadFile(f));
+  Array.from(e.dataTransfer.files).filter(f => /\.(sf2|sf3|dls)$/i.test(f.name)).forEach(f => window.loadFile(f));
 });
 
 // ── Play/Stop helpers ─────────────────────────────────────────
@@ -5064,7 +5118,9 @@ document.getElementById('drumHeader').addEventListener('click', e => {
 function drumFindPreset(sfIdx) {
   const sf = engine.soundfonts[sfIdx];
   if (!sf) return 0;
-  let p = sf.presets.find(p => p.bank === 128);
+  // v4: isDrum-Flag direkt auswerten, Fallback auf bank===128 oder Name
+  let p = sf.presets.find(p => p.isDrum);
+  if (!p) p = sf.presets.find(p => p.bank === 128);
   if (!p) p = sf.presets.find(p => /drum|kit|perc/i.test(p.name));
   if (!p) p = sf.presets[0];
   return sf.presets.indexOf(p);
@@ -5254,8 +5310,29 @@ function tbonePlayNote() {
   if (tboneCurrentMidi === midi) return;
   tboneCurrentMidi = midi;
   const transposed = midi + globalTranspose + (layer.transpose ?? 0);
+
+  // Velocity aus tbone-Druckstärke (tboneBlowPressure 0-1, Fallback 0.7)
+  const pressure = typeof tboneBlowPressure !== 'undefined' ? tboneBlowPressure : 0.7;
+  const vel = Math.round(Math.max(30, Math.min(127, pressure * 127)));
+
   engine.ensureAndGetStartT().then(startT => {
-    engine.playSync(transposed, layer.id, layer.sfIdx, layer.presetIdx, 90, layer.vol, startT);
+    engine.playSync(transposed, layer.id, layer.sfIdx, layer.presetIdx, vel, layer.vol, startT);
+    // Buzz anwenden: Intensität velocity-abhängig skalieren wenn buzzEnabled
+    if (layer.buzzEnabled) {
+      const threshold = layer.buzzThreshold ?? 127;
+      // Buzz ab Threshold; unter Threshold kein Buzz
+      if (vel >= threshold) {
+        const scaled = Math.min(1, (vel - threshold) / Math.max(1, 127 - threshold));
+        const ch = engine._getChannel(layer.id, layer.sfIdx, layer.presetIdx);
+        const buzzAmt = 0.35 + scaled * (layer.buzzIntensity ?? 70) / 100 * 0.6;
+        engine.setChannelSaturation(ch, buzzAmt);
+      } else {
+        const ch = engine._getChannel(layer.id, layer.sfIdx, layer.presetIdx);
+        engine.setChannelSaturation(ch, (layer.saturation ?? 0) / 100);
+      }
+    } else {
+      _applyBuzz();
+    }
   });
 }
 
@@ -6261,7 +6338,7 @@ function buildSeqPresetWidget(container, row, color) {
 
   let filtered = [], navIdx = -1;
 
-  function isDrum(p) { return p.bank === 128; }
+  function isDrum(p) { return p.isDrum || p.bank === 128; }
 
   function label(p) {
     return String(p.program).padStart(3,'0') + ' – ' + p.name;
@@ -6349,7 +6426,7 @@ function seqAddRow() {
   const note = defaults[seq.rows.length % defaults.length];
   // Default to first drum preset (bank 128), else 0
   const sf = engine.soundfonts[0];
-  const drumIdx = sf ? sf.presets.findIndex(p => p.bank === 128) : -1;
+  const drumIdx = sf ? sf.presets.findIndex(p => p.isDrum || p.bank === 128) : -1;
   seq.rows.push({
     id: seq.nextRowId++,
     sfIdx: 0,
@@ -6382,16 +6459,11 @@ function seqScheduleStep(stepIdx, time) {
       if (!seq.running) return;
       // Drum-Presets (bank 128) MÜSSEN auf Channel 9 gespielt werden –
       // SpessaSynth behandelt nur CH9 als Percussion-Channel (GM-Standard).
-      const isDrum = (p.bank === 128);
+      const isDrum = (p.isDrum || p.bank === 128);
       const playCh = isDrum ? 9 : SEQ_CH;
-      // Preset auf Kanal setzen (Bank MSB/LSB korrekt aufteilen)
-      if (p.bank) {
-        engine.synth.controllerChange(playCh, 0,  Math.floor(p.bank / 128)); // Bank MSB
-        engine.synth.controllerChange(playCh, 32, p.bank % 128);             // Bank LSB
-      } else {
-        engine.synth.controllerChange(playCh, 0,  0);
-        engine.synth.controllerChange(playCh, 32, 0);
-      }
+      // v4: bankMSB → CC0, bankLSB → CC32
+      engine.synth.controllerChange(playCh, 0,  p.bank   ?? 0);
+      engine.synth.controllerChange(playCh, 32, p.bankLSB ?? 0);
       engine.synth.programChange(playCh, p.program);
       engine.synth.controllerChange(playCh, 7, Math.round(row.vel));
       engine.synth.noteOn(playCh, row.note, row.vel);
@@ -6911,26 +6983,26 @@ document.getElementById('recLoopBtn').addEventListener('click',  function(){ rec
 document.getElementById('recSaveBtn').addEventListener('click',  recSave);
 document.getElementById('recMidiBtn').addEventListener('click',  recExportMidi);
 
-// ── WAV Export via OfflineAudioContext ───────────────────────
+// ── WAV Export ────────────────────────────────────────────────
+// Nimmt die aufgezeichneten Events live mit MediaRecorder auf,
+// dekodiert danach den rohen Audio-Blob zu PCM und kodiert ihn
+// als echte .wav-Datei (via SpessaSynth audioBufferToWav).
 async function recExportWav() {
   if (!rec.events.length || rec.state !== 'idle') return;
   const btn = document.getElementById('recWavBtn');
   btn.textContent = '⏳ Aufnahme läuft…';
   btn.disabled = true;
 
-  // Banner außerhalb von try deklarieren — sonst ist er im finally-Block out of scope
   let exportBanner = document.createElement('div');
   exportBanner.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:rgba(0,229,255,0.15);border-bottom:2px solid var(--accent);color:var(--accent);font-family:"Share Tech Mono",monospace;font-size:.8rem;text-align:center;padding:10px;z-index:9998;letter-spacing:.1em;';
-  exportBanner.textContent = '⏳ Export läuft — bitte warten…';
+  exportBanner.textContent = '⏳ WAV Export — Aufnahme läuft…';
   document.body.appendChild(exportBanner);
 
   try {
     await engine.ensureCtx();
     const ctx = engine.ctx;
 
-    // MediaRecorder an FX-Kette — Audio spielt mit normaler Lautstärke
-
-    // MediaRecorder an FX-Kette
+    // MediaRecorder an FX-Kette hängen
     const dest = ctx.createMediaStreamDestination();
     engine.filterNode.connect(dest);
 
@@ -6943,43 +7015,46 @@ async function recExportWav() {
 
     await new Promise(r => setTimeout(r, 100));
 
-    // Events direkt abspielen (ohne rec.state zu ändern)
+    // Events abspielen
     const timers = [];
     rec.events.forEach(ev => {
-      const tid = setTimeout(() => {
-        recPlayEvent(ev);
-      }, ev.t);
-      timers.push(tid);
+      timers.push(setTimeout(() => recPlayEvent(ev), ev.t));
     });
 
-    // Warten + Nachhall
+    // Aufnahme + Nachhall abwarten
     await new Promise(r => setTimeout(r, rec.duration + 2500));
     timers.forEach(t => clearTimeout(t));
     engine.stopAll();
 
-    // Recorder sauber stoppen
     await new Promise(resolve => { mr.onstop = resolve; mr.stop(); });
-
-    // Verbindungen wiederherstellen
     engine.filterNode.disconnect(dest);
 
     if (!chunks.length) throw new Error('Keine Audio-Daten aufgenommen');
 
-    const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
-    const ext  = blob.type.includes('ogg') ? 'ogg' : 'webm';
-    const file = new File([blob], `ensemble_export.${ext}`, { type: blob.type });
+    exportBanner.textContent = '⏳ WAV wird kodiert…';
+
+    // Rohes Audio (webm/ogg) → AudioBuffer (PCM) → WAV
+    const rawBlob   = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
+    const rawAb     = await rawBlob.arrayBuffer();
+    const decodeCtx = new AudioContext();
+    const audioBuffer = await decodeCtx.decodeAudioData(rawAb);
+    decodeCtx.close();
+
+    // SpessaSynth-eigener WAV-Encoder
+    const wavBlob = audioBufferToWav(audioBuffer);
+    const fname   = 'ensemble_' + new Date().toISOString().slice(0,19).replace(/[:T]/g,'-') + '.wav';
+    const file    = new File([wavBlob], fname, { type: 'audio/wav' });
 
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: 'Ensemble Export' }); }
-      catch(e) { if (e.name !== 'AbortError') fallbackDownload(blob, ext); }
+      try { await navigator.share({ files: [file], title: 'Ensemble WAV Export' }); }
+      catch(e) { if (e.name !== 'AbortError') fallbackDownload(wavBlob, 'wav', fname); }
     } else {
-      fallbackDownload(blob, ext);
+      fallbackDownload(wavBlob, 'wav', fname);
     }
 
   } catch(e) {
     console.error('WAV export error:', e);
-    alert('Fehler beim Rendern: ' + e.message);
-    // Lautsprecher sicherstellen
+    alert('Fehler beim WAV-Export: ' + e.message);
     try { engine.filterNode.connect(engine.ctx.destination); } catch(e2) {}
   } finally {
     btn.textContent = '🔊 WAV';
@@ -7033,10 +7108,10 @@ function buildMidiBytes(events, duration) {
 }
 
 
-function fallbackDownload(blob, ext) {
+function fallbackDownload(blob, ext, fname) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `ensemble_export.${ext}`; a.click();
+  a.href = url; a.download = fname ?? `ensemble_export.${ext}`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
@@ -7177,7 +7252,7 @@ document.getElementById('recMidiLoadInput').addEventListener('change', e=>{
           if(sf) {
             if(isDrum) {
               // Find drum preset (bank 128)
-              const di = sf.presets.findIndex(p => p.bank === 128);
+              const di = sf.presets.findIndex(p => p.isDrum || p.bank === 128);
               if(di >= 0) presetIdx = di;
             } else {
               // Match by program change if available
@@ -7816,13 +7891,8 @@ function jamPlayNote(playerName, layerIdx, midi, vel) {
           engine.synth.controllerChange(ch, 120, 0); // All Sound Off (nur bei Preset-Wechsel)
           engine.synth.controllerChange(ch, 64, 0);  // Sustain off
           engine.synth.controllerChange(ch, 7, vol); // Volume
-          if (p.bank) {
-            engine.synth.controllerChange(ch, 0, Math.floor(p.bank / 128)); // Bank MSB
-            engine.synth.controllerChange(ch, 32, p.bank % 128);            // Bank LSB
-          } else {
-            engine.synth.controllerChange(ch, 0, 0);
-            engine.synth.controllerChange(ch, 32, 0);
-          }
+          engine.synth.controllerChange(ch, 0,  p.bank   ?? 0); // Bank MSB (v4: bankMSB)
+          engine.synth.controllerChange(ch, 32, p.bankLSB ?? 0); // Bank LSB
           engine.synth.programChange(ch, p.program);
         }
       }
