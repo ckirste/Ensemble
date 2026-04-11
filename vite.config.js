@@ -1,36 +1,39 @@
 import { defineConfig } from 'vite'
 import { copyFileSync, mkdirSync } from 'fs'
-import { resolve } from 'path'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
 
-// Kopiert die SpessaSynth-v4-Worklet-Datei aus node_modules nach public/,
-// damit sie zur Laufzeit über addModule() erreichbar ist.
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+// Kopiert spessasynth_processor.min.js aus node_modules nach public/.
+// Muss in public/ liegen, damit Vite sie 1:1 nach dist/ kopiert
+// und der Browser sie per addModule('./spessasynth_processor.min.js') laden kann.
 function copySpessaSynthWorklet() {
+  const src  = resolve(__dirname, 'node_modules/spessasynth_lib/dist/spessasynth_processor.min.js')
+  const dest = resolve(__dirname, 'public/spessasynth_processor.min.js')
+
+  function doCopy() {
+    mkdirSync(resolve(__dirname, 'public'), { recursive: true })
+    copyFileSync(src, dest)
+    console.log('[ensemble] spessasynth_processor.min.js → public/ ✓')
+  }
+
   return {
     name: 'copy-spessasynth-worklet',
-    // Läuft beim Start von `vite dev` UND bei `vite build`
-    config() {
-      const src  = resolve('node_modules/spessasynth_lib/dist/spessasynth_processor.min.js')
-      const dest = resolve('public/spessasynth_processor.min.js')
-      try {
-        // public/-Verzeichnis anlegen falls nicht vorhanden (z.B. frischer Checkout)
-        mkdirSync(resolve('public'), { recursive: true })
-        copyFileSync(src, dest)
-        console.log('[ensemble] SpessaSynth-Worklet nach public/ kopiert.')
-      } catch (e) {
-        console.warn('[ensemble] Worklet-Copy fehlgeschlagen:', e.message)
-      }
-    },
+    // Läuft bei `vite build`
+    buildStart() { doCopy() },
+    // Läuft bei `vite dev`
+    configureServer() { doCopy() },
   }
 }
 
 export default defineConfig({
-  // Muss mit dem GitHub-Repository-Namen übereinstimmen: /Ensemble/
-  // Für lokale Tests oder eigene Domain: base: '/'
+  // Muss mit dem GitHub-Repo-Namen übereinstimmen.
+  // Für lokale Tests: GITHUB_PAGES_BASE=/ npm run dev
   base: process.env.GITHUB_PAGES_BASE ?? '/Ensemble/',
   plugins: [copySpessaSynthWorklet()],
   build: {
     sourcemap: false,
-    // Warnung ab 2 MB statt default 500 kB (SF2-Player hat großes Bundle)
     chunkSizeWarningLimit: 2048,
   },
 })

@@ -2035,10 +2035,12 @@ async ensureCtx() {
       onProgress(`Große SF2 (${sfSizeMB.toFixed(0)}MB) — bitte warten…`, 35);
     }
 
-    // SpessaSynth v4: addSoundBank für alle SF2s (erste und weitere gleich behandelt)
+    // v4: addSoundBank transferiert den Buffer in den Worker-Thread (Zero-Copy).
+    // Damit der Aufrufer seinen Buffer-Verweis behält (z.B. für IndexedDB-Cache),
+    // übergeben wir eine Kopie. SpessaSynth detacht diese Kopie, nicht das Original.
     const sfId = `sf_${Date.now()}`;
     try {
-      await this.synth.soundBankManager.addSoundBank(arrayBuffer, sfId);
+      await this.synth.soundBankManager.addSoundBank(arrayBuffer.slice(0), sfId);
       console.log('SF2 geladen:', sfId, 'presetList:', this.synth.presetList?.length);
       // ArrayBuffer-Referenz freigeben (SpessaSynth hat ihn transferiert)
       arrayBuffer = null;
