@@ -2338,9 +2338,6 @@ async ensureCtx() {
   removeSoundfont(sfIdx) {
     const sf = this.soundfonts[sfIdx];
     if (!sf) return;
-  removeSoundfont(sfIdx) {
-    const sf = this.soundfonts[sfIdx];
-    if (!sf) return;
     // v4: Sound Bank per ID entfernen
     if (this.synth && sf.sfId) {
       this.synth.soundBankManager.deleteSoundBank(sf.sfId)
