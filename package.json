@@ -1,0 +1,17 @@
+{
+  "name": "ensemble",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "spessasynth_lib": "^4.2.11"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
+
