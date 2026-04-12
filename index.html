@@ -982,7 +982,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v41</h1>
+    <h1>Ensemble_v40</h1>
     <div class="sub">by c. kirste &nbsp;·&nbsp; <span id="buildVersion" style="opacity:.7;font-size:.6em;letter-spacing:.15em"></span></div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -2150,13 +2150,12 @@ async ensureCtx() {
   // Presets exklusiv dieser Bank — nicht die globale Merge-Liste.
   _buildPresetListForId(sfId) {
     try {
-      // Presets aus dem beim Laden gespeicherten Diff-Snapshot holen
       const raw = (this._sfPresetCache && this._sfPresetCache.get(sfId)) ?? [];
       if (raw.length === 0) {
-        console.warn('_buildPresetListForId: kein Cache für', sfId, '— Fallback auf global');
+        console.warn('_buildPresetListForId: kein Cache für', sfId, '— Fallback');
         return this._buildPresetListFallback();
       }
-      return raw.map((p, i) => ({
+      const list = raw.map((p, i) => ({
         name:    p.name       ?? ('Preset ' + i),
         program: p.program    ?? i,
         bank:    p.bankMSB    ?? 0,
@@ -2164,6 +2163,13 @@ async ensureCtx() {
         isDrum:  p.isAnyDrums ?? false,
         zones:   [],
       }));
+      // Sortierung: Drums zuletzt, sonst nach bank → program
+      list.sort((a, b) => {
+        if (a.isDrum !== b.isDrum) return a.isDrum ? 1 : -1;
+        if (a.bank !== b.bank) return a.bank - b.bank;
+        return a.program - b.program;
+      });
+      return list;
     } catch(e) {
       console.warn('_buildPresetListForId error:', e);
       return this._buildPresetListFallback();
@@ -2175,15 +2181,20 @@ async ensureCtx() {
   _buildPresetListFallback() {
     try {
       const rawPresets = this.synth.presetList ?? [];
-      console.log("presetList Länge (global):", rawPresets.length);
-      return rawPresets.map((p, i) => ({
-        name:    p.name     ?? ('Preset ' + i),
-        program: p.program  ?? i,
-        bank:    p.bankMSB  ?? 0,
-        bankLSB: p.bankLSB  ?? 0,
+      const list = rawPresets.map((p, i) => ({
+        name:    p.name       ?? ('Preset ' + i),
+        program: p.program    ?? i,
+        bank:    p.bankMSB    ?? 0,
+        bankLSB: p.bankLSB    ?? 0,
         isDrum:  p.isAnyDrums ?? false,
         zones:   [],
       }));
+      list.sort((a, b) => {
+        if (a.isDrum !== b.isDrum) return a.isDrum ? 1 : -1;
+        if (a.bank !== b.bank) return a.bank - b.bank;
+        return a.program - b.program;
+      });
+      return list;
     } catch(e) {
       console.warn('Could not get preset list:', e);
       return [];
@@ -2199,6 +2210,10 @@ async ensureCtx() {
     if (!sf) return;
 
     const ch = this._getChannel(layerId, sfIdx, presetIdx);
+
+    // Vor jedem noteOn: priorityOrder + programChange aktualisieren.
+    // Das verhindert Race Conditions wenn mehrere Layer verschiedene SF2s nutzen.
+    this._setProgramOnChannel(ch, sfIdx, presetIdx);
 
     // Volume via CC7
     const ccVol = Math.round(Math.min(127, layerVol * 127));
