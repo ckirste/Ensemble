@@ -2163,9 +2163,17 @@ async ensureCtx() {
         isDrum:  p.isAnyDrums ?? false,
         zones:   [],
       }));
-      // Sortierung: Drums zuletzt, sonst nach bank → program
+      // Sortierung: Bank 0 (GM-Melodie) zuerst nach Program,
+      // dann Drums (isDrum / bank 128), dann alle Variation-Banks 1-127
       list.sort((a, b) => {
-        if (a.isDrum !== b.isDrum) return a.isDrum ? 1 : -1;
+        const aGM   = a.bank === 0 && !a.isDrum;
+        const bGM   = b.bank === 0 && !b.isDrum;
+        const aDrum = a.isDrum || a.bank === 128;
+        const bDrum = b.isDrum || b.bank === 128;
+        if (aGM   && !bGM)   return -1;  // Bank-0 immer zuerst
+        if (!aGM  && bGM)    return  1;
+        if (aDrum && !bDrum) return -1;  // Drums vor Variationen
+        if (!aDrum && bDrum) return  1;
         if (a.bank !== b.bank) return a.bank - b.bank;
         return a.program - b.program;
       });
@@ -2190,7 +2198,14 @@ async ensureCtx() {
         zones:   [],
       }));
       list.sort((a, b) => {
-        if (a.isDrum !== b.isDrum) return a.isDrum ? 1 : -1;
+        const aGM   = a.bank === 0 && !a.isDrum;
+        const bGM   = b.bank === 0 && !b.isDrum;
+        const aDrum = a.isDrum || a.bank === 128;
+        const bDrum = b.isDrum || b.bank === 128;
+        if (aGM   && !bGM)   return -1;
+        if (!aGM  && bGM)    return  1;
+        if (aDrum && !bDrum) return -1;
+        if (!aDrum && bDrum) return  1;
         if (a.bank !== b.bank) return a.bank - b.bank;
         return a.program - b.program;
       });
@@ -6805,7 +6820,12 @@ function seqScheduleStep(stepIdx, time) {
       // SpessaSynth behandelt nur CH9 als Percussion-Channel (GM-Standard).
       const isDrum = (p.isDrum || p.bank === 128);
       const playCh = isDrum ? 9 : SEQ_CH;
-      // v4: bankMSB → CC0, bankLSB → CC32
+      // v4: priorityOrder setzen damit die richtige SF gewählt wird,
+      // dann Bank + Program — identisch zu engine._setProgramOnChannel
+      if (sf.sfId && engine.synth.soundBankManager) {
+        const cur = [...engine.synth.soundBankManager.priorityOrder];
+        engine.synth.soundBankManager.priorityOrder = [sf.sfId, ...cur.filter(id => id !== sf.sfId)];
+      }
       engine.synth.controllerChange(playCh, 0,  p.bank   ?? 0);
       engine.synth.controllerChange(playCh, 32, p.bankLSB ?? 0);
       engine.synth.programChange(playCh, p.program);
