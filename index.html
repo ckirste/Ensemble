@@ -983,7 +983,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
     <h1>Ensemble_v40</h1>
-    <div class="sub">by c. kirste &nbsp;·&nbsp; <span id="buildVersion" style="opacity:.7;font-size:.6em;letter-spacing:.15em"></span></div>
+    <div class="sub">by c. kirste &nbsp;&nbsp; <span id="buildVersion" style="opacity:.7;font-size:.6em;letter-spacing:.15em"></span></div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
 
@@ -2071,10 +2071,23 @@ async ensureCtx() {
     // übergeben wir eine Kopie. SpessaSynth detacht diese Kopie, nicht das Original.
     const sfId = `sf_${Date.now()}`;
     try {
+      // Snapshot der globalen presetList VOR dem Laden — zum Diff danach
+      const preListBefore = (this.synth.presetList ?? []).map(p => `${p.program}:${p.bankMSB}:${p.bankLSB}`);
+
       await this.synth.soundBankManager.addSoundBank(arrayBuffer.slice(0), sfId);
       console.log('SF2 geladen:', sfId, 'presetList:', this.synth.presetList?.length);
-      // ArrayBuffer-Referenz freigeben (SpessaSynth hat ihn transferiert)
       arrayBuffer = null;
+
+      // Diff: Presets die nach dem Laden NEU in der globalen Liste sind → gehören dieser SF
+      const preListAfter = this.synth.presetList ?? [];
+      const beforeSet = new Set(preListBefore);
+      const newPresets = preListAfter.filter(p =>
+        !beforeSet.has(`${p.program}:${p.bankMSB}:${p.bankLSB}`)
+      );
+      // Falls kein Diff (z.B. selbe SF nochmal geladen): alle nehmen
+      this._sfPresetCache = this._sfPresetCache || new Map();
+      this._sfPresetCache.set(sfId, newPresets.length > 0 ? newPresets : [...preListAfter]);
+      console.log(`Presets für ${sfId}:`, (this._sfPresetCache.get(sfId) || []).length);
     } catch(e) {
       throw new Error('SF2 Ladefehler: ' + e.message);
     }
@@ -2104,19 +2117,17 @@ async ensureCtx() {
   // Presets exklusiv dieser Bank — nicht die globale Merge-Liste.
   _buildPresetListForId(sfId) {
     try {
-      const entry = this.synth.soundBankManager.soundBankList
-        .find(e => e.id === sfId);
-      if (!entry) {
-        console.warn('soundBankList: sfId nicht gefunden:', sfId);
+      // Presets aus dem beim Laden gespeicherten Diff-Snapshot holen
+      const raw = (this._sfPresetCache && this._sfPresetCache.get(sfId)) ?? [];
+      if (raw.length === 0) {
+        console.warn('_buildPresetListForId: kein Cache für', sfId, '— Fallback auf global');
         return this._buildPresetListFallback();
       }
-      const raw = entry.soundBank.presets ?? [];
-      console.log(`presets für ${sfId}:`, raw.length);
       return raw.map((p, i) => ({
-        name:    p.name    ?? ('Preset ' + i),
-        program: p.program ?? i,
-        bank:    p.bankMSB ?? 0,
-        bankLSB: p.bankLSB ?? 0,
+        name:    p.name       ?? ('Preset ' + i),
+        program: p.program    ?? i,
+        bank:    p.bankMSB    ?? 0,
+        bankLSB: p.bankLSB    ?? 0,
         isDrum:  p.isAnyDrums ?? false,
         zones:   [],
       }));
