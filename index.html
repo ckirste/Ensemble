@@ -374,13 +374,13 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 /* Expandable details */
 .layer-details{display:none;flex-direction:column;gap:0;border-top:1px solid var(--border)}
 .layer-details.open{display:flex}
-.layer-preset-row{display:flex;align-items:center;padding:8px 12px 6px;gap:8px}
+.layer-preset-row{display:flex;align-items:center;padding:8px 12px 4px;gap:8px;flex-wrap:wrap}
 .layer-search-input{background:#07070f;border:1px solid var(--border);color:var(--textbright);
   font-family:'Share Tech Mono',monospace;font-size:.7rem;padding:5px 8px;border-radius:5px;
   width:100%;box-sizing:border-box;outline:none}
 .layer-search-input:focus{border-color:var(--accent)}
 .layer-search-input::placeholder{color:var(--dim);font-size:.6rem}
-.layer-top{display:flex;align-items:center;gap:10px;padding:4px 12px 0}
+.layer-top{display:flex;align-items:center;gap:8px;padding:4px 12px 4px;flex-wrap:wrap;min-width:0}
 .layer-color{width:10px;height:10px;border-radius:50%;flex-shrink:0;box-shadow:0 0 6px currentColor}
 .layer-select{background:#07070f;border:1px solid var(--border);color:var(--textbright);
   font-family:'Share Tech Mono',monospace;font-size:.72rem;padding:4px 8px;
@@ -3874,7 +3874,7 @@ function renderLayers() {
 
     // Del button in top row
     const delBtn = document.createElement('button');
-    delBtn.style.cssText = 'background:#07070f;border:1px solid var(--border);width:36px;height:36px;border-radius:7px;cursor:pointer;font-size:.9rem;transition:all .12s;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--accent2);margin-left:auto';
+    delBtn.style.cssText = 'background:#07070f;border:1px solid var(--border);width:36px;height:36px;border-radius:7px;cursor:pointer;font-size:.9rem;transition:all .12s;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--accent2)';
     delBtn.textContent = '✕';
     delBtn.title = 'Layer entfernen';
     delBtn.addEventListener('click', () => removeLayer(layer.id));
@@ -8231,27 +8231,27 @@ function jamPlayNote(playerName, layerIdx, midi, vel) {
   const playerIdx = playerNames.indexOf(playerName);
   const ch = Math.min(15, 12 + (playerIdx >= 0 ? playerIdx : 0));
 
-  const vol = Math.round(Math.min(127, (layerInfo.vol ?? 1) * (player.vol ?? 1) * 127));
+  const vol = 127; // Remote-Spieler immer volle Kanal-Lautstärke via CC7
   const p = engine.soundfonts[found.sfIdx]?.presets[found.presetIdx];
+  // Velocity boosten falls zu leise (Android-Touch oft <50)
+  const boostedVel = Math.min(127, Math.max(vel, Math.round((layerInfo.vol ?? 1) * (player.vol ?? 1) * 110)));
 
   engine.ensureCtx().then(() => {
     try {
       if (p) {
-        // Nur bei Preset-Wechsel den Channel zurücksetzen.
-        // CC120 "All Sound Off" bei jeder Note würde laufende Akkord-Töne killen!
-        const presetKey = `${found.sfIdx}:${found.presetIdx}:${vol}`;
+        const presetKey = `${found.sfIdx}:${found.presetIdx}`;
         if (_jamChPreset[ch] !== presetKey) {
           _jamChPreset[ch] = presetKey;
-          engine.synth.controllerChange(ch, 120, 0); // All Sound Off (nur bei Preset-Wechsel)
-          engine.synth.controllerChange(ch, 64, 0);  // Sustain off
-          engine.synth.controllerChange(ch, 7, vol); // Volume
-          engine.synth.controllerChange(ch, 0,  p.bank   ?? 0); // Bank MSB (v4: bankMSB)
-          engine.synth.controllerChange(ch, 32, p.bankLSB ?? 0); // Bank LSB
+          engine.synth.controllerChange(ch, 120, 0);
+          engine.synth.controllerChange(ch, 64, 0);
+          engine.synth.controllerChange(ch, 0,  p.bank   ?? 0);
+          engine.synth.controllerChange(ch, 32, p.bankLSB ?? 0);
           engine.synth.programChange(ch, p.program);
         }
+        engine.synth.controllerChange(ch, 7, vol); // Immer CC7=127
       }
-      engine.synth.noteOn(ch, midi, vel);
-      console.log(`jamPlayNote: noteOn ch=${ch} midi=${midi} prog=${p?.program} bank=${p?.bank}`);
+      engine.synth.noteOn(ch, midi, boostedVel);
+      console.log(`jamPlayNote: noteOn ch=${ch} midi=${midi} vel=${boostedVel}`);
       const key = `jam_${playerName}_${layerIdx}_${midi}`;
       engine.voices.set(key, { ch, midi });
     } catch(e) { console.log('jamPlayNote error:', e.message); }
