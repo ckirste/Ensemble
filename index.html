@@ -982,8 +982,8 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v41</h1>
-    <div class="sub">by c. kirste &nbsp;&nbsp; <span id="buildVersion" style="opacity:.7;font-size:.6em;letter-spacing:.15em"></span></div>
+    <h1>Ensemble_v40</h1>
+    <div class="sub">by c. kirste &nbsp;·&nbsp; <span id="buildVersion" style="opacity:.7;font-size:.6em;letter-spacing:.15em"></span></div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
 
@@ -6706,15 +6706,16 @@ function buildSeqPresetWidget(container, row, color) {
     inp.value = sf ? label(sf.presets[idx]) : '';
     clr.classList.remove('visible'); drop.classList.remove('open');
   }
+  function isDrumPreset(p) { return !!(p.isDrum || p.isGMGSDrum); }
   function renderDrop(q) {
     const sf = engine.soundfonts[row.sfIdx];
     if (!sf) return;
     const ql = q.toLowerCase();
-    // Only drum presets (bank 128); if none exist show all
-    const hasDrums = sf.presets.some(isDrum);
-    filtered = sf.presets
-      .map((p,i) => ({p,i,l:label(p)}))
-      .filter(({p}) => hasDrums ? isDrum(p) : true)
+    // Nur Drum-Presets zeigen (isDrum/isGMGSDrum); falls keine vorhanden: alle
+    const drumPresets = sf.presets.filter(isDrumPreset);
+    const pool = drumPresets.length > 0 ? drumPresets : sf.presets;
+    filtered = pool
+      .map((p,_i) => ({ p, i: sf.presets.indexOf(p), l: label(p) }))
       .filter(({l}) => !ql || l.toLowerCase().includes(ql));
     navIdx = -1; drop.innerHTML = '';
     if (!filtered.length) {
@@ -6799,7 +6800,10 @@ function seqAddRow() {
 
 function seqScheduleStep(stepIdx, time) {
   const ctx = engine.ctx;
-  const SEQ_CH = 14; // MIDI-Channel 15 (0-basiert) für Sequencer
+  const DRUM_CH = 9;  // CH9 = immer Drums in GM (isDrum wird via setDrums gesetzt)
+
+  // CH9 einmalig als Drum-Channel sicherstellen
+  if (engine.synth) { try { engine.synth.setDrums(DRUM_CH, true); } catch(e) {} }
 
   seq.rows.forEach(row => {
     if (row.muted || !row.pattern[stepIdx]) return;
@@ -6808,33 +6812,21 @@ function seqScheduleStep(stepIdx, time) {
     const p = sf.presets[row.presetIdx];
     if (!p) return;
 
-    // Zeitverzögerung in ms bis zum geplanten Beat
-    const msDelay = Math.max(0, (time - ctx.currentTime) * 1000);
+    const msDelay   = Math.max(0, (time - ctx.currentTime) * 1000);
     const noteDurMs = Math.round(seqSecPerStep() * 0.85 * 1000);
 
     setTimeout(() => {
       if (!seq.running) return;
-      // Drum-Presets (bank 128) MÜSSEN auf Channel 9 gespielt werden –
-      // SpessaSynth behandelt nur CH9 als Percussion-Channel (GM-Standard).
-      const isDrum = (p.isDrum || p.isGMGSDrum);
-      const playCh = isDrum ? 9 : SEQ_CH;
-      // v4: priorityOrder setzen damit die richtige SF gewählt wird
-      if (sf.sfId && engine.synth.soundBankManager) {
+      // SF-Priorität setzen
+      if (sf.sfId && engine.synth?.soundBankManager) {
         const cur = [...engine.synth.soundBankManager.priorityOrder];
         engine.synth.soundBankManager.priorityOrder = [sf.sfId, ...cur.filter(id => id !== sf.sfId)];
       }
-      if (isDrum) {
-        // Drums: kein Bank-Select — CH9 ist immer Percussion in GM.
-        // programChange wählt das Drum-Kit (Standard-Kit = 0).
-        engine.synth.programChange(playCh, p.program);
-      } else {
-        engine.synth.controllerChange(playCh, 0,  p.bank   ?? 0);
-        engine.synth.controllerChange(playCh, 32, p.bankLSB ?? 0);
-        engine.synth.programChange(playCh, p.program);
-      }
-      engine.synth.controllerChange(playCh, 7, Math.round(row.vel));
-      engine.synth.noteOn(playCh, row.note, row.vel);
-      setTimeout(() => { try { engine.synth.noteOff(playCh, row.note); } catch(e) {} }, noteDurMs);
+      // CH9 mit isDrum=true: programChange wählt das Drum-Kit
+      engine.synth.programChange(DRUM_CH, p.program);
+      engine.synth.controllerChange(DRUM_CH, 7, Math.round(row.vel));
+      engine.synth.noteOn(DRUM_CH, row.note, row.vel);
+      setTimeout(() => { try { engine.synth.noteOff(DRUM_CH, row.note); } catch(e) {} }, noteDurMs);
     }, msDelay);
 
     // Visual flash
@@ -6842,12 +6834,7 @@ function seqScheduleStep(stepIdx, time) {
     setTimeout(() => {
       const rowEl = document.getElementById('seqRow' + rowId);
       if (!rowEl) return;
-      const stepEl = rowEl.querySelectorAll('.seq-step')[stepIdx];
-      if (stepEl) {
-        stepEl.classList.add('playing');
-        setTimeout(() => stepEl.classList.remove('playing'), 120);
-      }
-    }, msDelay);
+      const stepEl = rowEl.querySelectorAll('.seq-step')[stepIdx];}, msDelay);
   });
 }
 
