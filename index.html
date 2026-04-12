@@ -45,7 +45,7 @@ body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monosp
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background-image:linear-gradient(rgba(0,229,255,.025) 1px,transparent 1px),
   linear-gradient(90deg,rgba(0,229,255,.025) 1px,transparent 1px);background-size:48px 48px}
-.container{position:relative;z-index:1;width:100%;max-width:960px;padding:14px 14px 28px;
+.container{position:relative;z-index:1;width:100%;max-width:960px;min-width:0;padding:14px 14px 28px;box-sizing:border-box;
   display:flex;flex-direction:column;gap:14px}
 .header{text-align:center;padding:18px 0 4px;position:relative}
 .header h1{font-family:'Orbitron',monospace,sans-serif;font-weight:900;
@@ -127,16 +127,20 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .ps label{font-size:.62rem;letter-spacing:.2em;color:var(--accent);text-transform:uppercase}
 select{background:#07070f;border:1px solid var(--border);color:var(--textbright);
   font-family:'Share Tech Mono',monospace,Courier;font-size:.78rem;padding:7px 10px;
-  border-radius:6px;width:100%;outline:none;cursor:pointer;transition:border-color .2s}
+  border-radius:6px;width:100%;min-width:0;outline:none;cursor:pointer;transition:border-color .2s}
 select:hover,select:focus{border-color:var(--accent);box-shadow:var(--glow)}
 select:disabled{opacity:.7;cursor:default}
-input[type=range]{-webkit-appearance:none;height:6px;width:100%;padding:0;
+input[type=range]{-webkit-appearance:none;appearance:none;height:6px;width:100%;padding:0;
   background:linear-gradient(to right,var(--accent) var(--val,75%),var(--border) var(--val,75%));
   border:none;border-radius:3px;outline:none;cursor:pointer}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;
   background:var(--accent);border-radius:50%;box-shadow:var(--glow);cursor:pointer}
 input[type=range]::-moz-range-thumb{width:15px;height:15px;background:var(--accent);
   border-radius:50%;box-shadow:var(--glow);cursor:pointer;border:none}
+input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:3px}
+/* Seq velocity slider — Firefox braucht explizite Breite nicht, flex:1 reicht */
+.seq-row-vel::-moz-range-thumb{width:12px;height:12px;background:var(--accent2);border:none}
+.seq-row-vel::-moz-range-track{height:4px;border-radius:2px}
 .octave-ctrl{display:flex;align-items:center;gap:8px}
 .oct-btn{width:30px;height:30px;background:#07070f;border:1px solid var(--border);
   color:var(--accent);font-size:1.1rem;border-radius:6px;cursor:pointer;
@@ -301,6 +305,8 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;background:var(--acce
   letter-spacing:.04em;transition:all .15s}
 #panicBtn:hover{background:#ff3a3a;color:#fff;box-shadow:0 0 12px #ff3a3a88}
 #panicBtn:active{transform:scale(.96)}
+#panicNavBtn:hover{background:#ff3a3a !important;color:#fff !important;box-shadow:0 0 12px #ff3a3a88}
+#panicNavBtn:active{transform:scale(.96)}
 .layer-list{display:flex;flex-direction:column;gap:18px;padding-top:6px}
 .reg-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 16px 14px}
 .reg-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
@@ -312,6 +318,7 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;background:var(--acce
 .reg-btn.filled{border-color:var(--rc);box-shadow:0 0 14px var(--rc), 0 0 4px var(--rc) inset;background:color-mix(in srgb, var(--rc) 18%, #0a0e18)}
 .reg-btn.active-load{transform:scale(.92)}
 .reg-btn.saving{animation:reg-save-pulse .15s 3}
+.reg-btn.reg-current{outline:3px solid #fff4;outline-offset:3px}
 @keyframes reg-save-pulse{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
 .reg-num{font-size:.65rem;font-family:'Share Tech Mono',monospace;color:var(--dim);font-weight:700;pointer-events:none}
 .reg-btn.filled .reg-num{color:var(--rc)}
@@ -642,16 +649,20 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;background:var(--acce
 .seq-row.seq-row-muted{opacity:.4}
 .seq-row:hover{border-color:var(--dim)}
 
-/* Top bar: color + preset + note + vel + mute + del */
-.seq-row-top{display:flex;align-items:center;gap:8px;padding:8px 10px 6px;border-bottom:1px solid rgba(255,255,255,.04)}
+/* Zone 1: SF2 + Preset */
+.seq-row-top{display:flex;align-items:center;gap:6px;padding:7px 10px 5px;border-bottom:1px solid rgba(255,255,255,.04);flex-wrap:wrap}
 .seq-row-color{width:9px;height:9px;border-radius:50%;flex-shrink:0;box-shadow:0 0 6px currentColor}
 .seq-row-preset{flex:1;min-width:0}
+
+/* Zone 2: Note + Velocity + Mute + Del — above the steps */
+.seq-row-controls{display:flex;align-items:center;gap:6px;padding:5px 10px 5px;border-bottom:1px solid rgba(255,255,255,.04);flex-wrap:wrap}
 .seq-row-note{background:#07070f;border:1px solid var(--border);color:var(--accent3);
   font-family:'Share Tech Mono',monospace;font-size:.62rem;padding:4px 6px;
-  border-radius:5px;outline:none;cursor:pointer;width:155px;flex-shrink:0}
-.seq-row-vel-wrap{display:flex;align-items:center;gap:5px;flex-shrink:0}
-.seq-row-vel-lbl{font-size:.52rem;color:var(--text);opacity:.4;letter-spacing:.1em}
-.seq-row-vel{-webkit-appearance:none;height:4px;width:60px;
+  border-radius:5px;outline:none;cursor:pointer;max-width:140px;flex:1 1 80px;min-width:60px}
+.seq-row-vel-wrap{display:flex;align-items:center;gap:5px;flex:1 1 100px;min-width:80px}
+.seq-row-vel-lbl{font-size:.52rem;color:var(--text);opacity:.4;letter-spacing:.1em;white-space:nowrap}
+.seq-row-vel-val{font-size:.52rem;color:var(--accent2);font-family:'Share Tech Mono',monospace;min-width:24px;text-align:right}
+.seq-row-vel{-webkit-appearance:none;height:4px;flex:1;
   background:linear-gradient(to right,var(--accent2) 80%,var(--border) 80%);
   border:none;border-radius:2px;outline:none;cursor:pointer}
 .seq-row-vel::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:var(--accent2);border-radius:50%;cursor:pointer}
@@ -665,7 +676,7 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;background:var(--acce
   display:flex;align-items:center;justify-content:center;transition:all .12s}
 .seq-row-del:hover{border-color:var(--accent2)}
 
-/* Step grid row */
+/* Zone 3: Step grid */
 .seq-row-bottom{padding:8px 10px 9px;overflow-x:auto}
 .seq-steps{display:flex;gap:4px;align-items:center}
 .seq-step{width:30px;height:36px;border-radius:5px;border:1px solid var(--border);
@@ -966,12 +977,13 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;background:var(--acce
     <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('drumPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🥁</span><span class="jnav-lbl">Drums</span></button>
     <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('seqPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">⏏</span><span class="jnav-lbl">Seq</span></button>
     <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('pdfPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🎼</span><span class="jnav-lbl">PDF</span></button>
+    <button id="panicNavBtn" title="Alle Töne sofort stoppen (Leertaste)" style="flex-shrink:0;margin-left:auto;background:#1a0505;border:1.5px solid #ff3a3a;border-radius:8px;color:#ff3a3a;font-family:'Share Tech Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:.08em;padding:7px 13px;cursor:pointer;transition:all .12s;white-space:nowrap;min-height:36px;display:flex;align-items:center;-webkit-tap-highlight-color:transparent">■ PANIC</button>
   </nav>
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble</h1>
-    <div class="sub">Offline · Keine Abhängigkeiten</div>
+    <h1>Ensemble_v40</h1>
+    <div class="sub">by c. kirste &nbsp;·&nbsp; <span id="buildVersion" style="opacity:.7;font-size:.6em;letter-spacing:.15em"></span></div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
 
@@ -1163,6 +1175,16 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;background:var(--acce
       <div class="ps" style="max-width:100px">
         <label>&nbsp;</label>
         <button id="panicBtn" title="Alle Töne sofort stoppen (Leertaste)">■ PANIC</button>
+      </div>
+      <div class="ps" style="max-width:90px">
+        <label id="pitchBendLabel" style="cursor:pointer;letter-spacing:.08em;font-size:.6rem" title="Tippen: Ziel wechseln — PITCH · VEL · MOD · VOL">PITCH</label>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;touch-action:none;user-select:none" id="pitchBendWrap">
+          <div id="pitchBendTrack" style="width:28px;height:80px;background:var(--border);border-radius:14px;position:relative;cursor:ns-resize;border:1px solid var(--dim)">
+            <div id="pitchBendThumb" style="position:absolute;left:50%;transform:translate(-50%,-50%);top:50%;width:22px;height:22px;background:var(--accent);border-radius:50%;box-shadow:var(--glow)"></div>
+            <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:var(--dim);pointer-events:none"></div>
+          </div>
+          <div id="pitchBendVal" style="font-family:'Share Tech Mono',monospace;font-size:.52rem;color:var(--accent);min-width:28px;text-align:center">0</div>
+        </div>
       </div>
       <div class="ps" style="max-width:160px">
         <label>Alle Layer Velocity</label>
@@ -1485,6 +1507,13 @@ console.log = (...args) => {
 
 console.log("Script geladen, SpessaSynth importiert!");
 console.log("CHECKPOINT 1: Modul gestartet");
+
+// Build-Info aus Vite-Injection anzeigen
+try {
+  const bt = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : null;
+  const el = document.getElementById('buildVersion');
+  if (el && bt) el.textContent = bt;
+} catch(e) {}
 
 
 // Always start at top — prevent browser scroll restoration
@@ -2857,7 +2886,11 @@ async function regLoadFromDB() {
     db.close();
     all.forEach(({slot, data}) => { if (slot >= 0 && slot < REG_COUNT) registers[slot] = data; });
   } catch(e) {}
+  // Navigation startet am ersten belegten Slot (nicht zwingend Slot 0)
+  const first = _regFirstFilled();
+  if (first >= 0) regCurrentSlot = first;
   renderRegisters();
+  regNavUpdate();
 }
 
 function regSnapshot() {
@@ -2943,8 +2976,9 @@ function regSave(slot, btnEl) {
   if (!layers.length) return;
   registers[slot] = regSnapshot();
   regSaveToDB(slot);
+  regCurrentSlot = slot;          // Navigation zeigt auf neu belegten Slot
   renderRegisters();
-  // Flash animation
+  regNavUpdate();                  // Label im Nav-Display sofort aktualisieren
   if (btnEl) { btnEl.classList.add('saving'); setTimeout(() => btnEl.classList.remove('saving'), 500); }
 }
 
@@ -3048,16 +3082,41 @@ function regNavUpdate() {
   const name = reg ? reg.map(l => l.presetName?.split(' ')[0] ?? '?').join('+') : 'Leer';
   disp.textContent = `${regCurrentSlot + 1} · ${name}`;
   disp.style.color = reg ? REG_COLORS[regCurrentSlot % REG_COLORS.length] : 'var(--dim)';
+
+  // Aktiven Register-Button hervorheben
+  document.querySelectorAll('.reg-btn').forEach((b, i) => {
+    b.classList.toggle('reg-current', i === regCurrentSlot);
+  });
+}
+
+function _regFirstFilled() {
+  // Erstes belegtes Register finden; -1 wenn keins belegt
+  for (let i = 0; i < REG_COUNT; i++) {
+    if (registers[i]) return i;
+  }
+  return -1;
 }
 
 function regNavPrev() {
-  regCurrentSlot = (regCurrentSlot - 1 + REG_COUNT) % REG_COUNT;
+  // Rückwärts iterieren, dabei nur belegte Slots anspringen
+  let tried = 0;
+  do {
+    regCurrentSlot = (regCurrentSlot - 1 + REG_COUNT) % REG_COUNT;
+    tried++;
+  } while (!registers[regCurrentSlot] && tried < REG_COUNT);
+
   if (registers[regCurrentSlot]) regLoad(regCurrentSlot);
   regNavUpdate();
 }
 
 function regNavNext() {
-  regCurrentSlot = (regCurrentSlot + 1) % REG_COUNT;
+  // Vorwärts iterieren, dabei nur belegte Slots anspringen
+  let tried = 0;
+  do {
+    regCurrentSlot = (regCurrentSlot + 1) % REG_COUNT;
+    tried++;
+  } while (!registers[regCurrentSlot] && tried < REG_COUNT);
+
   if (registers[regCurrentSlot]) regLoad(regCurrentSlot);
   regNavUpdate();
 }
@@ -3691,14 +3750,21 @@ function renderLayers() {
     function rebuildPresets() {
       const sf = engine.soundfonts[layer.sfIdx];
       if (!sf) return;
-      layer.presetIdx = layer.presetIdx < sf.presets.length ? layer.presetIdx : 0;
-      psInput.value = psLabel(sf.presets[layer.presetIdx], layer.presetIdx);
-      presetLabel.textContent = sf.presets[layer.presetIdx]?.name ?? '—';
+      layer.presetIdx = 0;
+      psSearch.value = '';
+      psClear.classList.remove('visible');
+      psInput.value = psLabel(sf.presets[0], 0);
+      presetLabel.textContent = sf.presets[0]?.name ?? '—';
+      // Dropdown sofort mit Presets der neuen SF neu befüllen
+      psRenderDrop('');
+      psDrop.classList.remove('open');
     }
 
     sfSel.addEventListener('change', e => {
       layer.sfIdx = parseInt(e.target.value);
       layer.presetIdx = 0;
+      // Channel zurücksetzen damit neues SF+Preset auf frischem Channel spielt
+      engine.resetChannel(layer.id);
       rebuildPresets();
       engine.stopAll();
     });
@@ -5055,6 +5121,156 @@ function doPanic() {
   setTimeout(() => { btn.style.background = ''; btn.style.color = ''; }, 300);
 }
 document.getElementById('panicBtn').addEventListener('click', doPanic);
+document.getElementById('panicNavBtn')?.addEventListener('click', doPanic);
+
+// ── Pitch Bend / Modulation Strip ────────────────────────────
+// Ziel-Auswahl: Pitch · Velocity · Modulation (CC1) · Volume
+// Label antippen → Ziel wechseln. Pitch+Mod federn zurück, Vel+Vol bleiben.
+(function() {
+  const track   = document.getElementById('pitchBendTrack');
+  const thumb   = document.getElementById('pitchBendThumb');
+  const valLbl  = document.getElementById('pitchBendVal');
+  const modeLbl = document.getElementById('pitchBendLabel');
+  if (!track) return;
+
+  const TARGETS = [
+    { id: 'pitch', label: 'PITCH', color: 'var(--accent)',  spring: true  },
+    { id: 'vel',   label: 'VEL',   color: 'var(--accent3)', spring: false },
+    { id: 'mod',   label: 'MOD',   color: '#ffb830',        spring: true  },
+    { id: 'vol',   label: 'VOL',   color: 'var(--accent2)', spring: false },
+  ];
+  let targetIdx   = 0;
+  let dragging    = false;
+  let startY      = 0;
+  let startPct    = 0.5;
+  let currentPct  = 0.5;
+  let springTimer = null;
+
+  function target() { return TARGETS[targetIdx]; }
+
+  if (modeLbl) {
+    modeLbl.style.cursor = 'pointer';
+    modeLbl.title = 'Tippen: Ziel wechseln  Pitch · Vel · Mod · Vol';
+    modeLbl.addEventListener('click', () => {
+      targetIdx = (targetIdx + 1) % TARGETS.length;
+      applyTheme();
+      if (target().id === 'vel') {
+        currentPct = 0.5; // Mitte = vel 64
+      } else {
+        currentPct = 0.5;
+        sendValue(0.5);
+      }
+      updateVisual(currentPct);
+    });
+  }
+
+  function applyTheme() {
+    const t = target();
+    thumb.style.background  = t.color;
+    thumb.style.boxShadow   = '0 0 10px ' + t.color;
+    track.style.borderColor = t.color + '66';
+    if (modeLbl) { modeLbl.textContent = t.label; modeLbl.style.color = t.color; }
+  }
+
+  function pctToVal(pct) {
+    const t = target();
+    if (t.id === 'pitch') return Math.round((0.5 - pct) * 2 * 8191);
+    if (t.id === 'mod')   return Math.round((1 - pct) * 127);
+    if (t.id === 'vel')   return Math.max(1, Math.round((1 - pct) * 127));
+    if (t.id === 'vol')   return Math.round((1 - pct) * 127);
+    return 0;
+  }
+
+  function updateVisual(pct) {
+    const c = Math.max(0, Math.min(1, pct));
+    thumb.style.top = (c * 100) + '%';
+    const val = pctToVal(c);
+    const t = target();
+    valLbl.textContent = (t.id === 'pitch' && val > 0) ? '+' + val : String(val);
+    valLbl.style.color = (t.spring && Math.abs(val) < 10) ? 'var(--dim)' : t.color;
+  }
+
+  function sendValue(pct) {
+    if (!engine.synth) return;
+    const val = pctToVal(Math.max(0, Math.min(1, pct)));
+    const t   = target();
+    const channels = new Set(engine._channels.values());
+
+    if (t.id === 'pitch') {
+      channels.forEach(ch => { try { engine.synth.pitchWheel(ch, val + 8192); } catch(e) {} });
+    } else if (t.id === 'mod') {
+      channels.forEach(ch => { try { engine.synth.controllerChange(ch, 1, val); } catch(e) {} });
+    } else if (t.id === 'vol') {
+      channels.forEach(ch => { try { engine.synth.controllerChange(ch, 7, val); } catch(e) {} });
+    } else if (t.id === 'vel') {
+      // Velocity-Override: in alle Layer schreiben
+      layers.forEach(l => { l.velOverride = val; l.velMode = 'free'; });
+    }
+  }
+
+  function springBack() {
+    if (!target().spring) return;
+    clearTimeout(springTimer);
+    let pct = currentPct;
+    const step = () => {
+      pct += (0.5 - pct) * 0.25;
+      if (Math.abs(pct - 0.5) < 0.001) pct = 0.5;
+      currentPct = pct;
+      updateVisual(pct);
+      sendValue(pct);
+      if (pct !== 0.5) springTimer = setTimeout(step, 16);
+    };
+    step();
+  }
+
+  function getTrackY(e) {
+    const rect = track.getBoundingClientRect();
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return (clientY - rect.top) / rect.height;
+  }
+
+  function onStart(e) {
+    e.preventDefault();
+    dragging = true;
+    clearTimeout(springTimer);
+    startY   = getTrackY(e);
+    startPct = currentPct;
+    thumb.style.transition = 'none';
+  }
+  function onMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    const dy = getTrackY(e) - startY;
+    currentPct = Math.max(0, Math.min(1, startPct + dy));
+    updateVisual(currentPct);
+    sendValue(currentPct);
+  }
+  function onEnd(e) {
+    if (!dragging) return;
+    dragging = false;
+    thumb.style.transition = '';
+    springBack();
+  }
+
+  track.addEventListener('mousedown',   onStart, { passive: false });
+  window.addEventListener('mousemove',  onMove,  { passive: false });
+  window.addEventListener('mouseup',    onEnd);
+  track.addEventListener('touchstart',  onStart, { passive: false });
+  window.addEventListener('touchmove',  onMove,  { passive: false });
+  window.addEventListener('touchend',   onEnd);
+  window.addEventListener('touchcancel', onEnd);
+
+  const _origDoPanic = doPanic;
+  window.doPanic = function() {
+    _origDoPanic();
+    if (target().spring) {
+      currentPct = 0.5; updateVisual(0.5); clearTimeout(springTimer);
+    }
+  };
+
+  applyTheme();
+  updateVisual(0.5);
+})();
 
 // Global velocity buttons — set all layers at once
 (function() {
@@ -5338,6 +5554,7 @@ function tbonePlayNote() {
 
   engine.ensureAndGetStartT().then(startT => {
     engine.playSync(transposed, layer.id, layer.sfIdx, layer.presetIdx, vel, layer.vol, startT);
+    tbone_applyPitchBend();   // Sofort nach noteOn — Slide-Bruchteil einrechnen
     // Buzz anwenden: Intensität velocity-abhängig skalieren wenn buzzEnabled
     if (layer.buzzEnabled) {
       const threshold = layer.buzzThreshold ?? 127;
@@ -5363,6 +5580,11 @@ function tboneStopNote() {
   if (!layer) return;
   const transposed = tboneCurrentMidi + globalTranspose + (layer.transpose ?? 0);
   engine.stop(transposed, layer.id);
+  // Pitch Bend zurück auf Mitte damit nächste Note sauber startet
+  const channels = [...engine._channels.entries()]
+    .filter(([k]) => k.startsWith(layer.id + '_'))
+    .map(([, ch]) => ch);
+  channels.forEach(ch => { try { engine.synth.pitchWheel(ch, 8192); } catch(e) {} });
   tboneCurrentMidi = null;
 }
 
@@ -5461,7 +5683,32 @@ function tboneSetSlideFromX(clientX) {
   const x         = Math.max(0, Math.min(maxTravel, clientX - rect.left));
   tboneSlidePos   = (x / maxTravel) * (TBONE_POSITIONS - 1);
   tboneUpdateDisplay();
+  tbone_applyPitchBend();      // ← Kontinuierlicher Pitch Bend
   if (tboneBlowing) tbonePlayNote();
+}
+
+// Berechnet den Pitch Bend aus dem Bruchteil der Slide-Position.
+// Jede ganze Position = ein Halbton tiefer. Der Bruchteil dazwischen
+// entspricht einer Verstimmung von 0..–100 Cent (halber Halbton = 4096 PW-Units).
+// Bei exakter ganzer Position → PW zurück auf Mitte (8192).
+function tbone_applyPitchBend() {
+  if (!engine.synth || !tboneLayerId) return;
+  const layer = layers.find(l => l.id === tboneLayerId);
+  if (!layer) return;
+
+  const frac    = tboneSlidePos % 1;          // 0.0–<1.0: Abstand zur nächsten Position
+  // frac=0 → auf Position (kein Bend), frac→1 → fast nächste Position (fast -100 Cent)
+  // MIDI Pitch Bend: 8192=Mitte, 0=-PW_range, 16383=+PW_range
+  // Standard PW-Range = ±2 Halbton → 100 Cent = 8192/2 = 4096 Units
+  const bentUnits = Math.round(frac * 4096);  // 0 = kein Bend, 4096 = -1 Halbton
+  const pw = 8192 - bentUnits;                 // Slide zieht nach unten → negativer Bend
+
+  const channels = [...engine._channels.entries()]
+    .filter(([k]) => k.startsWith(layer.id + '_'))
+    .map(([, ch]) => ch);
+  channels.forEach(ch => {
+    try { engine.synth.pitchWheel(ch, pw); } catch(e) {}
+  });
 }
 
 // Track slide touch independently by touch ID
@@ -6268,16 +6515,19 @@ function seqRenderRows() {
     velWrap.className = 'seq-row-vel-wrap';
     const velLbl = document.createElement('div');
     velLbl.className = 'seq-row-vel-lbl'; velLbl.textContent = 'VEL';
+    const velVal = document.createElement('span');
+    velVal.className = 'seq-row-vel-val'; velVal.textContent = row.vel;
     const velSl = document.createElement('input');
     velSl.type = 'range'; velSl.className = 'seq-row-vel';
     velSl.min = 1; velSl.max = 127; velSl.value = row.vel;
     velSl.style.background = `linear-gradient(to right,${color} ${Math.round(row.vel/127*100)}%,var(--border) ${Math.round(row.vel/127*100)}%)`;
     velSl.addEventListener('input', function() {
       row.vel = parseInt(this.value);
+      velVal.textContent = row.vel;
       const pct = Math.round(row.vel/127*100);
       this.style.background = `linear-gradient(to right,${color} ${pct}%,var(--border) ${pct}%)`;
     });
-    velWrap.appendChild(velLbl); velWrap.appendChild(velSl);
+    velWrap.appendChild(velLbl); velWrap.appendChild(velSl); velWrap.appendChild(velVal);
 
     // Step buttons
     const stepsEl = document.createElement('div');
@@ -6313,16 +6563,20 @@ function seqRenderRows() {
       seqRenderRows();
     });
 
-    // Assemble top bar
+    // Assemble top bar: dot + SF2 selector + preset
     const topBar = document.createElement('div');
     topBar.className = 'seq-row-top';
     topBar.appendChild(dot);
     topBar.appendChild(sfSel);
     topBar.appendChild(psContainer);
-    topBar.appendChild(noteEl);
-    topBar.appendChild(velWrap);
-    topBar.appendChild(muteEl);
-    topBar.appendChild(delEl);
+
+    // Controls bar: note + velocity + mute + delete (above steps)
+    const controlsBar = document.createElement('div');
+    controlsBar.className = 'seq-row-controls';
+    controlsBar.appendChild(noteEl);
+    controlsBar.appendChild(velWrap);
+    controlsBar.appendChild(muteEl);
+    controlsBar.appendChild(delEl);
 
     // Assemble bottom bar (steps)
     const botBar = document.createElement('div');
@@ -6330,6 +6584,7 @@ function seqRenderRows() {
     botBar.appendChild(stepsEl);
 
     rowEl.appendChild(topBar);
+    rowEl.appendChild(controlsBar);
     rowEl.appendChild(botBar);
     container.appendChild(rowEl);
   });
@@ -7928,10 +8183,13 @@ function jamPlayNote(playerName, layerIdx, midi, vel) {
 function jamStopNote(playerName, layerIdx, midi) {
   const player = jamPlayers.get(playerName);
   if (!player || !engine.synth) return;
-  const ch = 12 + (layerIdx % 4);
+  // Channel-Berechnung identisch zu jamPlayNote
+  const playerNames = [...jamPlayers.keys()];
+  const playerIdx = playerNames.indexOf(playerName);
+  const ch = Math.min(15, 12 + (playerIdx >= 0 ? playerIdx : 0));
   try {
     engine.synth.controllerChange(ch, 64, 0); // Sustain-Pedal aus
-    engine.synth.noteOff(ch, midi, false);
+    engine.synth.noteOff(ch, midi);            // v4: kein drittes Argument
   } catch(e) {}
   const key = `jam_${playerName}_${layerIdx}_${midi}`;
   engine.voices.delete(key);
