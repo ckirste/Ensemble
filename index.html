@@ -982,8 +982,8 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v40</h1>
-    <div class="sub">by c. kirste &nbsp;·&nbsp; <span id="buildVersion" style="opacity:.7;font-size:.6em;letter-spacing:.15em"></span></div>
+    <h1>Ensemble_v41</h1>
+    <div class="sub">by c. kirste &nbsp;&nbsp; <span id="buildVersion" style="opacity:.7;font-size:.6em;letter-spacing:.15em"></span></div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
 
@@ -2083,7 +2083,7 @@ async ensureCtx() {
           program: p.program    ?? i,
           bank:    p.bankMSB    ?? 0,
           bankLSB: p.bankLSB    ?? 0,
-          isDrum:  p.isAnyDrums ?? false,
+          isDrum:  !!(p.isAnyDrums || p.isGMGSDrum || (p.bankMSB === 128)),
           zones:   [],
         }));
         // Ressourcen freigeben
@@ -2113,7 +2113,7 @@ async ensureCtx() {
             program: p.program    ?? i,
             bank:    p.bankMSB    ?? 0,
             bankLSB: p.bankLSB    ?? 0,
-            isDrum:  p.isAnyDrums ?? false,
+            isDrum:  !!(p.isAnyDrums || p.isGMGSDrum || (p.bankMSB === 128)),
             zones:   [],
           }));
         console.log(`Diff-Fallback: ${parsedPresets.length} Presets`);
@@ -2160,7 +2160,7 @@ async ensureCtx() {
         program: p.program    ?? i,
         bank:    p.bankMSB    ?? 0,
         bankLSB: p.bankLSB    ?? 0,
-        isDrum:  p.isAnyDrums ?? false,
+        isDrum:  !!(p.isAnyDrums || p.isGMGSDrum || (p.bankMSB === 128)),
         zones:   [],
       }));
       // Sortierung: Bank 0 (GM-Melodie) zuerst nach Program,
@@ -2168,8 +2168,8 @@ async ensureCtx() {
       list.sort((a, b) => {
         const aGM   = a.bank === 0 && !a.isDrum;
         const bGM   = b.bank === 0 && !b.isDrum;
-        const aDrum = a.isDrum || a.bank === 128;
-        const bDrum = b.isDrum || b.bank === 128;
+        const aDrum = !!(a.isDrum || a.isGMGSDrum);
+        const bDrum = !!(b.isDrum || b.isGMGSDrum);
         if (aGM   && !bGM)   return -1;  // Bank-0 immer zuerst
         if (!aGM  && bGM)    return  1;
         if (aDrum && !bDrum) return -1;  // Drums vor Variationen
@@ -2194,14 +2194,14 @@ async ensureCtx() {
         program: p.program    ?? i,
         bank:    p.bankMSB    ?? 0,
         bankLSB: p.bankLSB    ?? 0,
-        isDrum:  p.isAnyDrums ?? false,
+        isDrum:  !!(p.isAnyDrums || p.isGMGSDrum || (p.bankMSB === 128)),
         zones:   [],
       }));
       list.sort((a, b) => {
         const aGM   = a.bank === 0 && !a.isDrum;
         const bGM   = b.bank === 0 && !b.isDrum;
-        const aDrum = a.isDrum || a.bank === 128;
-        const bDrum = b.isDrum || b.bank === 128;
+        const aDrum = !!(a.isDrum || a.isGMGSDrum);
+        const bDrum = !!(b.isDrum || b.isGMGSDrum);
         if (aGM   && !bGM)   return -1;
         if (!aGM  && bGM)    return  1;
         if (aDrum && !bDrum) return -1;
@@ -5438,9 +5438,7 @@ document.getElementById('drumHeader').addEventListener('click', e => {
 function drumFindPreset(sfIdx) {
   const sf = engine.soundfonts[sfIdx];
   if (!sf) return 0;
-  // v4: isDrum-Flag direkt auswerten, Fallback auf bank===128 oder Name
-  let p = sf.presets.find(p => p.isDrum);
-  if (!p) p = sf.presets.find(p => p.bank === 128);
+  let p = sf.presets.find(p => p.isDrum || p.isGMGSDrum);
   if (!p) p = sf.presets.find(p => /drum|kit|perc/i.test(p.name));
   if (!p) p = sf.presets[0];
   return sf.presets.indexOf(p);
@@ -6697,7 +6695,7 @@ function buildSeqPresetWidget(container, row, color) {
 
   let filtered = [], navIdx = -1;
 
-  function isDrum(p) { return p.isDrum || p.bank === 128; }
+  function isDrum(p) { return p.isDrum || p.isGMGSDrum; }
 
   function label(p) {
     return String(p.program).padStart(3,'0') + ' – ' + p.name;
@@ -6785,7 +6783,7 @@ function seqAddRow() {
   const note = defaults[seq.rows.length % defaults.length];
   // Default to first drum preset (bank 128), else 0
   const sf = engine.soundfonts[0];
-  const drumIdx = sf ? sf.presets.findIndex(p => p.isDrum || p.bank === 128) : -1;
+  const drumIdx = sf ? sf.presets.findIndex(p => p.isDrum || p.isGMGSDrum) : -1;
   seq.rows.push({
     id: seq.nextRowId++,
     sfIdx: 0,
@@ -6818,17 +6816,22 @@ function seqScheduleStep(stepIdx, time) {
       if (!seq.running) return;
       // Drum-Presets (bank 128) MÜSSEN auf Channel 9 gespielt werden –
       // SpessaSynth behandelt nur CH9 als Percussion-Channel (GM-Standard).
-      const isDrum = (p.isDrum || p.bank === 128);
+      const isDrum = (p.isDrum || p.isGMGSDrum);
       const playCh = isDrum ? 9 : SEQ_CH;
-      // v4: priorityOrder setzen damit die richtige SF gewählt wird,
-      // dann Bank + Program — identisch zu engine._setProgramOnChannel
+      // v4: priorityOrder setzen damit die richtige SF gewählt wird
       if (sf.sfId && engine.synth.soundBankManager) {
         const cur = [...engine.synth.soundBankManager.priorityOrder];
         engine.synth.soundBankManager.priorityOrder = [sf.sfId, ...cur.filter(id => id !== sf.sfId)];
       }
-      engine.synth.controllerChange(playCh, 0,  p.bank   ?? 0);
-      engine.synth.controllerChange(playCh, 32, p.bankLSB ?? 0);
-      engine.synth.programChange(playCh, p.program);
+      if (isDrum) {
+        // Drums: kein Bank-Select — CH9 ist immer Percussion in GM.
+        // programChange wählt das Drum-Kit (Standard-Kit = 0).
+        engine.synth.programChange(playCh, p.program);
+      } else {
+        engine.synth.controllerChange(playCh, 0,  p.bank   ?? 0);
+        engine.synth.controllerChange(playCh, 32, p.bankLSB ?? 0);
+        engine.synth.programChange(playCh, p.program);
+      }
       engine.synth.controllerChange(playCh, 7, Math.round(row.vel));
       engine.synth.noteOn(playCh, row.note, row.vel);
       setTimeout(() => { try { engine.synth.noteOff(playCh, row.note); } catch(e) {} }, noteDurMs);
@@ -7616,7 +7619,7 @@ document.getElementById('recMidiLoadInput').addEventListener('change', e=>{
           if(sf) {
             if(isDrum) {
               // Find drum preset (bank 128)
-              const di = sf.presets.findIndex(p => p.isDrum || p.bank === 128);
+              const di = sf.presets.findIndex(p => p.isDrum || p.isGMGSDrum);
               if(di >= 0) presetIdx = di;
             } else {
               // Match by program change if available
