@@ -225,6 +225,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 .kb-wrap2-landscape .keyboard{height:100% !important}
 .kb-wrap2-landscape .key.white{height:100% !important}
 .kb-wrap2-landscape .key.black{height:63% !important}
+.kb-wrap2-landscape #pitchBendSidebar2{height:100%;flex-shrink:0}
 .kb-header{font-size:.62rem;letter-spacing:.2em;color:var(--accent);text-transform:uppercase;
   margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
 .kb-nav{display:flex;gap:6px}
@@ -1127,8 +1128,18 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
         <button class="kb-nav-btn" id="kbRight" title="Nach rechts">▶</button>
       </div>
     </div>
-    <div class="kb-scroll" id="kbScroll">
-      <div class="keyboard" id="keyboard"></div>
+    <div style="display:flex;flex-direction:row;flex:1;min-height:0;overflow:hidden">
+      <div class="kb-scroll" id="kbScroll" style="flex:1">
+        <div class="keyboard" id="keyboard"></div>
+      </div>
+      <div id="pitchBendSidebar" style="width:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-left:1px solid var(--border);padding:4px 2px;touch-action:none;user-select:none;background:var(--panel);flex-shrink:0">
+          <label id="pitchBendLabel" style="cursor:pointer;letter-spacing:.06em;font-size:.48rem;color:var(--accent);text-transform:uppercase;writing-mode:horizontal-tb;text-align:center;line-height:1.2" title="Tippen: Ziel wechseln — PITCH · VEL · MOD · VOL">PITCH</label>
+          <div id="pitchBendTrack" style="width:26px;flex:1;min-height:60px;background:var(--border);border-radius:13px;position:relative;cursor:ns-resize;border:1px solid var(--dim)">
+            <div id="pitchBendThumb" style="position:absolute;left:50%;transform:translate(-50%,-50%);top:50%;width:20px;height:20px;background:var(--accent);border-radius:50%;box-shadow:var(--glow)"></div>
+            <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:var(--dim);pointer-events:none"></div>
+          </div>
+          <div id="pitchBendVal" style="font-family:'Share Tech Mono',monospace;font-size:.48rem;color:var(--accent);text-align:center">0</div>
+        </div>
     </div>
     </div>
   
@@ -1176,16 +1187,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
         <label>&nbsp;</label>
         <button id="panicBtn" title="Alle Töne sofort stoppen (Leertaste)">■ PANIC</button>
       </div>
-      <div class="ps" style="max-width:90px">
-        <label id="pitchBendLabel" style="cursor:pointer;letter-spacing:.08em;font-size:.6rem" title="Tippen: Ziel wechseln — PITCH · VEL · MOD · VOL">PITCH</label>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;touch-action:none;user-select:none" id="pitchBendWrap">
-          <div id="pitchBendTrack" style="width:28px;height:80px;background:var(--border);border-radius:14px;position:relative;cursor:ns-resize;border:1px solid var(--dim)">
-            <div id="pitchBendThumb" style="position:absolute;left:50%;transform:translate(-50%,-50%);top:50%;width:22px;height:22px;background:var(--accent);border-radius:50%;box-shadow:var(--glow)"></div>
-            <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:var(--dim);pointer-events:none"></div>
-          </div>
-          <div id="pitchBendVal" style="font-family:'Share Tech Mono',monospace;font-size:.52rem;color:var(--accent);min-width:28px;text-align:center">0</div>
-        </div>
-      </div>
+
       <div class="ps" style="max-width:160px">
         <label>Alle Layer Velocity</label>
         <div style="display:flex;gap:4px">
@@ -1290,13 +1292,52 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
         <button class="kb-nav-btn" id="kbFullscreen2" title="Manual-Modus: Klaviatur füllt Display" style="font-size:.65rem;width:auto;padding:0 8px;white-space:nowrap">⛶ Manual</button>
       </div>
     </div>
-    <div class="kb-scroll" id="kbScroll2">
-      <div class="keyboard" id="keyboard2"></div>
+    <div style="display:flex;flex-direction:row;flex:1;min-height:0;overflow:hidden">
+      <div class="kb-scroll" id="kbScroll2" style="flex:1">
+        <div class="keyboard" id="keyboard2"></div>
+      </div>
+      <div id="pitchBendSidebar2" style="width:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-left:1px solid var(--border);padding:4px 2px;touch-action:none;user-select:none;background:var(--panel);flex-shrink:0">
+          <label id="pitchBendLabel2" style="cursor:pointer;letter-spacing:.06em;font-size:.48rem;color:var(--accent);text-transform:uppercase;writing-mode:horizontal-tb;text-align:center;line-height:1.2" title="Tippen: Ziel wechseln — PITCH · VEL · MOD · VOL">PITCH</label>
+          <div id="pitchBendTrack2" style="width:26px;flex:1;min-height:60px;background:var(--border);border-radius:13px;position:relative;cursor:ns-resize;border:1px solid var(--dim)">
+            <div id="pitchBendThumb2" style="position:absolute;left:50%;transform:translate(-50%,-50%);top:50%;width:20px;height:20px;background:var(--accent);border-radius:50%;box-shadow:var(--glow)"></div>
+            <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:var(--dim);pointer-events:none"></div>
+          </div>
+          <div id="pitchBendVal2" style="font-family:'Share Tech Mono',monospace;font-size:.48rem;color:var(--accent);text-align:center">0</div>
+        </div>
     </div>
   </div>
 
   <!-- Beat Sequencer -->
   <!-- Trombone Panel -->
+  <!-- Beat Sequencer -->
+    <div class="seq-panel" id="seqPanel">
+      <div class="seq-header">
+        <div class="seq-title">🥁 Beat Sequencer</div>
+        <div class="seq-header-controls">
+          <button class="seq-btn seq-start-btn" id="seqStartBtn">▶ START</button>
+          <button class="seq-btn" id="seqAddRowBtn" disabled>＋ Zeile</button>
+          <div class="seq-sep"></div>
+          <label class="seq-lbl">Steps</label>
+          <select class="seq-sel" id="seqStepsSel">
+            <option value="8">8</option>
+            <option value="16" selected>16</option>
+            <option value="32">32</option>
+          </select>
+          <label class="seq-lbl">Swing</label>
+          <input type="range" class="seq-swing-sl" id="seqSwingSl" min="0" max="100" value="0">
+          <span class="seq-swing-val" id="seqSwingVal">0%</span>
+          <div class="seq-sep"></div>
+          <label class="seq-lbl" title="BPM mit Metronom synchronisieren">
+            <input type="checkbox" id="seqSyncChk" checked> Sync
+          </label>
+          <button class="seq-btn seq-clear-all" id="seqClearAllBtn">✕ Alles</button>
+        </div>
+      </div>
+      <div class="seq-step-indicator" id="seqStepIndicator"></div>
+      <div class="seq-rows" id="seqRows">
+        <div class="seq-empty" id="seqEmpty">SF2 laden und „＋ Zeile" klicken</div>
+      </div>
+    </div>
   <div class="tbone-panel" id="tbonePanel">
     <div class="tbone-header" id="tboneHeader">
       <span class="tbone-title">🎺 Zugposaune</span>
@@ -1357,35 +1398,6 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
     </div>
   </div>
 
-  <!-- Beat Sequencer -->
-    <div class="seq-panel" id="seqPanel">
-      <div class="seq-header">
-        <div class="seq-title">🥁 Beat Sequencer</div>
-        <div class="seq-header-controls">
-          <button class="seq-btn seq-start-btn" id="seqStartBtn">▶ START</button>
-          <button class="seq-btn" id="seqAddRowBtn" disabled>＋ Zeile</button>
-          <div class="seq-sep"></div>
-          <label class="seq-lbl">Steps</label>
-          <select class="seq-sel" id="seqStepsSel">
-            <option value="8">8</option>
-            <option value="16" selected>16</option>
-            <option value="32">32</option>
-          </select>
-          <label class="seq-lbl">Swing</label>
-          <input type="range" class="seq-swing-sl" id="seqSwingSl" min="0" max="100" value="0">
-          <span class="seq-swing-val" id="seqSwingVal">0%</span>
-          <div class="seq-sep"></div>
-          <label class="seq-lbl" title="BPM mit Metronom synchronisieren">
-            <input type="checkbox" id="seqSyncChk" checked> Sync
-          </label>
-          <button class="seq-btn seq-clear-all" id="seqClearAllBtn">✕ Alles</button>
-        </div>
-      </div>
-      <div class="seq-step-indicator" id="seqStepIndicator"></div>
-      <div class="seq-rows" id="seqRows">
-        <div class="seq-empty" id="seqEmpty">SF2 laden und „＋ Zeile" klicken</div>
-      </div>
-    </div>
   
   <!-- PDF Panel -->
     <div class="pdf-panel" id="pdfPanel">
@@ -5207,23 +5219,30 @@ document.getElementById('panicBtn').addEventListener('click', doPanic);
 document.getElementById('panicNavBtn')?.addEventListener('click', doPanic);
 
 // ── Pitch Bend / Modulation Strip ────────────────────────────
-// Ziel-Auswahl: Pitch · Velocity · Modulation (CC1) · Volume
-// Label antippen → Ziel wechseln. Pitch+Mod federn zurück, Vel+Vol bleiben.
+// Sitzt neben beiden Klaviaturen. Beide Sidebars (kb1 + kb2) teilen
+// denselben State und steuern dieselben Channels.
 (function() {
-  const track   = document.getElementById('pitchBendTrack');
-  const thumb   = document.getElementById('pitchBendThumb');
-  const valLbl  = document.getElementById('pitchBendVal');
-  const modeLbl = document.getElementById('pitchBendLabel');
-  if (!track) return;
+  // Alle Element-Paare (primary = kb1, secondary = kb2)
+  const PAIRS = [
+    { track: 'pitchBendTrack', thumb: 'pitchBendThumb', val: 'pitchBendVal', lbl: 'pitchBendLabel' },
+    { track: 'pitchBendTrack2',thumb: 'pitchBendThumb2',val: 'pitchBendVal2',lbl: 'pitchBendLabel2' },
+  ].map(ids => ({
+    track:  document.getElementById(ids.track),
+    thumb:  document.getElementById(ids.thumb),
+    valLbl: document.getElementById(ids.val),
+    modeLbl:document.getElementById(ids.lbl),
+  })).filter(p => p.track);
+
+  if (!PAIRS.length) return;
 
   const TARGETS = [
-    { id: 'pitch', label: 'PITCH', color: 'var(--accent)',  spring: true  },
-    { id: 'vel',   label: 'VEL',   color: 'var(--accent3)', spring: false },
-    { id: 'mod',   label: 'MOD',   color: '#ffb830',        spring: true  },
-    { id: 'vol',   label: 'VOL',   color: 'var(--accent2)', spring: false },
+    { id:'pitch', label:'PITCH', color:'var(--accent)',  spring:true  },
+    { id:'vel',   label:'VEL',   color:'var(--accent3)', spring:false },
+    { id:'mod',   label:'MOD',   color:'#ffb830',        spring:true  },
+    { id:'vol',   label:'VOL',   color:'var(--accent2)', spring:false },
   ];
   let targetIdx   = 0;
-  let dragging    = false;
+  let dragging    = null; // which track is being dragged
   let startY      = 0;
   let startPct    = 0.5;
   let currentPct  = 0.5;
@@ -5231,64 +5250,61 @@ document.getElementById('panicNavBtn')?.addEventListener('click', doPanic);
 
   function target() { return TARGETS[targetIdx]; }
 
-  if (modeLbl) {
-    modeLbl.style.cursor = 'pointer';
-    modeLbl.title = 'Tippen: Ziel wechseln  Pitch · Vel · Mod · Vol';
-    modeLbl.addEventListener('click', () => {
-      targetIdx = (targetIdx + 1) % TARGETS.length;
-      applyTheme();
-      if (target().id === 'vel') {
-        currentPct = 0.5; // Mitte = vel 64
-      } else {
-        currentPct = 0.5;
-        sendValue(0.5);
-      }
-      updateVisual(currentPct);
-    });
-  }
+  PAIRS.forEach(p => {
+    if (p.modeLbl) {
+      p.modeLbl.style.cursor = 'pointer';
+      p.modeLbl.title = 'Tippen: Ziel wechseln  PITCH · Vel · MOD · VOL';
+      p.modeLbl.addEventListener('click', () => {
+        targetIdx = (targetIdx + 1) % TARGETS.length;
+        applyTheme();
+        if (!target().spring) { sendValue(currentPct); }
+        else { currentPct = 0.5; updateVisual(0.5); sendValue(0.5); }
+      });
+    }
+  });
 
   function applyTheme() {
     const t = target();
-    thumb.style.background  = t.color;
-    thumb.style.boxShadow   = '0 0 10px ' + t.color;
-    track.style.borderColor = t.color + '66';
-    if (modeLbl) { modeLbl.textContent = t.label; modeLbl.style.color = t.color; }
+    PAIRS.forEach(p => {
+      p.thumb.style.background  = t.color;
+      p.thumb.style.boxShadow   = '0 0 10px ' + t.color;
+      p.track.style.borderColor = t.color + '66';
+      if (p.modeLbl) { p.modeLbl.textContent = t.label; p.modeLbl.style.color = t.color; }
+    });
   }
 
   function pctToVal(pct) {
     const t = target();
-    if (t.id === 'pitch') return Math.round((0.5 - pct) * 2 * 8191);
-    if (t.id === 'mod')   return Math.round((1 - pct) * 127);
-    if (t.id === 'vel')   return Math.max(1, Math.round((1 - pct) * 127));
-    if (t.id === 'vol')   return Math.round((1 - pct) * 127);
+    if (t.id==='pitch') return Math.round((0.5-pct)*2*8191);
+    if (t.id==='mod')   return Math.round((1-pct)*127);
+    if (t.id==='vel')   return Math.max(1,Math.round((1-pct)*127));
+    if (t.id==='vol')   return Math.round((1-pct)*127);
     return 0;
   }
 
   function updateVisual(pct) {
-    const c = Math.max(0, Math.min(1, pct));
-    thumb.style.top = (c * 100) + '%';
+    const c = Math.max(0,Math.min(1,pct));
+    PAIRS.forEach(p => {
+      p.thumb.style.top = (c*100) + '%';
+    });
     const val = pctToVal(c);
     const t = target();
-    valLbl.textContent = (t.id === 'pitch' && val > 0) ? '+' + val : String(val);
-    valLbl.style.color = (t.spring && Math.abs(val) < 10) ? 'var(--dim)' : t.color;
+    const txt = (t.id==='pitch' && val>0) ? '+'+val : String(val);
+    PAIRS.forEach(p => {
+      p.valLbl.textContent = txt;
+      p.valLbl.style.color = (t.spring && Math.abs(val)<10) ? 'var(--dim)' : t.color;
+    });
   }
 
   function sendValue(pct) {
     if (!engine.synth) return;
-    const val = pctToVal(Math.max(0, Math.min(1, pct)));
-    const t   = target();
+    const val = pctToVal(Math.max(0,Math.min(1,pct)));
+    const t = target();
     const channels = new Set(engine._channels.values());
-
-    if (t.id === 'pitch') {
-      channels.forEach(ch => { try { engine.synth.pitchWheel(ch, val + 8192); } catch(e) {} });
-    } else if (t.id === 'mod') {
-      channels.forEach(ch => { try { engine.synth.controllerChange(ch, 1, val); } catch(e) {} });
-    } else if (t.id === 'vol') {
-      channels.forEach(ch => { try { engine.synth.controllerChange(ch, 7, val); } catch(e) {} });
-    } else if (t.id === 'vel') {
-      // Velocity-Override: in alle Layer schreiben
-      layers.forEach(l => { l.velOverride = val; l.velMode = 'free'; });
-    }
+    if (t.id==='pitch')      channels.forEach(ch=>{ try{engine.synth.pitchWheel(ch,val+8192);}catch(e){} });
+    else if (t.id==='mod')   channels.forEach(ch=>{ try{engine.synth.controllerChange(ch,1,val);}catch(e){} });
+    else if (t.id==='vol')   channels.forEach(ch=>{ try{engine.synth.controllerChange(ch,7,val);}catch(e){} });
+    else if (t.id==='vel')   layers.forEach(l=>{ l.velOverride=val; l.velMode='free'; });
   }
 
   function springBack() {
@@ -5296,59 +5312,57 @@ document.getElementById('panicNavBtn')?.addEventListener('click', doPanic);
     clearTimeout(springTimer);
     let pct = currentPct;
     const step = () => {
-      pct += (0.5 - pct) * 0.25;
-      if (Math.abs(pct - 0.5) < 0.001) pct = 0.5;
-      currentPct = pct;
-      updateVisual(pct);
-      sendValue(pct);
-      if (pct !== 0.5) springTimer = setTimeout(step, 16);
+      pct += (0.5-pct)*0.25;
+      if (Math.abs(pct-0.5)<0.001) pct=0.5;
+      currentPct=pct; updateVisual(pct); sendValue(pct);
+      if (pct!==0.5) springTimer=setTimeout(step,16);
     };
     step();
   }
 
-  function getTrackY(e) {
-    const rect = track.getBoundingClientRect();
+  function getTrackY(trackEl, e) {
+    const rect = trackEl.getBoundingClientRect();
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     return (clientY - rect.top) / rect.height;
   }
 
-  function onStart(e) {
+  function onStart(trackEl, e) {
     e.preventDefault();
-    dragging = true;
+    dragging = trackEl;
     clearTimeout(springTimer);
-    startY   = getTrackY(e);
+    startY   = getTrackY(trackEl, e);
     startPct = currentPct;
-    thumb.style.transition = 'none';
+    PAIRS.forEach(p => p.thumb.style.transition = 'none');
   }
   function onMove(e) {
     if (!dragging) return;
     e.preventDefault();
-    const dy = getTrackY(e) - startY;
-    currentPct = Math.max(0, Math.min(1, startPct + dy));
+    const dy = getTrackY(dragging, e) - startY;
+    currentPct = Math.max(0,Math.min(1,startPct+dy));
     updateVisual(currentPct);
     sendValue(currentPct);
   }
   function onEnd(e) {
     if (!dragging) return;
-    dragging = false;
-    thumb.style.transition = '';
+    dragging = null;
+    PAIRS.forEach(p => p.thumb.style.transition = '');
     springBack();
   }
 
-  track.addEventListener('mousedown',   onStart, { passive: false });
-  window.addEventListener('mousemove',  onMove,  { passive: false });
-  window.addEventListener('mouseup',    onEnd);
-  track.addEventListener('touchstart',  onStart, { passive: false });
-  window.addEventListener('touchmove',  onMove,  { passive: false });
-  window.addEventListener('touchend',   onEnd);
+  PAIRS.forEach(p => {
+    p.track.addEventListener('mousedown',  e => onStart(p.track, e), {passive:false});
+    p.track.addEventListener('touchstart', e => onStart(p.track, e), {passive:false});
+  });
+  window.addEventListener('mousemove',   onMove,  {passive:false});
+  window.addEventListener('touchmove',   onMove,  {passive:false});
+  window.addEventListener('mouseup',     onEnd);
+  window.addEventListener('touchend',    onEnd);
   window.addEventListener('touchcancel', onEnd);
 
   const _origDoPanic = doPanic;
   window.doPanic = function() {
     _origDoPanic();
-    if (target().spring) {
-      currentPct = 0.5; updateVisual(0.5); clearTimeout(springTimer);
-    }
+    if (target().spring) { currentPct=0.5; updateVisual(0.5); clearTimeout(springTimer); }
   };
 
   applyTheme();
@@ -6706,7 +6720,11 @@ function buildSeqPresetWidget(container, row, color) {
     inp.value = sf ? label(sf.presets[idx]) : '';
     clr.classList.remove('visible'); drop.classList.remove('open');
   }
-  function isDrumPreset(p) { return !!(p.isDrum || p.isGMGSDrum); }
+  function isDrumPreset(p) {
+    // v4: isDrum aus SoundBankLoader, isGMGSDrum aus presetList, bank===128 niemals true
+    // Fallback: Name enthält drum/kit/perc
+    return !!(p.isDrum || p.isGMGSDrum || /drum|kit|perc/i.test(p.name));
+  }
   function renderDrop(q) {
     const sf = engine.soundfonts[row.sfIdx];
     if (!sf) return;
@@ -8026,8 +8044,8 @@ document.getElementById('sessionLoadInput').addEventListener('change', e => {
   // Order matches actual DOM top→bottom order for IntersectionObserver
   const sectionMap = [
     ['ancSF2',    0], ['midiPanel', 1], ['jamPanel',  2], ['ancFX', 3], ['ancLayer', 4], ['ancKeys', 5],
-    ['metroPanel',6], ['recPanel',  7], ['tbonePanel',8],
-    ['drumPanel', 9], ['seqPanel',  10], ['pdfPanel', 11],
+    ['metroPanel',6], ['recPanel',  7], ['seqPanel',  8],
+    ['tbonePanel',9], ['drumPanel', 10], ['pdfPanel', 11],
   ];
   const btns = document.querySelectorAll('.jnav-btn');
   const obs = new IntersectionObserver(entries => {
