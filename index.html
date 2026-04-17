@@ -991,7 +991,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
     <h1>Ensemble_v40</h1>
-    <div class="sub">by c. kirste &nbsp;&nbsp; <span id="buildVersion" style="opacity:.7;font-size:.6em;letter-spacing:.15em"></span></div>
+    <div class="sub">by c. kirste &nbsp;·&nbsp; <span id="buildVersion" style="opacity:.7;font-size:.6em;letter-spacing:.15em"></span></div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
 
@@ -1249,6 +1249,35 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
     </div>
   
   <!-- Recorder Panel -->
+  <!-- Beat Sequencer -->
+    <div class="seq-panel" id="seqPanel">
+      <div class="seq-header">
+        <div class="seq-title">🥁 Beat Sequencer</div>
+        <div class="seq-header-controls">
+          <button class="seq-btn seq-start-btn" id="seqStartBtn">▶ START</button>
+          <button class="seq-btn" id="seqAddRowBtn" disabled>＋ Zeile</button>
+          <div class="seq-sep"></div>
+          <label class="seq-lbl">Steps</label>
+          <select class="seq-sel" id="seqStepsSel">
+            <option value="8">8</option>
+            <option value="16" selected>16</option>
+            <option value="32">32</option>
+          </select>
+          <label class="seq-lbl">Swing</label>
+          <input type="range" class="seq-swing-sl" id="seqSwingSl" min="0" max="100" value="0">
+          <span class="seq-swing-val" id="seqSwingVal">0%</span>
+          <div class="seq-sep"></div>
+          <label class="seq-lbl" title="BPM mit Metronom synchronisieren">
+            <input type="checkbox" id="seqSyncChk" checked> Sync
+          </label>
+          <button class="seq-btn seq-clear-all" id="seqClearAllBtn">✕ Alles</button>
+        </div>
+      </div>
+      <div class="seq-step-indicator" id="seqStepIndicator"></div>
+      <div class="seq-rows" id="seqRows">
+        <div class="seq-empty" id="seqEmpty">SF2 laden und „＋ Zeile" klicken</div>
+      </div>
+    </div>
     <div class="rec-panel" id="recPanel" data-anc="ancRec">
       <div class="rec-header">
         <div class="rec-title">⏺ Aufnahme</div>
@@ -1323,35 +1352,6 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <!-- Beat Sequencer -->
   <!-- Trombone Panel -->
-  <!-- Beat Sequencer -->
-    <div class="seq-panel" id="seqPanel">
-      <div class="seq-header">
-        <div class="seq-title">🥁 Beat Sequencer</div>
-        <div class="seq-header-controls">
-          <button class="seq-btn seq-start-btn" id="seqStartBtn">▶ START</button>
-          <button class="seq-btn" id="seqAddRowBtn" disabled>＋ Zeile</button>
-          <div class="seq-sep"></div>
-          <label class="seq-lbl">Steps</label>
-          <select class="seq-sel" id="seqStepsSel">
-            <option value="8">8</option>
-            <option value="16" selected>16</option>
-            <option value="32">32</option>
-          </select>
-          <label class="seq-lbl">Swing</label>
-          <input type="range" class="seq-swing-sl" id="seqSwingSl" min="0" max="100" value="0">
-          <span class="seq-swing-val" id="seqSwingVal">0%</span>
-          <div class="seq-sep"></div>
-          <label class="seq-lbl" title="BPM mit Metronom synchronisieren">
-            <input type="checkbox" id="seqSyncChk" checked> Sync
-          </label>
-          <button class="seq-btn seq-clear-all" id="seqClearAllBtn">✕ Alles</button>
-        </div>
-      </div>
-      <div class="seq-step-indicator" id="seqStepIndicator"></div>
-      <div class="seq-rows" id="seqRows">
-        <div class="seq-empty" id="seqEmpty">SF2 laden und „＋ Zeile" klicken</div>
-      </div>
-    </div>
   <div class="tbone-panel" id="tbonePanel">
     <div class="tbone-header" id="tboneHeader">
       <span class="tbone-title">🎺 Zugposaune</span>
@@ -8078,7 +8078,7 @@ document.getElementById('sessionLoadInput').addEventListener('change', e => {
   // Order matches actual DOM top→bottom order for IntersectionObserver
   const sectionMap = [
     ['ancSF2',    0], ['midiPanel', 1], ['jamPanel',  2], ['ancFX', 3], ['ancLayer', 4], ['ancKeys', 5],
-    ['metroPanel',6], ['recPanel',  7], ['seqPanel',  8],
+    ['metroPanel',6], ['seqPanel',  7], ['recPanel',  8],
     ['tbonePanel',9], ['drumPanel', 10], ['pdfPanel', 11],
   ];
   const btns = document.querySelectorAll('.jnav-btn');
