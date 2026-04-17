@@ -221,11 +221,11 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
   display:flex;flex-direction:column;touch-action:none}
 .kb-wrap2-landscape .kb-header{padding:6px 12px;border-bottom:1px solid var(--border);
   background:#09090f;flex-shrink:0;display:flex;justify-content:space-between;align-items:center}
-.kb-wrap2-landscape .kb-scroll{flex:1;overflow-x:auto;overflow-y:hidden;min-height:0}
+.kb-wrap2-landscape .kb-scroll{flex:1;overflow-x:auto;overflow-y:hidden;min-height:0;align-self:stretch}
 .kb-wrap2-landscape .keyboard{height:100% !important}
 .kb-wrap2-landscape .key.white{height:100% !important}
 .kb-wrap2-landscape .key.black{height:63% !important}
-.kb-wrap2-landscape #pitchBendSidebar2{height:100%;flex-shrink:0}
+.kb-wrap2-landscape #pitchBendSidebar2{align-self:stretch;flex-shrink:0}
 /* Ausklappbare Leiste am unteren Rand des Manual-Modus */
 .kb-landscape-drawer{flex-shrink:0;background:#0d0d1a;border-top:1px solid var(--border);overflow:hidden;transition:max-height .22s ease;max-height:0}
 .kb-landscape-drawer.open{max-height:120px}
@@ -1329,7 +1329,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
         <button class="kb-drawer-toggle" id="kbDrawerToggleBtn" style="display:none" title="Zugriegel / Layer ein-/ausblenden">▲ Mehr</button>
       </div>
     </div>
-    <div style="display:flex;flex-direction:row;align-items:flex-start">
+    <div style="display:flex;flex-direction:row;align-items:stretch;flex:1;min-height:0">
       <div class="kb-scroll" id="kbScroll2" style="flex:1">
         <div class="keyboard" id="keyboard2"></div>
       </div>
@@ -1982,6 +1982,9 @@ class AudioEngine {
     this._pendingLoad = [];
     this._channels    = new Map(); // layerId_sfIdx_presetIdx → ch
     this._nextCh      = 0;
+    // Per-channel Programm-Cache: ch → "sfId:bank:bankLSB:program"
+    // Verhindert redundante programChange-Messages bei Akkorden (z.B. Full Orchestra)
+    this._chProgKey   = new Map();
     // Per-channel WaveShapers für Saturation/Buzz (ch → {shaper, wetGain})
     this._channelSaturators = new Map();
   }
@@ -2371,6 +2374,13 @@ async ensureCtx() {
     const sf = this.soundfonts[sfIdx];
     if (!sf || !sf.presets[presetIdx]) return;
     const p = sf.presets[presetIdx];
+
+    // Cache-Key: wenn gleicher Preset auf gleichem Channel → nichts tun.
+    // Das verhindert redundante programChange-Aufrufe bei Akkorden (Full Orchestra etc.)
+    const cacheKey = `${sf.sfId}:${p.bank}:${p.bankLSB ?? 0}:${p.program}`;
+    if (this._chProgKey.get(ch) === cacheKey) return;
+    this._chProgKey.set(ch, cacheKey);
+
     try {
       if (sf.sfId && this.synth.soundBankManager) {
         const current = [...this.synth.soundBankManager.priorityOrder];
@@ -2390,9 +2400,12 @@ async ensureCtx() {
 
   // Reset channel when layer changes preset
   resetChannel(layerId) {
-    [...this._channels.keys()]
-      .filter(k => k.startsWith(`${layerId}_`))
-      .forEach(k => this._channels.delete(k));
+    [...this._channels.entries()]
+      .filter(([k]) => k.startsWith(`${layerId}_`))
+      .forEach(([k, ch]) => {
+        this._channels.delete(k);
+        this._chProgKey.delete(ch); // Cache löschen damit neues Preset gesetzt wird
+      });
   }
 
   // ── FX — SpessaSynth has built-in reverb/chorus ───────────────
@@ -6024,17 +6037,6 @@ tboneUpdateDisplay();
   const drawer      = document.getElementById('kbLandscapeDrawer');
   const drawerInner = document.getElementById('kbLandscapeDrawerInner');
   const drawerBtn   = document.getElementById('kbDrawerToggleBtn');
-  let drawerOpen    = false;
-
-  function toggleDrawer() {
-    drawerOpen = !drawerOpen;
-    drawer?.classList.toggle('open', drawerOpen);
-    if (drawerBtn) {
-      drawerBtn.textContent = drawerOpen ? '▼ Weniger' : '▲ Mehr';
-      drawerBtn.classList.toggle('open', drawerOpen);
-    }
-  }
-  if (drawerBtn) drawerBtn.addEventListener('click', toggleDrawer);
 
   function enter() {
     active = true;
@@ -6042,13 +6044,14 @@ tboneUpdateDisplay();
     btn.textContent = '✕ Schließen';
     btn.style.cssText = 'font-size:.65rem;width:auto;padding:0 8px;white-space:nowrap;color:var(--accent2);border-color:var(--accent2)';
     document.body.style.overflow = 'hidden';
-    if (drawerBtn) drawerBtn.style.display = '';
-    // Move drawbar row into drawer for manual mode
+    if (drawerBtn) drawerBtn.style.display = 'none';
+    // Zugriegel in kb-header verschieben (wie vorher)
     if (drawbarRow2 && drawbarRow2.parentNode) {
       drawbarRow2.parentNode.insertBefore(drawbarRowPlaceholder, drawbarRow2);
-      if (drawerInner) {
+      const hdr = wrap.querySelector('.kb-header');
+      if (hdr) {
         drawbarRow2.style.cssText = 'display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;padding:2px 0;flex:1;scrollbar-width:none';
-        drawerInner.appendChild(drawbarRow2);
+        hdr.appendChild(drawbarRow2);
       }
     }
     (async () => {
@@ -6065,11 +6068,7 @@ tboneUpdateDisplay();
     btn.style.cssText = 'font-size:.65rem;width:auto;padding:0 8px;white-space:nowrap';
     document.body.style.overflow = '';
     if (drawerBtn) drawerBtn.style.display = 'none';
-    // Collapse drawer
-    drawerOpen = false;
-    drawer?.classList.remove('open');
-    if (drawerBtn) { drawerBtn.textContent = '▲ Mehr'; drawerBtn.classList.remove('open'); }
-    // Restore drawbar row
+    // Zugriegel zurück
     if (drawbarRow2 && drawbarRowPlaceholder.parentNode) {
       drawbarRow2.style.cssText = '';
       drawbarRowPlaceholder.parentNode.insertBefore(drawbarRow2, drawbarRowPlaceholder);
