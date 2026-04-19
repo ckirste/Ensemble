@@ -2383,7 +2383,12 @@ async ensureCtx() {
     if (!sf || !sf.presets[presetIdx]) return;
     const p = sf.presets[presetIdx];
 
-    const cacheKey = `${sf.sfId}:${p.bank}:${p.bankLSB ?? 0}:${p.program}`;
+    // Cache-Key enthält auch die aktuelle Position der SF in priorityOrder,
+    // damit nach einem Sequencer-Step (der die Order verändert hat) neu gesendet wird.
+    const orderPos = sf.sfId && this.synth.soundBankManager
+      ? this.synth.soundBankManager.priorityOrder.indexOf(sf.sfId)
+      : 0;
+    const cacheKey = `${sf.sfId}:${p.bank}:${p.bankLSB ?? 0}:${p.program}:${orderPos}`;
     if (this._chProgKey.get(ch) === cacheKey) return;
     this._chProgKey.set(ch, cacheKey);
 
@@ -6900,12 +6905,9 @@ function seqScheduleStep(stepIdx, time) {
 
     setTimeout(() => {
       if (!seq.running) return;
-      // SF-Priorität setzen
-      if (sf.sfId && engine.synth?.soundBankManager) {
-        const cur = [...engine.synth.soundBankManager.priorityOrder];
-        engine.synth.soundBankManager.priorityOrder = [sf.sfId, ...cur.filter(id => id !== sf.sfId)];
-      }
-      // CH9 mit isDrum=true: programChange wählt das Drum-Kit
+      // CH9 ist immer Drums (isDrum=true) — priorityOrder NICHT anfassen,
+      // das würde die Layer auf dem Keyboard stören!
+      // programChange auf CH9 wählt das Kit (isDrum bleibt true).
       engine.synth.programChange(DRUM_CH, p.program);
       engine.synth.controllerChange(DRUM_CH, 7, Math.round(row.vel));
       engine.synth.noteOn(DRUM_CH, row.note, row.vel);
