@@ -95,10 +95,19 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   border-radius:0 7px 7px 0;color:var(--dim);font-size:.75rem;cursor:pointer;
   display:flex;align-items:center;justify-content:center;transition:all .12s;padding:0}
 .preset-dropdown-toggle:hover{background:rgba(0,229,255,.08);color:var(--accent)}
-.preset-dropdown{position:absolute;top:calc(100% + 4px);left:0;min-width:100%;width:max-content;max-width:420px;z-index:500;
+.preset-dropdown{position:absolute;top:calc(100% + 4px);left:0;min-width:100%;width:max-content;max-width:500px;z-index:500;
   background:#0d0d1a;border:1px solid var(--accent);border-radius:8px;
-  max-height:260px;overflow-y:auto;box-shadow:0 8px 28px rgba(0,0,0,.75);display:none}
-.preset-dropdown.open{display:block}
+  box-shadow:0 8px 28px rgba(0,0,0,.75);display:none;overflow:hidden}
+.preset-dropdown.open{display:flex;flex-direction:column}
+/* Two-column layout: bank list left, preset list right */
+.preset-dropdown-cols{display:flex;flex-direction:row;flex:1;min-height:0;overflow:hidden}
+.preset-dropdown-banks{width:110px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;max-height:280px}
+.preset-dropdown-presets{flex:1;overflow-y:auto;max-height:280px}
+.preset-bank-item{padding:8px 10px;font-family:'Share Tech Mono',monospace;font-size:.7rem;
+  color:var(--dim);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:background .08s;border-left:3px solid transparent}
+.preset-bank-item:hover{background:rgba(0,229,255,.06);color:var(--text)}
+.preset-bank-item.active{background:rgba(0,229,255,.12);color:var(--accent);border-left-color:var(--accent);font-weight:700}
 .preset-dropdown-item{padding:9px 14px;font-family:'Share Tech Mono',monospace;font-size:.78rem;
   color:var(--text);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   transition:background .08s;display:flex;align-items:center;gap:6px}
@@ -3728,51 +3737,132 @@ function renderLayers() {
       }
     }
 
+    let selectedBank = null; // aktuell gewählte Bank im linken Panel
+
+    function getBankLabel(bank, isDrum) {
+      if (isDrum) return '🥁 Drums';
+      if (bank === 0) return 'Bank 0 (GM)';
+      return 'Bank ' + bank;
+    }
+
     function psRenderDrop(query) {
       const sf = engine.soundfonts[layer.sfIdx];
       if (!sf) return;
       const q = query.toLowerCase();
-      psFiltered = sf.presets
-        .map((p, i) => ({ p, i, label: psLabel(p, i) }))
-        .filter(x => !q || x.label.toLowerCase().includes(q));
-      psNavIdx = -1;
-      psDrop.innerHTML = ''; // search field is now outside — clear everything
+      psDrop.innerHTML = '';
 
-      // ── Favourites section (only when no search query) ──────────
-      if (!q) {
-        const favs = getFavs(layer.sfIdx);
-        if (favs.length) {
-          const secLbl = document.createElement('div');
-          secLbl.className = 'preset-dropdown-section';
-          secLbl.textContent = '⭐ Favoriten';
-          psDrop.appendChild(secLbl);
-          favs.forEach(({ p, i, label }) => {
+      // Bei Suche: flache Liste wie bisher
+      if (q) {
+        psFiltered = sf.presets
+          .map((p, i) => ({ p, i, label: psLabel(p, i) }))
+          .filter(x => x.label.toLowerCase().includes(q));
+        psNavIdx = -1;
+        if (!psFiltered.length) {
+          const empty = document.createElement('div');
+          empty.className = 'preset-dropdown-empty';
+          empty.textContent = 'Kein Ergebnis';
+          psDrop.appendChild(empty);
+        } else {
+          psFiltered.forEach(({ p, i, label }) => {
             psDrop.appendChild(makePsItem(p, i, label, layer.sfIdx, psSetPreset));
           });
-          const sep = document.createElement('div');
-          sep.className = 'preset-dropdown-sep';
-          psDrop.appendChild(sep);
-          const allLbl = document.createElement('div');
-          allLbl.className = 'preset-dropdown-section';
-          allLbl.textContent = 'Alle Presets';
-          psDrop.appendChild(allLbl);
+          const activeEl = psDrop.querySelector('.active');
+          if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
         }
+        psDrop.classList.add('open');
+        return;
       }
 
-      // ── All (filtered) presets ───────────────────────────────────
-      if (!psFiltered.length) {
-        psDrop.innerHTML += '';
-        const empty = document.createElement('div');
-        empty.className = 'preset-dropdown-empty';
-        empty.textContent = 'Kein Ergebnis';
-        psDrop.appendChild(empty);
-      } else {
-        psFiltered.forEach(({ p, i, label }) => {
-          psDrop.appendChild(makePsItem(p, i, label, layer.sfIdx, psSetPreset));
-        });
-        const activeEl = psDrop.querySelector('.active');
-        if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+      // Kein Suchtext: Zwei-Spalten Bank/Preset
+      psFiltered = sf.presets.map((p, i) => ({ p, i, label: psLabel(p, i) }));
+      psNavIdx = -1;
+
+      // Unique Banks ermitteln (in Sortierreihenfolge)
+      const banks = [];
+      const bankSeen = new Set();
+      sf.presets.forEach(p => {
+        const key = String(p.bank) + (p.isDrum ? 'd' : '');
+        if (!bankSeen.has(key)) {
+          bankSeen.add(key);
+          banks.push({ bank: p.bank, isDrum: !!(p.isDrum || p.isGMGSDrum), key });
+        }
+      });
+
+      // Aktive Bank: die des gerade gewählten Presets oder erste Bank
+      const curP = sf.presets[layer.presetIdx];
+      const curKey = curP ? String(curP.bank) + (curP.isDrum ? 'd' : '') : banks[0]?.key;
+      if (selectedBank === null || !bankSeen.has(selectedBank)) {
+        selectedBank = curKey ?? banks[0]?.key ?? '0';
       }
+
+      // Favoriten-Zeile oben (über den Spalten)
+      const favs = getFavs(layer.sfIdx);
+      if (favs.length) {
+        const favRow = document.createElement('div');
+        favRow.style.cssText = 'border-bottom:1px solid var(--border);padding:4px 8px;display:flex;flex-wrap:wrap;gap:4px;background:#0a0a18';
+        const favLbl = document.createElement('div');
+        favLbl.style.cssText = 'font-size:.52rem;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;width:100%;margin-bottom:2px';
+        favLbl.textContent = '⭐ Favoriten';
+        favRow.appendChild(favLbl);
+        favs.slice(0, 8).forEach(({ p, i, label }) => {
+          const chip = document.createElement('div');
+          chip.style.cssText = 'font-family:\'Share Tech Mono\',monospace;font-size:.65rem;color:var(--text);padding:2px 7px;background:#07070f;border:1px solid var(--border);border-radius:4px;cursor:pointer;white-space:nowrap';
+          chip.textContent = p.name ?? label;
+          chip.addEventListener('mousedown', e => { e.preventDefault(); psSetPreset(i); });
+          if (i === layer.presetIdx) chip.style.borderColor = 'var(--accent)';
+          favRow.appendChild(chip);
+        });
+        psDrop.appendChild(favRow);
+      }
+
+      // Zwei-Spalten-Layout
+      const cols = document.createElement('div');
+      cols.className = 'preset-dropdown-cols';
+
+      // Linke Spalte: Banken
+      const bankCol = document.createElement('div');
+      bankCol.className = 'preset-dropdown-banks';
+
+      // Rechte Spalte: Presets der gewählten Bank
+      const presetCol = document.createElement('div');
+      presetCol.className = 'preset-dropdown-presets';
+
+      function renderPresetsForBank(bankKey) {
+        presetCol.innerHTML = '';
+        const bankPresets = sf.presets
+          .map((p, i) => ({ p, i }))
+          .filter(({ p }) => {
+            const k = String(p.bank) + (p.isDrum ? 'd' : '');
+            return k === bankKey;
+          });
+        bankPresets.forEach(({ p, i }) => {
+          const label = `${String(p.program).padStart(3,'0')} – ${p.name}`;
+          const item = makePsItem(p, i, label, layer.sfIdx, psSetPreset);
+          presetCol.appendChild(item);
+          if (i === layer.presetIdx) {
+            setTimeout(() => item.scrollIntoView({ block: 'nearest' }), 0);
+          }
+        });
+      }
+
+      banks.forEach(({ bank, isDrum, key }) => {
+        const bankItem = document.createElement('div');
+        bankItem.className = 'preset-bank-item' + (key === selectedBank ? ' active' : '');
+        bankItem.textContent = getBankLabel(bank, isDrum);
+        bankItem.addEventListener('mousedown', e => {
+          e.preventDefault();
+          selectedBank = key;
+          bankCol.querySelectorAll('.preset-bank-item').forEach(el => el.classList.remove('active'));
+          bankItem.classList.add('active');
+          renderPresetsForBank(key);
+        });
+        bankCol.appendChild(bankItem);
+      });
+
+      renderPresetsForBank(selectedBank);
+      cols.appendChild(bankCol);
+      cols.appendChild(presetCol);
+      psDrop.appendChild(cols);
       psDrop.classList.add('open');
     }
 
@@ -3871,11 +3961,11 @@ function renderLayers() {
       const sf = engine.soundfonts[layer.sfIdx];
       if (!sf) return;
       layer.presetIdx = 0;
+      selectedBank = null; // Bank-Auswahl zurücksetzen
       psSearch.value = '';
       psClear.classList.remove('visible');
       psInput.value = psLabel(sf.presets[0], 0);
       presetLabel.textContent = sf.presets[0]?.name ?? '—';
-      // Dropdown sofort mit Presets der neuen SF neu befüllen
       psRenderDrop('');
       psDrop.classList.remove('open');
     }
