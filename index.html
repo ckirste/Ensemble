@@ -976,6 +976,27 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
   border:none;outline:none;cursor:pointer}
 .adsr-sl::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;
   border-radius:50%;cursor:pointer}
+
+/* ── Arpeggiator ─────────────────────────────────────────────── */
+.arp-panel{display:flex;flex-direction:column;gap:8px;padding:10px 0 4px;border-top:1px solid var(--border);margin-top:4px}
+.arp-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.arp-lbl{font-size:.52rem;letter-spacing:.14em;color:var(--accent3);text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.arp-btn{padding:5px 11px;border-radius:6px;border:1px solid var(--border);background:#0a0e18;
+  color:var(--textbright);font-size:.72rem;font-family:'Share Tech Mono',monospace;
+  cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.arp-btn:hover{border-color:var(--accent3);color:var(--accent3)}
+.arp-btn.active{border-color:var(--accent3);background:rgba(155,127,232,.18);color:var(--accent3);font-weight:700}
+.arp-play-btn{padding:6px 18px;border-radius:7px;border:1px solid var(--accent3);
+  background:rgba(155,127,232,.1);color:var(--textbright);font-size:.8rem;
+  font-family:'Share Tech Mono',monospace;cursor:pointer;transition:all .15s;white-space:nowrap}
+.arp-play-btn:hover{background:rgba(155,127,232,.22);color:var(--accent3)}
+.arp-play-btn.active{border-color:#69ff47;background:rgba(105,255,71,.15);color:#69ff47;
+  animation:arp-blink .7s ease-in-out infinite}
+@keyframes arp-blink{0%,100%{opacity:1}50%{opacity:.55}}
+.arp-note-dot{width:10px;height:10px;border-radius:50%;background:var(--accent3);
+  flex-shrink:0;transition:all .08s;box-shadow:0 0 0 var(--accent3)}
+.arp-note-dot.active{background:#69ff47;box-shadow:0 0 8px #69ff47;transform:scale(1.4)}
+.arp-dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;min-height:16px}
 </style>
 </head>
 <body>
@@ -999,7 +1020,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v41</h1>
+    <h1>Ensemble_v45</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -1134,6 +1155,32 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
         <button class="chord-sel-btn" id="chordClearBtn" style="color:#ff4060;border-color:#ff406055">✕ Auswahl löschen</button>
       </div>
       <div class="chord-display" id="chordDisplay"></div>
+      <!-- Arpeggiator -->
+      <div class="arp-panel" id="arpPanel">
+        <div class="arp-row">
+          <span class="arp-lbl">Arpeggio</span>
+          <button class="arp-btn active" id="arpDirUp">↑ Auf</button>
+          <button class="arp-btn" id="arpDirDown">↓ Ab</button>
+          <button class="arp-btn" id="arpDirUpDown">↑↓ Auf/Ab</button>
+          <span class="arp-lbl" style="margin-left:6px">Wert</span>
+          <button class="arp-btn active" id="arpVal8">♪ 8tel</button>
+          <button class="arp-btn" id="arpVal16">♬ 16tel</button>
+          <button class="arp-btn" id="arpVal8t">♪³ 8tel-Triole</button>
+          <button class="arp-btn" id="arpVal16t">♬³ 16tel-Triole</button>
+        </div>
+        <div class="arp-row">
+          <span class="arp-lbl">Oktave</span>
+          <button class="arp-btn active" id="arpOct1">1</button>
+          <button class="arp-btn" id="arpOct2">2</button>
+          <button class="arp-btn" id="arpOct3">3</button>
+          <span class="arp-lbl" style="margin-left:6px">Vel</span>
+          <input type="range" id="arpVelSl" min="20" max="127" value="90"
+            style="-webkit-appearance:none;height:4px;width:70px;accent-color:var(--accent3);border-radius:2px;cursor:pointer">
+          <span id="arpVelVal" style="font-size:.6rem;font-family:'Share Tech Mono',monospace;color:var(--accent3);min-width:24px">90</span>
+          <div class="arp-dots" id="arpDots"></div>
+          <button class="arp-play-btn" id="arpPlayBtn" style="margin-left:auto">▶ Arpeggio</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2023,7 +2070,7 @@ class AudioEngine {
     if (this.ctx && this._workletReady) return;
 
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'balanced' });
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = 1.0;
 
@@ -2080,6 +2127,13 @@ class AudioEngine {
     const synth = new WorkletSynthesizer(this.ctx, { enableEventSystem: false });
     synth.connect(this.masterGain);
     await synth.isReady;
+    // Polyphonie auf 256 setzen (SpessaSynth-Default, explizit gesetzt).
+    // Full-Orchestra-Presets nutzen 10-30 interne Voices pro gespielter Note —
+    // 64 wäre zu wenig und würde fehlende Töne verursachen.
+    // Hängende Noten werden vom Watchdog-Timer behandelt, nicht durch
+    // ein niedriges Polyphonie-Limit.
+    try { synth.maxPolyphony = 256; } catch(e) {}
+    try { synth.setMasterParameter('maxPolyphony', 256); } catch(e) {}
 
     const sfId = `sf_${Date.now()}`;
 
@@ -2231,9 +2285,21 @@ class AudioEngine {
       } catch(e) {}
     }
 
+    // Laufender Zähler pro layerId+midi → verhindert Key-Kollision
+    // bei schnellen wiederholten Tönen auf derselben Note
+    if (!this._voiceSeq) this._voiceSeq = new Map();
+    const seqKey = `${layerId}_${midi}`;
+    const seq    = ((this._voiceSeq.get(seqKey) ?? 0) + 1) & 0xFFFF;
+    this._voiceSeq.set(seqKey, seq);
+
+    // Alten Voice-Eintrag für dieselbe Note sauber entfernen
+    // (SpessaSynth macht Retrigger intern — wir wollen nur den Map-Eintrag sauber halten)
+    const oldKey = `${layerId}_${midi}_${(seq - 1) & 0xFFFF}`;
+    this.voices.delete(oldKey);
+
     sfObj.synth.noteOn(ch, midi, vel);
 
-    const key = `${layerId}_${midi}_0`;
+    const key = `${layerId}_${midi}_${seq}`;
     this.voices.set(key, { ch, midi, sfIdx, startT: startT ?? this.ctx.currentTime });
   }
 
@@ -2258,6 +2324,8 @@ class AudioEngine {
         found = true;
       }
     });
+    // Voice-Seq-Counter zurücksetzen damit alter Key-Müll nicht akkumuliert
+    if (this._voiceSeq) this._voiceSeq.delete(`${layerId}_${midi}`);
     // Fallback: alle Channels aller Synths
     if (!found) {
       this.synths.forEach(sfObj => {
@@ -2294,6 +2362,7 @@ class AudioEngine {
       }
     });
     this.voices.clear();
+    if (this._voiceSeq) this._voiceSeq.clear();
     if (typeof heldNotes !== 'undefined') heldNotes.clear();
     if (typeof layers !== 'undefined') {
       layers.forEach(l => { l.melodyNote = null; l.bassNote = null; });
@@ -5172,6 +5241,75 @@ function doPanic() {
 document.getElementById('panicBtn').addEventListener('click', doPanic);
 document.getElementById('panicNavBtn')?.addEventListener('click', doPanic);
 
+// ── Watchdog: hängende Noten periodisch aufräumen ────────────
+// Hängende Noten entstehen durch verlorene touchend/mouseup-Events
+// (Android-Browser, schnelles Spiel, App-Wechsel) — NICHT durch
+// zu viele gleichzeitige Voices. Polyphonie-Limit (256) löst das nicht,
+// der Watchdog schon: er schickt noteOff für Voices die zu alt sind.
+(function startVoiceWatchdog() {
+  const MAX_VOICE_AGE_MS = 12000; // 12s — länger als jeder mögliche Release
+  setInterval(() => {
+    if (!engine.ctx || !engine.synths.length) return;
+    const now = engine.ctx.currentTime;
+    let killed = 0;
+    for (const [key, v] of engine.voices) {
+      const ageMs = (now - (v.startT ?? now)) * 1000;
+      if (ageMs > MAX_VOICE_AGE_MS) {
+        engine._killVoice(key);
+        killed++;
+      }
+    }
+    // Zusätzlich: Noten die nicht in heldNotes sind aber noch im voices-Map
+    // hängen → nach kurzer Grace-Period beenden
+    for (const [key, v] of engine.voices) {
+      const midi = v.midi;
+      if (!heldNotes.has(midi)) {
+        const ageMs = (now - (v.startT ?? now)) * 1000;
+        // Grace Period: 6s für Sustain/Release
+        if (ageMs > 6000) {
+          engine._killVoice(key);
+          killed++;
+        }
+      }
+    }
+    if (killed > 0) console.log(`Watchdog: ${killed} hängende Voice(s) beendet`);
+  }, 8000);
+})();
+
+// ── App-Hintergrund / Sichtbarkeit (Android) ─────────────────
+// Wenn die App in den Hintergrund geht und zurückkommt,
+// gehen oft noteOff-Events verloren → Panic beim Wiederkommen.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    // Kurze Pause damit AudioContext sich erholt, dann aufräumen
+    setTimeout(() => {
+      if (heldNotes.size > 0) {
+        // Es sollten keine Noten mehr gehalten sein nach Hintergrund
+        doPanic();
+      } else {
+        // Trotzdem CC123 an alle Kanäle senden — sicher ist sicher
+        engine.synths.forEach(sfObj => {
+          for (let ch = 0; ch < 16; ch++) {
+            try { sfObj.synth.controllerChange(ch, 123, 0); } catch(e) {}
+          }
+        });
+        engine.voices.clear();
+      }
+    }, 300);
+  } else {
+    // App geht in Hintergrund → alle Noten sofort stoppen
+    engine.stopAll();
+  }
+});
+
+// ── AudioContext Resume nach User-Interaktion ─────────────────
+// Android suspendiert den AudioContext manchmal im Hintergrund.
+document.addEventListener('pointerdown', () => {
+  if (engine.ctx && engine.ctx.state === 'suspended') {
+    engine.ctx.resume().catch(() => {});
+  }
+}, { passive: true });
+
 // ── Pitch Bend / Modulation Strip ────────────────────────────
 // Sitzt neben beiden Klaviaturen. Beide Sidebars (kb1 + kb2) teilen
 // denselben State und steuern dieselben Channels.
@@ -6206,6 +6344,243 @@ chordStyle.textContent = `
 `;
 document.head.appendChild(chordStyle);
 initChordPanel();
+
+// ══════════════════════════════════════════════════════════════
+//  ARPEGGIATOR
+// ══════════════════════════════════════════════════════════════
+const arp = {
+  running:    false,
+  dir:        'up',        // 'up' | 'down' | 'updown'
+  noteVal:    '8',         // '8' | '16' | '8t' | '16t'
+  octaves:    1,           // 1 | 2 | 3
+  vel:        90,
+  step:       0,
+  ascending:  true,        // für updown-Richtung
+  timerID:    null,
+  nextTime:   0,
+  notes:      [],          // aktuell arpeggierte MIDI-Noten (mit Oktaven)
+  lastNote:   null,        // zuletzt gespielte Note (für noteOff)
+};
+
+// Noten-Sequenz aufbauen: Akkord über N Oktaven, Richtung
+function arpBuildSequence() {
+  if (chordSelRoot < 0 || chordSelType < 0) return [];
+  const base  = chordGetMidiNotes(chordSelRoot, chordSelType); // C3-basiert
+  const notes = [];
+  for (let oct = 0; oct < arp.octaves; oct++) {
+    base.forEach(m => {
+      const n = m + oct * 12;
+      if (n >= 0 && n <= 127) notes.push(n);
+    });
+  }
+  return notes;
+}
+
+// Millisekunden pro Schritt aus BPM + Notenwert
+function arpStepMs() {
+  const bpm = metro.bpm;
+  const beatMs = 60000 / bpm;
+  switch (arp.noteVal) {
+    case '8':   return beatMs / 2;
+    case '16':  return beatMs / 4;
+    case '8t':  return beatMs / 3;        // Triole: 3 in der Zeit von 2
+    case '16t': return beatMs / 6;        // 16tel-Triole
+    default:    return beatMs / 2;
+  }
+}
+
+// Nächsten Step-Index berechnen
+function arpNextStep(notes) {
+  const len = notes.length;
+  if (!len) return 0;
+  if (arp.dir === 'up') {
+    return (arp.step + 1) % len;
+  }
+  if (arp.dir === 'down') {
+    return (arp.step - 1 + len) % len;
+  }
+  // updown
+  if (arp.ascending) {
+    if (arp.step >= len - 1) { arp.ascending = false; return len - 2 < 0 ? 0 : len - 2; }
+    return arp.step + 1;
+  } else {
+    if (arp.step <= 0) { arp.ascending = true; return 1 < len ? 1 : 0; }
+    return arp.step - 1;
+  }
+}
+
+const ARP_LOOKAHEAD = 0.08;
+const ARP_INTERVAL  = 20;
+
+function arpSchedule() {
+  if (!arp.running) return;
+  engine.ensureCtx();
+  const ctx = engine.ctx;
+
+  while (arp.nextTime < ctx.currentTime + ARP_LOOKAHEAD) {
+    const notes = arpBuildSequence();
+    if (!notes.length) { arpStop(); return; }
+
+    const midi    = notes[arp.step % notes.length];
+    const stepMs  = arpStepMs();
+    const noteLen = stepMs * 0.72; // Note klingt 72% der Steplänge
+
+    const tOn  = arp.nextTime;
+    const tOff = tOn + noteLen / 1000;
+
+    // noteOn
+    const _midi = midi; // closure
+    const _tOn  = tOn;
+    const _tOff = tOff;
+    const delay = Math.max(0, (_tOn - ctx.currentTime) * 1000);
+    setTimeout(() => {
+      if (!arp.running) return;
+      // Vorherige Note beenden
+      if (arp.lastNote !== null) {
+        getActiveLayers().forEach(layer => {
+          const t = arp.lastNote + globalTranspose + (layer.transpose ?? 0);
+          engine.stop(t, layer.id);
+        });
+      }
+      playMidi(_midi, arp.vel, null, 'screen');
+      arp.lastNote = _midi;
+      // Visual: Dot blinken
+      arpFlashDot(arp.step);
+      // Klaviatur-Highlight temporär
+      chordClearHighlight();
+      const k = document.querySelector(`.key[data-midi="${_midi}"]`);
+      if (k) { k.classList.add('active'); setTimeout(() => k.classList.remove('active'), noteLen * 0.8); }
+    }, delay);
+
+    // noteOff
+    const offDelay = Math.max(0, (_tOff - ctx.currentTime) * 1000);
+    setTimeout(() => {
+      if (!arp.running) return;
+      stopMidi(_midi);
+    }, offDelay);
+
+    // Nächsten Step vorbereiten
+    arp.step = arpNextStep(notes);
+    arp.nextTime += stepMs / 1000;
+  }
+
+  arp.timerID = setTimeout(arpSchedule, ARP_INTERVAL);
+}
+
+function arpStart() {
+  if (arp.running) return;
+  if (chordSelRoot < 0 || chordSelType < 0) return;
+  arp.running   = true;
+  arp.step      = arp.dir === 'down' ? arpBuildSequence().length - 1 : 0;
+  arp.ascending = true;
+  arp.lastNote  = null;
+  engine.ensureCtx().then(() => {
+    arp.nextTime = engine.ctx.currentTime + 0.05;
+    arpSchedule();
+    // Metronom mitlaufen lassen
+    if (!metro.running) metroStart();
+  });
+  document.getElementById('arpPlayBtn').textContent = '■ Stop';
+  document.getElementById('arpPlayBtn').classList.add('active');
+  arpRenderDots();
+}
+
+function arpStop() {
+  arp.running = false;
+  clearTimeout(arp.timerID);
+  // Letzte Note beenden
+  if (arp.lastNote !== null) {
+    stopMidi(arp.lastNote);
+    arp.lastNote = null;
+  }
+  document.getElementById('arpPlayBtn').textContent = '▶ Arpeggio';
+  document.getElementById('arpPlayBtn').classList.remove('active');
+  // Dots zurücksetzen
+  document.querySelectorAll('.arp-note-dot').forEach(d => d.classList.remove('active'));
+}
+
+function arpRenderDots() {
+  const wrap = document.getElementById('arpDots');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  if (chordSelRoot < 0 || chordSelType < 0) return;
+  const notes = arpBuildSequence();
+  notes.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'arp-note-dot';
+    d.id = 'arpDot_' + i;
+    wrap.appendChild(d);
+  });
+}
+
+function arpFlashDot(idx) {
+  document.querySelectorAll('.arp-note-dot').forEach(d => d.classList.remove('active'));
+  const d = document.getElementById('arpDot_' + idx);
+  if (d) d.classList.add('active');
+}
+
+// Wenn Akkord wechselt → Dots neu rendern, Arp neu starten falls läuft
+const _origChordUpdate = chordUpdate;
+window.chordUpdate = function() {
+  _origChordUpdate();
+  arpRenderDots();
+  if (arp.running) {
+    arpStop();
+    setTimeout(arpStart, 80);
+  }
+};
+
+// ── Button Wiring ─────────────────────────────────────────────
+// Richtung
+[['arpDirUp','up'],['arpDirDown','down'],['arpDirUpDown','updown']].forEach(([id, val]) => {
+  document.getElementById(id).addEventListener('click', () => {
+    arp.dir = val;
+    ['arpDirUp','arpDirDown','arpDirUpDown'].forEach(bid =>
+      document.getElementById(bid).classList.toggle('active', bid === id));
+    if (arp.running) { arpStop(); setTimeout(arpStart, 50); }
+  });
+});
+
+// Notenwert
+[['arpVal8','8'],['arpVal16','16'],['arpVal8t','8t'],['arpVal16t','16t']].forEach(([id, val]) => {
+  document.getElementById(id).addEventListener('click', () => {
+    arp.noteVal = val;
+    ['arpVal8','arpVal16','arpVal8t','arpVal16t'].forEach(bid =>
+      document.getElementById(bid).classList.toggle('active', bid === id));
+  });
+});
+
+// Oktaven
+[['arpOct1',1],['arpOct2',2],['arpOct3',3]].forEach(([id, val]) => {
+  document.getElementById(id).addEventListener('click', () => {
+    arp.octaves = val;
+    ['arpOct1','arpOct2','arpOct3'].forEach(bid =>
+      document.getElementById(bid).classList.toggle('active', bid === id));
+    arpRenderDots();
+    if (arp.running) { arpStop(); setTimeout(arpStart, 50); }
+  });
+});
+
+// Velocity
+document.getElementById('arpVelSl').addEventListener('input', function() {
+  arp.vel = parseInt(this.value);
+  document.getElementById('arpVelVal').textContent = this.value;
+});
+
+// Play/Stop
+document.getElementById('arpPlayBtn').addEventListener('click', () => {
+  arp.running ? arpStop() : arpStart();
+});
+
+// Panic stoppt auch Arp
+const _origDoPanicArp = window.doPanic ?? doPanic;
+window.doPanic = function() {
+  arpStop();
+  _origDoPanicArp();
+};
+
+arpRenderDots();
+
 // ══════════════════════════════════════════════════════════════
 let midiAccess = null;
 let activeMidiInputs = new Set();
