@@ -1020,7 +1020,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v45</h1>
+    <h1>Ensemble_v46</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -1157,8 +1157,9 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
       <div class="chord-display" id="chordDisplay"></div>
       <!-- Arpeggiator -->
       <div class="arp-panel" id="arpPanel">
+        <!-- Zeile 1: Richtung + Notenwert -->
         <div class="arp-row">
-          <span class="arp-lbl">Arpeggio</span>
+          <span class="arp-lbl">Richtung</span>
           <button class="arp-btn active" id="arpDirUp">↑ Auf</button>
           <button class="arp-btn" id="arpDirDown">↓ Ab</button>
           <button class="arp-btn" id="arpDirUpDown">↑↓ Auf/Ab</button>
@@ -1168,14 +1169,30 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
           <button class="arp-btn" id="arpVal8t">♪³ 8tel-Triole</button>
           <button class="arp-btn" id="arpVal16t">♬³ 16tel-Triole</button>
         </div>
+        <!-- Zeile 2: Töne + Grundton-Oktave + BPM -->
         <div class="arp-row">
-          <span class="arp-lbl">Oktave</span>
-          <button class="arp-btn active" id="arpOct1">1</button>
-          <button class="arp-btn" id="arpOct2">2</button>
-          <button class="arp-btn" id="arpOct3">3</button>
+          <span class="arp-lbl">Töne</span>
+          <button class="arp-btn" id="arpN3">3</button>
+          <button class="arp-btn active" id="arpN4">4</button>
+          <button class="arp-btn" id="arpN5">5</button>
+          <button class="arp-btn" id="arpN6">6</button>
+          <button class="arp-btn" id="arpN7">7</button>
+          <button class="arp-btn" id="arpN8">8</button>
+          <span class="arp-lbl" style="margin-left:6px">Grundton</span>
+          <button class="arp-btn" id="arpRootC2">C2</button>
+          <button class="arp-btn active" id="arpRootC3">C3</button>
+          <button class="arp-btn" id="arpRootC4">C4</button>
+          <button class="arp-btn" id="arpRootC5">C5</button>
+        </div>
+        <!-- Zeile 3: BPM + Vel + Dots + Play -->
+        <div class="arp-row">
+          <span class="arp-lbl">BPM</span>
+          <button class="arp-btn" id="arpBpmDown" style="width:28px;padding:4px 0;text-align:center">−</button>
+          <div id="arpBpmDisplay" style="font-family:'Orbitron',monospace;font-size:.95rem;color:var(--accent3);min-width:36px;text-align:center;line-height:1">120</div>
+          <button class="arp-btn" id="arpBpmUp" style="width:28px;padding:4px 0;text-align:center">+</button>
           <span class="arp-lbl" style="margin-left:6px">Vel</span>
           <input type="range" id="arpVelSl" min="20" max="127" value="90"
-            style="-webkit-appearance:none;height:4px;width:70px;accent-color:var(--accent3);border-radius:2px;cursor:pointer">
+            style="-webkit-appearance:none;height:4px;width:65px;accent-color:var(--accent3);border-radius:2px;cursor:pointer">
           <span id="arpVelVal" style="font-size:.6rem;font-family:'Share Tech Mono',monospace;color:var(--accent3);min-width:24px">90</span>
           <div class="arp-dots" id="arpDots"></div>
           <button class="arp-play-btn" id="arpPlayBtn" style="margin-left:auto">▶ Arpeggio</button>
@@ -6352,26 +6369,34 @@ const arp = {
   running:    false,
   dir:        'up',        // 'up' | 'down' | 'updown'
   noteVal:    '8',         // '8' | '16' | '8t' | '16t'
-  octaves:    1,           // 1 | 2 | 3
+  numNotes:   4,           // Anzahl Töne (3–8)
+  rootBase:   48,          // MIDI-Grundton (C2=36, C3=48, C4=60, C5=72)
   vel:        90,
   step:       0,
   ascending:  true,        // für updown-Richtung
   timerID:    null,
   nextTime:   0,
-  notes:      [],          // aktuell arpeggierte MIDI-Noten (mit Oktaven)
   lastNote:   null,        // zuletzt gespielte Note (für noteOff)
 };
 
-// Noten-Sequenz aufbauen: Akkord über N Oktaven, Richtung
+// Noten-Sequenz aufbauen:
+// Nimmt die Akkord-Intervalle, wiederholt sie über Oktaven bis
+// genug Noten vorhanden sind, schneidet auf arp.numNotes ab.
+// Grundton basiert auf arp.rootBase statt fest C3(48).
 function arpBuildSequence() {
   if (chordSelRoot < 0 || chordSelType < 0) return [];
-  const base  = chordGetMidiNotes(chordSelRoot, chordSelType); // C3-basiert
+  // Intervalle des gewählten Akkordtyps (halbtonschritte über root)
+  const intervals = CHORD_TYPES[chordSelType].intervals;
+  // Grundton = arp.rootBase + Halbtonversatz des gewählten Roots (0=C,1=C#,...)
+  const root = arp.rootBase + chordSelRoot;
   const notes = [];
-  for (let oct = 0; oct < arp.octaves; oct++) {
-    base.forEach(m => {
-      const n = m + oct * 12;
-      if (n >= 0 && n <= 127) notes.push(n);
+  // Über genug Oktaven iterieren bis numNotes erreicht
+  for (let oct = 0; notes.length < arp.numNotes; oct++) {
+    intervals.forEach(iv => {
+      const n = root + iv + oct * 12;
+      if (n >= 0 && n <= 127 && notes.length < arp.numNotes) notes.push(n);
     });
+    if (oct > 8) break; // Sicherheits-Abbruch
   }
   return notes;
 }
@@ -6550,16 +6575,56 @@ window.chordUpdate = function() {
   });
 });
 
-// Oktaven
-[['arpOct1',1],['arpOct2',2],['arpOct3',3]].forEach(([id, val]) => {
+// Anzahl Töne (3–8)
+[['arpN3',3],['arpN4',4],['arpN5',5],['arpN6',6],['arpN7',7],['arpN8',8]].forEach(([id, val]) => {
   document.getElementById(id).addEventListener('click', () => {
-    arp.octaves = val;
-    ['arpOct1','arpOct2','arpOct3'].forEach(bid =>
+    arp.numNotes = val;
+    ['arpN3','arpN4','arpN5','arpN6','arpN7','arpN8'].forEach(bid =>
       document.getElementById(bid).classList.toggle('active', bid === id));
     arpRenderDots();
     if (arp.running) { arpStop(); setTimeout(arpStart, 50); }
   });
 });
+
+// Grundton-Oktave
+[['arpRootC2',36],['arpRootC3',48],['arpRootC4',60],['arpRootC5',72]].forEach(([id, val]) => {
+  document.getElementById(id).addEventListener('click', () => {
+    arp.rootBase = val;
+    ['arpRootC2','arpRootC3','arpRootC4','arpRootC5'].forEach(bid =>
+      document.getElementById(bid).classList.toggle('active', bid === id));
+    arpRenderDots();
+    if (arp.running) { arpStop(); setTimeout(arpStart, 50); }
+  });
+});
+
+// BPM im Arp-Panel (direkt mit Metronom verknüpft)
+function arpUpdateBpmDisplay() {
+  const el = document.getElementById('arpBpmDisplay');
+  if (el) el.textContent = metro.bpm;
+}
+document.getElementById('arpBpmDown').addEventListener('click', () => {
+  metroSetBpm(metro.bpm - 1); arpUpdateBpmDisplay();
+});
+document.getElementById('arpBpmUp').addEventListener('click', () => {
+  metroSetBpm(metro.bpm + 1); arpUpdateBpmDisplay();
+});
+// Long-press für schnelles Ändern
+['arpBpmDown','arpBpmUp'].forEach(id => {
+  const dir = id.includes('Down') ? -1 : 1;
+  const btn = document.getElementById(id);
+  let iv = null;
+  btn.addEventListener('mousedown',  () => { iv = setInterval(() => { metroSetBpm(metro.bpm + dir); arpUpdateBpmDisplay(); }, 80); });
+  btn.addEventListener('touchstart', e => { e.preventDefault(); iv = setInterval(() => { metroSetBpm(metro.bpm + dir); arpUpdateBpmDisplay(); }, 80); }, {passive:false});
+  ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev =>
+    btn.addEventListener(ev, () => clearInterval(iv)));
+});
+// Sync: wenn Metro-BPM von außen geändert wird → Arp-Display updaten
+const _origMetroSetBpmArp = window.metroSetBpm ?? metroSetBpm;
+window.metroSetBpm = function(bpm) {
+  _origMetroSetBpmArp(bpm);
+  arpUpdateBpmDisplay();
+};
+arpUpdateBpmDisplay();
 
 // Velocity
 document.getElementById('arpVelSl').addEventListener('input', function() {
@@ -7304,7 +7369,7 @@ const metro = {
   beats: 4,       // numerator of time sig
   beat: 0,        // current beat index (0-based)
   vol: 0.8,
-  muted: false,
+  muted: true,    // standardmäßig stumm — nur visueller Takt
   nextTime: 0,    // AudioContext time of next click
   timerID: null,
   tapTimes: [],
@@ -8518,6 +8583,9 @@ console.log("CHECKPOINT 5: Vollbild-Button wird registriert");
     if (sl) sl.style.opacity = metro.muted ? '0.3' : '1';
   });
   update();
+  // Initial-Opacity passend zu metro.muted = true
+  const _muteSlInit = document.getElementById('metroVolSlider');
+  if (_muteSlInit) _muteSlInit.style.opacity = metro.muted ? '0.3' : '1';
 })();
 
 
