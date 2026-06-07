@@ -14,6 +14,8 @@
   --ui-scale:1;
   --ui-base-size:14px; --ui-label-size:10px; --ui-mono-size:11px; --ui-key-height:130px;
 }
+.pdf-rec-controls button:active { transform: scale(0.96); }
+.pdf-rec-controls button:disabled { opacity: 0.4; cursor: default; }
 .settings-toggle{position:absolute;top:14px;right:16px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:1.1rem;width:36px;height:36px;cursor:pointer;transition:all .15s}
 .fs-toggle{position:absolute;top:14px;left:16px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:1.1rem;width:36px;height:36px;cursor:pointer;transition:all .15s}
 .fs-toggle:hover,.fs-toggle.active{border-color:var(--accent);color:var(--accent)}
@@ -131,7 +133,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   border-radius:3px;width:0%;transition:width .12s}
 
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;
-  padding:14px 16px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+  padding:14px 16px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
 .ps{display:flex;flex-direction:column;gap:6px;flex:1;min-width:130px}
 .ps label{font-size:.62rem;letter-spacing:.2em;color:var(--accent);text-transform:uppercase}
 select{background:#07070f;border:1px solid var(--border);color:var(--textbright);
@@ -522,6 +524,22 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 .rec-info{font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--text);opacity:.5;flex:1;white-space:nowrap}
 .rec-progress-wrap{flex:1;min-width:80px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;cursor:pointer}
 .rec-progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .1s linear}
+/* ── Track list (Spuren) ───────────────────────────── */
+.rec-tracks{display:flex;flex-direction:column;gap:4px;margin-top:2px}
+.rec-track{display:flex;align-items:center;gap:6px;background:#07070f;border:1px solid var(--border);border-radius:6px;padding:4px 8px;transition:border-color .15s}
+.rec-track:hover{border-color:var(--dim)}
+.rec-track-mute{background:none;border:1px solid var(--border);border-radius:4px;color:var(--dim);font-size:.7rem;width:22px;height:22px;cursor:pointer;flex-shrink:0;transition:all .12s;display:flex;align-items:center;justify-content:center;padding:0}
+.rec-track-mute:hover{border-color:var(--accent3);color:var(--accent3)}
+.rec-track-mute.muted{border-color:#555;color:#555;background:#1a1a2a}
+.rec-track-muted-stripe{opacity:.35}
+.rec-track-num{font-family:'Orbitron',monospace;font-size:.55rem;color:var(--dim);width:14px;flex-shrink:0;text-align:center}
+.rec-track-badge{font-size:.52rem;letter-spacing:.06em;padding:2px 6px;border-radius:3px;flex-shrink:0;white-space:nowrap}
+.rec-track-badge.base{background:rgba(0,229,255,.12);color:var(--accent);border:1px solid rgba(0,229,255,.3)}
+.rec-track-badge.overdub{background:rgba(255,184,48,.1);color:#ffb830;border:1px solid rgba(255,184,48,.3)}
+.rec-track-evcount{font-size:.6rem;color:var(--dim);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'Share Tech Mono',monospace}
+.rec-track-dur{font-size:.6rem;color:var(--accent3);font-family:'Share Tech Mono',monospace;white-space:nowrap;flex-shrink:0}
+.rec-track-del{background:none;border:1px solid transparent;color:var(--dim);font-size:.75rem;width:20px;height:20px;border-radius:4px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .12s;padding:0}
+.rec-track-del:hover{border-color:var(--accent2);color:var(--accent2);background:rgba(255,64,96,.08)}
 
 /* ── Trombone ────────────────────────────────────────────────── */
 .tbone-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px}
@@ -1006,6 +1024,71 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 .fx-adsr-sl::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent3);cursor:pointer}
 .fx-adsr-reset{background:#07070f;border:1px solid var(--border);border-radius:6px;color:var(--dim);font-size:.6rem;font-family:'Share Tech Mono',monospace;padding:4px 10px;cursor:pointer;transition:all .12s}
 .fx-adsr-reset:hover{border-color:var(--accent2);color:var(--accent2)}
+
+/* ══ Noten-Editor Panel ══════════════════════════════════════ */
+.score-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:0;margin-bottom:12px;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column}
+.score-header{display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+  padding:8px 10px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--panel)}
+.score-body{display:flex;flex-direction:row;align-items:stretch;flex:1;min-height:0;width:100%;overflow:hidden}
+.score-toolbar{flex-shrink:0;width:60px;z-index:999;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:6px 3px;overflow-y:auto;overflow-x:hidden;
+  background:#111827;border-right:1px solid var(--border)}
+.score-toolbar::-webkit-scrollbar{width:0}
+.score-toolbar .score-noteval-row{flex-direction:column;background:transparent;border:none;padding:0;gap:3px}
+.score-toolbar .score-nv-btn{width:46px;height:52px;flex-shrink:0}
+.score-toolbar>span:first-child{font-size:.42rem;letter-spacing:.1em;color:var(--accent3);text-transform:uppercase;text-align:center}
+.score-toolbar label{flex-direction:column;font-size:.52rem;cursor:pointer;display:flex;align-items:center;gap:1px}
+.score-toolbar select{background:#0a0e18;border:1px solid var(--border);color:var(--textbright);font-size:.56rem;border-radius:4px;padding:2px;width:52px;cursor:pointer}
+.score-content-wrap{display:flex;flex-direction:column;flex:1;min-width:0;overflow:hidden}
+#scoreTracksContainer{overflow-x:auto;overflow-y:auto;height:350px/*flex:1*/;min-height:100px;width:100%;max-width: 100%;box-sizing:border-box}
+#scoreTracksContainer::-webkit-scrollbar{height:5px;width:5px}
+#scoreTracksContainer::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.score-track-unit{margin-bottom:8px;background:#fff;border:1px solid #555;border-radius:6px;overflow:auto;display:block;width:80%;min-width:100%}
+.score-piano-wrap{flex-shrink:0;width:100%;border-top:1px solid #333;background:var(--panel)}
+.score-piano-header{display:flex;align-items:center;gap:6px;padding:3px 8px;background:#111827;border-bottom:1px solid var(--border);flex-wrap:nowrap;min-height:28px}
+.score-piano-lbl{font-size:.52rem;letter-spacing:.12em;color:var(--accent3);text-transform:uppercase;white-space:nowrap}
+.score-piano-oct{font-family:'Orbitron',monospace;font-size:.9rem;color:var(--accent3);min-width:20px;text-align:center}
+.score-piano-info{font-size:.58rem;color:var(--dim);flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.score-track-header{background:#1a1f2e;padding:6px 10px;display:flex;gap:8px;align-items:center;font-size:.68rem;color:var(--accent);flex-wrap:wrap}
+.score-track-header select{background:#0a0e18;border:1px solid var(--border);border-radius:5px;color:var(--textbright);font-size:.65rem;padding:2px 5px;cursor:pointer}
+.score-track-row{display:flex;position:relative;height:180px;align-items:stretch;
+  overflow-x:auto;overflow-y:hidden;width:100%;
+  background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);
+  background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;
+  background-size:100% 1px;background-color:#fff}
+.score-clef-area{width:80px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid rgba(0,0,0,.2);position:sticky;left:0;z-index:100;background-color:#fff;gap:4px;
+  background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);
+  background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;background-size:100% 1px}
+.score-key-sig{display:flex;align-items:flex-end;padding:0 4px;height:100%;border-right:2px solid rgba(0,0,0,.25);background-color:#fff;z-index:90;
+  background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);
+  background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;background-size:100% 1px}
+.score-timeline{display:flex;position:relative;height:100%;z-index:50}
+.score-step{flex-shrink:0;height:100%;position:relative;border-right:1px solid rgba(0,0,0,.06);cursor:pointer;background:rgba(0,0,0,.01);transition:background .1s}
+.score-step:hover{background:rgba(0,100,255,.05)}
+.score-step.selected{background:rgba(0,100,255,.12);outline:2px solid #0066ff}
+.score-step.playhead{background:rgba(0,255,150,.15);outline:2px solid #00ff96}
+.score-bar-line{position:absolute;top:70px;width:2px;height:41px;background:#000;pointer-events:none;z-index:60}
+.score-ledger{position:absolute;left:12px;width:32px;height:1.5px;background:#000;pointer-events:none}
+.score-dot{position:absolute;width:4px;height:4px;background:#000;border-radius:50%;left:40px}
+.score-acc{position:absolute;width:14px;height:32px;left:8px;pointer-events:none}
+.score-editor-panel{display:none;background:#1a1f2e;border-bottom:1px solid #333;flex-direction:column;overflow:hidden}
+.score-editor-inner{display:flex;flex-direction:row;flex-wrap:wrap;gap:0;align-items:stretch}
+.score-editor-left{padding:6px 10px;border-right:1px solid #333;display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.score-editor-right{padding:6px 10px;flex:1;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+/* ── Score Cursor ────────────────────────────────────────────── */
+.score-step.cursor::before{content:'';position:absolute;top:0;left:-2px;width:3px;
+  height:100%;background:#00e5ff;z-index:20;border-radius:2px;
+  animation:score-cursor-blink .7s ease-in-out infinite}
+@keyframes score-cursor-blink{0%,100%{opacity:1}50%{opacity:.2}}
+.score-step.cursor{background:rgba(0,229,255,.06)!important}
+/* End-Cursor: blinkende Linie NACH der letzten Note */
+.score-end-cursor{flex-shrink:0;width:40px;height:100%;position:relative;cursor:pointer}
+.score-end-cursor::before{content:'';position:absolute;top:0;left:4px;width:3px;
+  height:100%;background:#00e5ff;border-radius:2px;
+  animation:score-cursor-blink .7s ease-in-out infinite}
+.score-end-cursor:hover{background:rgba(0,229,255,.04)}
 </style>
 </head>
 <body>
@@ -1024,12 +1107,13 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
     <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('drumPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🥁</span><span class="jnav-lbl">Drums</span></button>
     <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('seqPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">⏏</span><span class="jnav-lbl">Seq</span></button>
     <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('pdfPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🎼</span><span class="jnav-lbl">PDF</span></button>
+    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('scorePanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🎵</span><span class="jnav-lbl">Noten</span></button>
     <button id="panicNavBtn" title="Alle Töne sofort stoppen (Leertaste)" style="flex-shrink:0;margin-left:auto;background:#1a0505;border:1.5px solid #ff3a3a;border-radius:8px;color:#ff3a3a;font-family:'Share Tech Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:.08em;padding:7px 13px;cursor:pointer;transition:all .12s;white-space:nowrap;min-height:36px;display:flex;align-items:center;-webkit-tap-highlight-color:transparent">■ PANIC</button>
   </nav>
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v48</h1>
+    <h1>Ensemble_v85</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -1395,6 +1479,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
         <div class="rec-info"      id="recInfo">Keine Aufnahme</div>
         <div class="rec-progress-wrap"><div class="rec-progress-bar" id="recProgressBar" style="width:0%"></div></div>
       </div>
+      <div class="rec-tracks" id="recTrackList"></div>
     </div>
   
   <!-- Beat Sequencer -->
@@ -1530,6 +1615,12 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
           <div class="pdf-page-display" id="pdfPageDisplay">— / —</div>
           <button class="pdf-nav-btn" id="pdfNextBtn">▶</button>
         </div>
+        <!-- NEU: Recorder-Buttons -->
+  <div class="pdf-rec-controls" style="display:flex; gap:6px; margin-left:auto; margin-right:auto">
+    <button class="pdf-rec-btn" id="pdfRecBtn" style="background:#07070f;border:1px solid var(--accent2);color:var(--accent2);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.7rem;font-family:'Share Tech Mono',monospace">⏺ REC</button>
+    <button class="pdf-rec-btn" id="pdfPlayBtn" style="background:#07070f;border:1px solid var(--accent);color:var(--accent);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.7rem;font-family:'Share Tech Mono',monospace" disabled>▶ PLAY</button>
+    <button class="pdf-rec-btn" id="pdfStopBtn" style="background:#07070f;border:1px solid var(--border);color:var(--dim);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.7rem;font-family:'Share Tech Mono',monospace" disabled>■ STOP</button>
+  </div>
         <div class="pdf-zoom-ctrl">
           <button class="pdf-nav-btn" id="pdfZoomOut">－</button>
           <span style="font-family:'Orbitron',monospace;font-size:.6rem;color:var(--accent3);min-width:40px;text-align:center" id="pdfZoomLbl">100%</span>
@@ -1542,6 +1633,63 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
         <canvas id="pdfCanvas"></canvas>
       </div>
     </div>
+
+  <!-- ══ Noten-Editor Panel ══ -->
+  <div class="score-panel panel" id="scorePanel">
+    <div class="score-header">
+      <span style="font-size:.6rem;letter-spacing:.14em;color:var(--accent);text-transform:uppercase">🎵 Noten-Editor</span>
+      <button class="score-btn" onclick="scoreAddTrack()">+ Track</button>
+      <button class="score-btn" id="scoreKbInputBtn" onclick="scoreToggleKbInput()"
+        title="Klaviatur-Eingabe: Taste drücken = Note setzen + nächster Step">🎹 Klaviatur-Eingabe</button>
+      <button class="score-btn active" id="scorePlayBtn" onclick="scoreTogglePlay()">▶ Abspielen</button>
+      <button class="score-btn" onclick="scoreExportJSON()">⬇ JSON</button>
+      <button class="score-btn" onclick="scoreImportJSON()">⬆ JSON laden</button>
+      <input type="file" id="scoreImportInput" accept=".json" style="display:none">
+    </div>
+
+    <!-- score-body: toolbar links | content rechts -->
+    <div class="score-body">
+      <div class="score-toolbar" id="scoreToolbar">
+        <span>▶ Nächste Note</span>
+        <div class="score-noteval-row" id="scoreNoteValBtns"></div>
+        <label><input type="checkbox" id="scoreToolRest"> Pause</label>
+        <label><input type="checkbox" id="scoreToolDot"> Punkt</label>
+        <span style="font-size:.5rem;color:var(--dim)">Ton</span>
+        <select id="scoreToolKey">
+          <optgroup label="Dur">
+            <option value="C-Dur">C</option><option value="G-Dur">G</option>
+            <option value="D-Dur">D</option><option value="A-Dur">A</option>
+            <option value="E-Dur">E</option><option value="H-Dur">H</option>
+            <option value="Fis-Dur">F#</option><option value="F-Dur">F</option>
+            <option value="B-Dur">B</option><option value="Es-Dur">Es</option>
+            <option value="As-Dur">As</option><option value="Des-Dur">Des</option>
+          </optgroup>
+          <optgroup label="Moll">
+            <option value="a-Moll">a</option><option value="e-Moll">e</option>
+            <option value="h-Moll">h</option><option value="fis-Moll">f#</option>
+            <option value="d-Moll">d</option><option value="g-Moll">g</option>
+            <option value="c-Moll">c</option><option value="f-Moll">f</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="score-content-wrap">
+        <div id="scoreTracksContainer"></div>
+        <div class="score-piano-wrap" id="scorePianoWrap">
+          <div class="score-piano-header">
+            <span class="score-piano-lbl">🎹 Noten-Eingabe</span>
+            <button class="score-btn" id="scorePianoOctDown" style="width:26px;padding:2px 0;text-align:center">−</button>
+            <span class="score-piano-oct" id="scorePianoOctDisp">4</span>
+            <button class="score-btn" id="scorePianoOctUp" style="width:26px;padding:2px 0;text-align:center">+</button>
+            <span class="score-piano-info" id="scorePianoInfo">Klaviatur-Eingabe aktivieren</span>
+          </div>
+          <div class="kb-scroll" style="width:100%;overflow-x:auto">
+            <div class="keyboard" id="scoreKb" style="position:relative;height:130px"></div>
+          </div>
+        </div>
+      </div>
+    </div><!-- score-body -->
+  </div><!-- score-panel -->
+
 
   <!-- ══ Live Jam Panel — Ensemble Edition ══ -->
   <div class="jam-panel" id="jamPanel">
@@ -1601,7 +1749,19 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 </div>
 
 <script type="module">
-import { WorkletSynthesizer, audioBufferToWav } from "spessasynth_lib";
+// SpessaSynth asynchron laden — blockiert NICHT das UI
+let WorkletSynthesizer = null, audioBufferToWav = null;
+// Sofort mit null starten, später nachladen
+const _spessaPromise = import("spessasynth_lib").then(m => {
+  WorkletSynthesizer = m.WorkletSynthesizer;
+  audioBufferToWav   = m.audioBufferToWav;
+  console.log("SpessaSynth geladen ✓");
+  // AudioEngine informieren falls schon initialisiert
+  if (window._onSpessaReady) window._onSpessaReady();
+}).catch(_e => {
+  console.warn("SpessaSynth nicht verfügbar — nur Notendarstellung aktiv");
+  window._spessaUnavailable = true;
+});
 
 // --- MOBILE DEBUGGER ---
 const debugDiv = document.createElement('div');
@@ -2160,6 +2320,11 @@ class AudioEngine {
     onProgress('Neuer Synthesizer wird initialisiert…', 30);
 
     // Eigene WorkletSynthesizer-Instanz pro SF2
+    // Warte kurz auf SpessaSynth falls noch lädt
+    if (!WorkletSynthesizer) {
+      try { await _spessaPromise; } catch(_) {}
+    }
+    if (!WorkletSynthesizer) throw new Error('SpessaSynth nicht verfügbar — bitte online öffnen');
     const synth = new WorkletSynthesizer(this.ctx, { enableEventSystem: false });
     synth.connect(this.masterGain);
     await synth.isReady;
@@ -5250,11 +5415,16 @@ function buildKb(){
     }
     kb.style.width=wx+'px';
     kb.querySelectorAll('.key').forEach(k=>{
-      k.addEventListener('mousedown',e=>{e.preventDefault();(function(){const _yf=e.offsetY/Math.max(1,k.offsetHeight);const _vel=_yf<0.4?40:_yf<0.7?80:127;playMidi(parseInt(k.dataset.midi),_vel,null,'screen');})();});
-      k.addEventListener('mouseup',()=>stopMidi(parseInt(k.dataset.midi)));
-      k.addEventListener('mouseleave',()=>stopMidi(parseInt(k.dataset.midi)));
-      k.addEventListener('touchstart',e=>{e.preventDefault();const _t=e.touches[0],_r=k.getBoundingClientRect();(function(){const _yf=(_t.clientY-_r.top)/Math.max(1,_r.height);const _vel=_yf<0.4?40:_yf<0.7?80:127;playMidi(parseInt(k.dataset.midi),_vel,null,'screen');})();},{passive:false});
-      k.addEventListener('touchend',e=>{e.preventDefault();stopMidi(parseInt(k.dataset.midi));},{passive:false});
+      k.addEventListener('mousedown',e=>{e.preventDefault();
+        // Score Keyboard-Eingabe-Modus: Note setzen statt spielen
+        if (scoreKbNoteInput && scoreKbNoteInput(k.dataset.note)) return;
+        (function(){const _yf=e.offsetY/Math.max(1,k.offsetHeight);const _vel=_yf<0.4?40:_yf<0.7?80:127;playMidi(parseInt(k.dataset.midi),_vel,null,'screen');})();});
+      k.addEventListener('mouseup',()=>{ if(!scoreKbInput) stopMidi(parseInt(k.dataset.midi)); });
+      k.addEventListener('mouseleave',()=>{ if(!scoreKbInput) stopMidi(parseInt(k.dataset.midi)); });
+      k.addEventListener('touchstart',e=>{e.preventDefault();
+        if (scoreKbNoteInput && scoreKbNoteInput(k.dataset.note)) return;
+        const _t=e.touches[0],_r=k.getBoundingClientRect();(function(){const _yf=(_t.clientY-_r.top)/Math.max(1,_r.height);const _vel=_yf<0.4?40:_yf<0.7?80:127;playMidi(parseInt(k.dataset.midi),_vel,null,'screen');})();},{passive:false});
+      k.addEventListener('touchend',e=>{e.preventDefault();if(!scoreKbInput) stopMidi(parseInt(k.dataset.midi));},{passive:false});
       k.addEventListener('touchcancel',()=>stopMidi(parseInt(k.dataset.midi)));
     });
   });
@@ -6719,6 +6889,855 @@ arpRebuildRootBtns();
 arpRenderDots();
 
 // ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+//  NOTEN-EDITOR
+// ══════════════════════════════════════════════════════════════
+(function() {
+
+// ── Datentabellen ────────────────────────────────────────────
+const PITCH_MAP_T = { 'C4':50,'D4':55,'E4':60,'F4':65,'G4':70,'A4':75,'B4':80,
+                      'C5':85,'D5':90,'E5':95,'F5':100,'G5':105,'A5':110 };
+const PITCH_MAP_B = { 'E2':50,'F2':55,'G2':60,'A2':65,'B2':70,'C3':75,'D3':80,
+                      'E3':85,'F3':90,'G3':95,'A3':100,'B3':105,'C4':110 };
+
+// MIDI-Nummer pro Notenname
+const NOTE_MIDI = {
+  'C2':36,'D2':38,'E2':40,'F2':41,'G2':43,'A2':45,'B2':47,
+  'C3':48,'D3':50,'E3':52,'F3':53,'G3':55,'A3':57,'B3':59,
+  'C4':60,'D4':62,'E4':64,'F4':65,'G4':67,'A4':69,'B4':71,
+  'C5':72,'D5':74,'E5':76,'F5':77,'G5':79,'A5':81,'B5':83,
+};
+const ACC_OFFSET = { '#':1, 'b':-1, 'n':0, null:0 };
+
+// Tonart → Vorzeichen (Standard-Notenpositionen für Violinschlüssel)
+// Bass-Schlüssel-Positionen werden beim Rendern automatisch verschoben
+const KEY_SIGS = {
+  // ── Dur ──────────────────────────────────────
+  'C-Dur':  [],
+  'G-Dur':  [{p:'F5',t:'#'}],
+  'D-Dur':  [{p:'F5',t:'#'},{p:'C5',t:'#'}],
+  'A-Dur':  [{p:'F5',t:'#'},{p:'C5',t:'#'},{p:'G5',t:'#'}],
+  'E-Dur':  [{p:'F5',t:'#'},{p:'C5',t:'#'},{p:'G5',t:'#'},{p:'D5',t:'#'}],
+  'H-Dur':  [{p:'F5',t:'#'},{p:'C5',t:'#'},{p:'G5',t:'#'},{p:'D5',t:'#'},{p:'A4',t:'#'}],
+  'Fis-Dur':[{p:'F5',t:'#'},{p:'C5',t:'#'},{p:'G5',t:'#'},{p:'D5',t:'#'},{p:'A4',t:'#'},{p:'E5',t:'#'}],
+  'Cis-Dur':[{p:'F5',t:'#'},{p:'C5',t:'#'},{p:'G5',t:'#'},{p:'D5',t:'#'},{p:'A4',t:'#'},{p:'E5',t:'#'},{p:'B4',t:'#'}],
+  'F-Dur':  [{p:'B4',t:'b'}],
+  'B-Dur':  [{p:'B4',t:'b'},{p:'E5',t:'b'}],
+  'Es-Dur': [{p:'B4',t:'b'},{p:'E5',t:'b'},{p:'A4',t:'b'}],
+  'As-Dur': [{p:'B4',t:'b'},{p:'E5',t:'b'},{p:'A4',t:'b'},{p:'D5',t:'b'}],
+  'Des-Dur':[{p:'B4',t:'b'},{p:'E5',t:'b'},{p:'A4',t:'b'},{p:'D5',t:'b'},{p:'G4',t:'b'}],
+  'Ges-Dur':[{p:'B4',t:'b'},{p:'E5',t:'b'},{p:'A4',t:'b'},{p:'D5',t:'b'},{p:'G4',t:'b'},{p:'C5',t:'b'}],
+  'Ces-Dur':[{p:'B4',t:'b'},{p:'E5',t:'b'},{p:'A4',t:'b'},{p:'D5',t:'b'},{p:'G4',t:'b'},{p:'C5',t:'b'},{p:'F5',t:'b'}],
+  // ── Moll ─────────────────────────────────────
+  'a-Moll': [],
+  'e-Moll': [{p:'F5',t:'#'}],
+  'h-Moll': [{p:'F5',t:'#'},{p:'C5',t:'#'}],
+  'fis-Moll':[{p:'F5',t:'#'},{p:'C5',t:'#'},{p:'G5',t:'#'}],
+  'cis-Moll':[{p:'F5',t:'#'},{p:'C5',t:'#'},{p:'G5',t:'#'},{p:'D5',t:'#'}],
+  'gis-Moll':[{p:'F5',t:'#'},{p:'C5',t:'#'},{p:'G5',t:'#'},{p:'D5',t:'#'},{p:'A4',t:'#'}],
+  'dis-Moll':[{p:'F5',t:'#'},{p:'C5',t:'#'},{p:'G5',t:'#'},{p:'D5',t:'#'},{p:'A4',t:'#'},{p:'E5',t:'#'}],
+  'ais-Moll':[{p:'F5',t:'#'},{p:'C5',t:'#'},{p:'G5',t:'#'},{p:'D5',t:'#'},{p:'A4',t:'#'},{p:'E5',t:'#'},{p:'B4',t:'#'}],
+  'd-Moll': [{p:'B4',t:'b'}],
+  'g-Moll': [{p:'B4',t:'b'},{p:'E5',t:'b'}],
+  'c-Moll': [{p:'B4',t:'b'},{p:'E5',t:'b'},{p:'A4',t:'b'}],
+  'f-Moll': [{p:'B4',t:'b'},{p:'E5',t:'b'},{p:'A4',t:'b'},{p:'D5',t:'b'}],
+  'b-Moll': [{p:'B4',t:'b'},{p:'E5',t:'b'},{p:'A4',t:'b'},{p:'D5',t:'b'},{p:'G4',t:'b'}],
+  'es-Moll':[{p:'B4',t:'b'},{p:'E5',t:'b'},{p:'A4',t:'b'},{p:'D5',t:'b'},{p:'G4',t:'b'},{p:'C5',t:'b'}],
+  'as-Moll':[{p:'B4',t:'b'},{p:'E5',t:'b'},{p:'A4',t:'b'},{p:'D5',t:'b'},{p:'G4',t:'b'},{p:'C5',t:'b'},{p:'F5',t:'b'}],
+};
+
+const DUR_MAP   = {'1n':4,'2n':2,'4n':1,'8n':.5,'16n':.25,'32n':.125};
+// Taktarten: Zähler/Nenner → Viertelnoten pro Takt
+const TIME_SIGS = {
+  '2/4': {num:2, den:4, beats:2.0},
+  '3/4': {num:3, den:4, beats:3.0},
+  '4/4': {num:4, den:4, beats:4.0},
+  '2/2': {num:2, den:2, beats:4.0},
+  '6/8': {num:6, den:8, beats:3.0},  // 2 Schläge à 3 Achtel = 3 Viertelnoten
+  '12/8':{num:12,den:8, beats:6.0},  // 4 Schläge à 3 Achtel = 6 Viertelnoten
+};
+const STEP_W    = 120; // px pro Viertelnote
+
+// ── SVGs ─────────────────────────────────────────────────────
+// Exakt wie Original Editor.html — class="score-acc" setzt Größe+Position
+const svgAcc = {
+  '#':`<svg class="score-acc" viewBox="0 0 12 30"><path d="M3 12 L10 10 M3 20 L10 18 M5 6 L5 24 M8 6 L8 24" stroke="black" stroke-width="1.8" fill="none"/></svg>`,
+  'b':`<svg class="score-acc" viewBox="0 0 12 30"><path d="M4 6 L4 22 Q 10 22 10 18 Q 10 14 4 16" stroke="black" stroke-width="1.8" fill="none"/></svg>`,
+  'n': `<svg class="score-acc" viewBox="0 0 12 30"><path d="M4 10 L4 24 M8 12 L8 22 M4 14 L8 14 M4 22 L8 22" stroke="black" stroke-width="1.8" fill="none"/></svg>`,
+};
+// Violinschlüssel — detaillierter Pfad (Wikipedia-Vorlage)
+const svgClefT = `<svg viewBox="0 0 80 230" height="90" width="34">
+  <path d="M44 218 C 30 218 18 210 18 196 C 18 184 28 176 40 176
+           C 48 176 56 180 60 188 C 64 196 62 208 54 214
+           C 50 217 46 218 42 218
+           C 34 218 26 212 24 204
+           M 44 176 C 44 160 48 140 52 118
+           C 56 96 60 72 60 50
+           C 60 32 54 18 44 12
+           C 38 8 32 8 28 12
+           C 22 16 20 24 22 32
+           C 24 40 32 46 40 46
+           C 50 46 58 38 58 28
+           C 58 20 52 14 44 14
+           M 40 46 C 36 60 34 80 34 100
+           C 34 120 36 144 40 176"
+    stroke="#000" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+</svg>`;
+
+// Bassschlüssel — sauberer Pfad + zwei Punkte
+const svgClefB = `<svg viewBox="0 0 60 55" height="52" width="46" style="margin-bottom:8px">
+  <path d="M10 8 C 10 4 16 2 22 4
+           C 34 8 40 22 40 34
+           C 40 46 32 54 20 54
+           C 12 54 6 50 6 44
+           C 6 38 12 34 18 34
+           C 24 34 30 38 30 44
+           C 30 48 27 51 23 52"
+    stroke="#000" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="46" cy="16" r="3.5" fill="#000"/>
+  <circle cx="46" cy="28" r="3.5" fill="#000"/>
+</svg>`;
+
+// Exakt dieselben SVG-Strings wie Original Editor.html
+// viewBox="0 0 30 50", Ellipse cy=40 → 12px vom Boden bei height:60px (erprobt)
+// Notenkopf: ry=4 → 4.8px gerendert → passt in 10px Linienabstand mit Luft
+// cx/cy/Hals bleiben gleich damit PITCH_MAP-Kalibrierung stimmt
+const noteIconsStaff = {
+  '1n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="15" cy="40" rx="8" ry="4" fill="none" stroke="black" stroke-width="2"/></svg>`,
+  '2n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="7" ry="4" fill="none" stroke="black" stroke-width="1.8"/><path d="M17 40 L17 5" stroke="black" stroke-width="2"/></svg>`,
+  '4n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
+  '8n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 28" fill="none" stroke="black" stroke-width="3"/></svg>`,
+  '16n':`<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 22" fill="none" stroke="black" stroke-width="3"/><path d="M16 14 Q 27 24 27 31" fill="none" stroke="black" stroke-width="3"/></svg>`,
+  '32n':`<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 18" fill="none" stroke="black" stroke-width="3"/><path d="M16 10 Q 27 20 27 23" fill="none" stroke="black" stroke-width="3"/><path d="M16 15 Q 27 25 27 28" fill="none" stroke="black" stroke-width="3"/></svg>`,
+};
+const restIconsStaff = {
+  '1n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><rect x="5" y="30" width="20" height="6" fill="black"/></svg>`,
+  '2n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><rect x="5" y="24" width="20" height="6" fill="black"/></svg>`,
+  '4n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><path d="M10 15 L20 25 L10 30 L15 40 Q 10 45 5 40" stroke="black" stroke-width="2.5" fill="none"/></svg>`,
+  '8n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="20" r="3" fill="black"/><path d="M10 20 Q 20 20 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
+  '16n':`<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="20" r="3" fill="black"/><circle cx="10" cy="30" r="3" fill="black"/><path d="M10 20 Q 20 20 20 40 M10 30 Q 20 30 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
+  '32n':`<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="15" r="2" fill="black"/><circle cx="10" cy="25" r="2" fill="black"/><circle cx="10" cy="35" r="2" fill="black"/><path d="M10 15 Q 20 15 20 40 M10 25 Q 20 25 20 40 M10 35 Q 20 35 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
+};
+// Toolbar-Icons (klein, für Notenwert-Buttons) — dunkle Farbe auf dunklem Hintergrund
+const noteIcons = {
+  '1n': `<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="15" cy="40" rx="9" ry="6" fill="none" stroke="#000" stroke-width="2.5"/></svg>`,
+  '2n': `<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="10" cy="40" rx="8" ry="5" fill="none" stroke="#000" stroke-width="2"/><path d="M17 40 L17 5" stroke="#000" stroke-width="2"/></svg>`,
+  '4n': `<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="10" cy="40" rx="7" ry="5" fill="#000"/><path d="M17 40 L17 5" stroke="#000" stroke-width="2.5"/></svg>`,
+  '8n': `<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="10" cy="40" rx="7" ry="5" fill="#000"/><path d="M17 40 L17 5" stroke="#000" stroke-width="2.5"/><path d="M17 5 Q 28 15 28 28" fill="none" stroke="#000" stroke-width="3.5"/></svg>`,
+  '16n':`<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="10" cy="40" rx="7" ry="5" fill="#000"/><path d="M17 40 L17 5" stroke="#000" stroke-width="2.5"/><path d="M17 5 Q 28 15 28 22" fill="none" stroke="#000" stroke-width="3.5"/><path d="M17 14 Q 28 24 28 31" fill="none" stroke="#000" stroke-width="3.5"/></svg>`,
+  '32n':`<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="10" cy="40" rx="7" ry="5" fill="#000"/><path d="M17 40 L17 5" stroke="#000" stroke-width="2.5"/><path d="M17 5 Q 28 15 28 18" fill="none" stroke="#000" stroke-width="3.5"/><path d="M17 10 Q 28 20 28 23" fill="none" stroke="#000" stroke-width="3.5"/><path d="M17 15 Q 28 25 28 28" fill="none" stroke="#000" stroke-width="3.5"/></svg>`,
+};
+const restIcons = {
+  '1n': `<svg viewBox="0 0 30 50" height="44" width="28"><rect x="5" y="30" width="20" height="6" fill="#000"/></svg>`,
+  '2n': `<svg viewBox="0 0 30 50" height="44" width="28"><rect x="5" y="24" width="20" height="6" fill="#000"/></svg>`,
+  '4n': `<svg viewBox="0 0 30 50" height="44" width="28"><path d="M10 15 L20 25 L10 30 L15 40 Q 10 45 5 40" stroke="#000" stroke-width="2.5" fill="none"/></svg>`,
+  '8n': `<svg viewBox="0 0 30 50" height="44" width="28"><circle cx="10" cy="20" r="3" fill="#000"/><path d="M10 20 Q 20 20 20 40" stroke="#000" stroke-width="2" fill="none"/></svg>`,
+  '16n':`<svg viewBox="0 0 30 50" height="44" width="28"><circle cx="10" cy="20" r="3" fill="#000"/><circle cx="10" cy="30" r="3" fill="#000"/><path d="M10 20 Q 20 20 20 40 M10 30 Q 20 30 20 40" stroke="#000" stroke-width="2" fill="none"/></svg>`,
+  '32n':`<svg viewBox="0 0 30 50" height="44" width="28"><circle cx="10" cy="15" r="2" fill="#000"/><circle cx="10" cy="25" r="2" fill="#000"/><circle cx="10" cy="35" r="2" fill="#000"/><path d="M10 15 Q 20 15 20 40 M10 25 Q 20 25 20 40 M10 35 Q 20 35 20 40" stroke="#000" stroke-width="2" fill="none"/></svg>`,
+};
+
+// ── State ─────────────────────────────────────────────────────
+let scoreTracks = [{ clef:'treble', key:'C-Dur', timeSig:'4/4', layerIdx:0, data:[
+  {notes:[{p:'C4',a:null}],len:'4n',rest:false,dot:false}
+]}];
+let scoreActive    = null;  // {tIdx, sIdx} — Editor-Subpanel
+let scoreCursor    = null;  // {tIdx, sIdx} — Einfüge-Cursor (Klaviatur-Eingabe)
+let scoreTool      = { len:'4n', rest:false, dot:false };
+let scorePlayTimer = null;
+let scorePlayPos   = null;  // {tIdx, sIdx}
+let scoreKbInput   = false; // Keyboard-Eingabe-Modus aktiv
+
+// ── Toolbar ───────────────────────────────────────────────────
+function scoreRenderToolbar() {
+  const vals = ['1n','2n','4n','8n','16n','32n'];
+  const labels = {'1n':'Ganze','2n':'Halbe','4n':'Viertel','8n':'Achtel','16n':'16tel','32n':'32tel'};
+  const wrap = document.getElementById('scoreNoteValBtns');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  vals.forEach(v => {
+    const icon = scoreTool.rest ? restIcons[v] : noteIcons[v];
+    const btn = document.createElement('button');
+    btn.className = 'score-nv-btn' + (scoreTool.len===v?' active':'');
+    btn.title = labels[v];
+    btn.innerHTML = icon;
+    btn.addEventListener('click', () => scoreSetLen(v));
+    wrap.appendChild(btn);
+  });
+}
+window.scoreSetLen = function(v) {
+  scoreTool.len = v; scoreRenderToolbar();
+};
+document.getElementById('scoreToolRest')?.addEventListener('change', function() {
+  scoreTool.rest = this.checked; scoreRenderToolbar();
+});
+document.getElementById('scoreToolDot')?.addEventListener('change', function() {
+  scoreTool.dot = this.checked;
+});
+
+// ── Render ────────────────────────────────────────────────────
+function scoreRender() {
+  const container = document.getElementById('scoreTracksContainer');
+  if (!container) return;
+
+  // Scroll-Positionen aller Track-Rows sichern
+  const scrollPositions = [];
+  container.querySelectorAll('.score-track-row').forEach((row, i) => {
+    scrollPositions[i] = row.scrollLeft;
+  });
+
+  container.innerHTML = '';
+
+  scoreTracks.forEach((track, tIdx) => {
+    const pMap = track.clef === 'treble' ? PITCH_MAP_T : PITCH_MAP_B;
+    const keySig = KEY_SIGS[track.key] || [];
+
+    const unit = document.createElement('div');
+    unit.className = 'score-track-unit';
+
+    // Header
+    const hdr = document.createElement('div');
+    hdr.className = 'score-track-header';
+    // Layer-Dropdown aus den aktiven Ensemble-Layern aufbauen
+    const layerOpts = (typeof layers !== 'undefined' ? layers : [])
+      .map((l, i) => {
+        const sfName = (typeof engine !== 'undefined' && engine.synths[l.sfIdx])
+          ? engine.synths[l.sfIdx].name : `SF${l.sfIdx}`;
+        const presetName = (typeof engine !== 'undefined' && engine.synths[l.sfIdx])
+          ? (engine.synths[l.sfIdx].presets[l.presetIdx]?.name ?? '—') : '—';
+        return `<option value="${i}" ${track.layerIdx===i?'selected':''}>L${i+1}: ${presetName}</option>`;
+      }).join('') || '<option value="0">— kein Layer —</option>';
+
+    hdr.innerHTML = `<span style="color:var(--accent3)">♩ Track ${tIdx+1}</span>
+      <select onchange="window.scoreTracks[${tIdx}].clef=this.value;window.scoreRender()" style="margin-left:4px">
+        <option value="treble" ${track.clef==='treble'?'selected':''}>𝄞 Violin</option>
+        <option value="bass"   ${track.clef==='bass'?'selected':''} >𝄢 Bass</option>
+      </select>
+      <select onchange="window.scoreTracks[${tIdx}].key=this.value;window.scoreRender()" style="max-width:90px">
+        <optgroup label="── Dur ──">
+          ${Object.keys(KEY_SIGS).filter(k=>k.includes('Dur')||k==='C-Dur').map(k=>`<option value="${k}" ${(track.key??'C-Dur')===k?'selected':''}>${k}</option>`).join('')}
+        </optgroup>
+        <optgroup label="── Moll ──">
+          ${Object.keys(KEY_SIGS).filter(k=>k.includes('Moll')).map(k=>`<option value="${k}" ${(track.key??'C-Dur')===k?'selected':''}>${k}</option>`).join('')}
+        </optgroup>
+      </select>
+      <select onchange="window.scoreTracks[${tIdx}].timeSig=this.value;window.scoreRender()" style="width:58px">
+        ${Object.keys(TIME_SIGS).map(t=>`<option value="${t}" ${(track.timeSig??'4/4')===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+      <span style="font-size:.6rem;color:var(--dim);margin-left:4px">↔ Layer:</span>
+      <select onchange="window.scoreTracks[${tIdx}].layerIdx=parseInt(this.value);window.scoreRender()"
+        title="Welcher Ensemble-Layer spielt diesen Track ab">${layerOpts}</select>
+      <button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreAddStep(${tIdx})">+ Step</button>
+      ${tIdx>0?`<button class="score-btn danger" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreTracks.splice(${tIdx},1);window.scoreRender()">✕</button>`:''}`;
+    unit.appendChild(hdr);
+
+    // Notensystem-Zeile
+    const row = document.createElement('div');
+    row.className = 'score-track-row';
+
+    // Schlüssel
+    const clefArea = document.createElement('div');
+    clefArea.className = 'score-clef-area';
+    clefArea.innerHTML = (track.clef==='treble' ? svgClefT : svgClefB);
+    row.appendChild(clefArea);
+
+    // Vorzeichen
+    const keyArea = document.createElement('div');
+    keyArea.className = 'score-key-sig';
+    keySig.forEach(sig => {
+      const pm = track.clef==='bass' ? PITCH_MAP_B : PITCH_MAP_T;
+      const bpk = track.clef==='bass'
+        ? Object.keys(PITCH_MAP_B)[Object.keys(PITCH_MAP_T).indexOf(sig.p)-2] || 'E2'
+        : sig.p;
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;width:14px;height:100%';
+      const accEl = document.createElement('div');
+      accEl.innerHTML = svgAcc[sig.t];
+      accEl.firstChild.style.top = `${sig.t === '#' ? 153-(pm[bpk]||70) : 150-(pm[bpk]||70)}px`;
+      wrap.appendChild(accEl.firstChild);
+      keyArea.appendChild(wrap);
+    });
+    row.appendChild(keyArea);
+
+    // Taktart-Anzeige
+    const ts = TIME_SIGS[track.timeSig ?? '4/4'] ?? TIME_SIGS['4/4'];
+    const tsArea = document.createElement('div');
+    tsArea.style.cssText = 'flex-shrink:0;width:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;background-color:#fff;border-right:1px solid rgba(0,0,0,0.15);background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;background-size:100% 1px';
+    tsArea.innerHTML = `<svg viewBox="0 0 28 50" height="50" width="28">
+      <text x="14" y="24" text-anchor="middle" font-family="serif" font-size="22" font-weight="bold" fill="#000">${ts.num}</text>
+      <text x="14" y="46" text-anchor="middle" font-family="serif" font-size="22" font-weight="bold" fill="#000">${ts.den}</text>
+    </svg>`;
+    row.appendChild(tsArea);
+
+    // Timeline
+    const timeline = document.createElement('div');
+    timeline.className = 'score-timeline';
+    let totalX = 0, durSum = 0;
+
+    track.data.forEach((s, sIdx) => {
+      const step = document.createElement('div');
+      step.className = 'score-step';
+      const baseW = (s.len==='32n' ? 30 : DUR_MAP[s.len] * STEP_W);
+      step.style.width = (baseW * (s.dot ? 1.5 : 1)) + 'px';
+
+      const isSelected = scoreActive && scoreActive.tIdx===tIdx && scoreActive.sIdx===sIdx;
+      const isPlay     = scorePlayPos && scorePlayPos.tIdx===tIdx && scorePlayPos.sIdx===sIdx;
+      const isCursor   = scoreKbInput && scoreCursor && scoreCursor.tIdx===tIdx && scoreCursor.sIdx===sIdx;
+      if (isSelected) step.classList.add('selected');
+      if (isPlay)     step.classList.add('playhead');
+      if (isCursor)   step.classList.add('cursor');
+
+      step.addEventListener('click', () => {
+        if (scoreKbInput) {
+          // Im Eingabe-Modus: Cursor setzen statt Editor öffnen
+          scoreCursor = {tIdx, sIdx};
+          scoreRender();
+        } else {
+          scoreToggleEditor(tIdx, sIdx);
+        }
+      });
+
+      if (s.rest) {
+        const r = document.createElement('div');
+        r.innerHTML = restIconsStaff[s.len];
+        r.firstChild.style.bottom = '70px';
+        step.appendChild(r.firstChild);
+        if (s.dot) {
+          const d = document.createElement('div');
+          d.className = 'score-dot'; d.style.top = '78px'; step.appendChild(d);
+        }
+      } else {
+        s.notes.forEach(n => {
+          const y = pMap[n.p] || 70;
+          // Vorzeichen
+          if (n.a) {
+            const ac = document.createElement('div');
+            ac.innerHTML = svgAcc[n.a];
+            ac.firstChild.style.bottom = undefined;
+            ac.firstChild.style.top = `${n.a === '#' ? 153-y : 150-y}px`;
+            step.appendChild(ac.firstChild);
+          }
+          // Note
+          const nw = document.createElement('div');
+          nw.innerHTML = noteIconsStaff[s.len];
+          nw.firstChild.style.bottom = undefined;
+          nw.firstChild.style.top = `${122 - y}px`;
+          step.appendChild(nw.firstChild);
+          // Punkt
+          if (s.dot) {
+            const d = document.createElement('div');
+            d.className = 'score-dot'; d.style.top = `${165-y}px`; step.appendChild(d);
+          }
+          // Hilfslinien
+          const needsLedger =
+            (track.clef==='treble' && n.p==='C4') ||
+            (track.clef==='bass'   && (n.p==='E2'||n.p==='C4'));
+          if (needsLedger) {
+            const l = document.createElement('div');
+            l.className = 'score-ledger'; l.style.top = `${169-y}px`; step.appendChild(l);
+          }
+        });
+      }
+
+      timeline.appendChild(step);
+
+      const actualDur = DUR_MAP[s.len] * (s.dot ? 1.5 : 1);
+      durSum += actualDur;
+      totalX += baseW * (s.dot ? 1.5 : 1);
+
+      // Taktstrich: nach beatsPerBar Viertelnoten
+      const beatsPerBar = (TIME_SIGS[track.timeSig ?? '4/4'] ?? TIME_SIGS['4/4']).beats;
+      if (Math.round(durSum * 1000) % Math.round(beatsPerBar * 1000) === 0) {
+        const b = document.createElement('div');
+        b.className = 'score-bar-line';
+        b.style.left = `${totalX - 1}px`;
+        timeline.appendChild(b);
+      }
+    });
+
+    // End-Cursor-Zone: klickbarer Bereich nach letzter Note
+    const endZone = document.createElement('div');
+    const isEndCursor = scoreKbInput && scoreCursor &&
+      scoreCursor.tIdx === tIdx && scoreCursor.sIdx === track.data.length;
+    if (isEndCursor) endZone.className = 'score-end-cursor';
+    else {
+      endZone.style.cssText = 'flex-shrink:0;width:40px;height:100%;cursor:pointer';
+      if (scoreKbInput) endZone.style.background = 'rgba(0,229,255,.02)';
+    }
+    endZone.title = 'Cursor ans Ende setzen';
+    endZone.addEventListener('click', () => {
+      if (scoreKbInput) {
+        scoreCursor = {tIdx, sIdx: track.data.length};
+        scoreActive = null;
+        scoreRender();
+      }
+    });
+    timeline.appendChild(endZone);
+
+    row.appendChild(timeline);
+    unit.appendChild(row);
+
+    // Editor-Subpanel ÜBER dem Notensystem (vor der row)
+    const ed = document.createElement('div');
+    ed.className = 'score-editor-panel';
+    ed.id = `scoreEd-${tIdx}`;
+    unit.insertBefore(ed, row);   // vor der Notenzeile einfügen
+    container.appendChild(unit);
+  });
+
+  // Aktiven Editor wiederherstellen
+  if (scoreActive) scoreRenderEditor(scoreActive.tIdx, scoreActive.sIdx);
+
+  // Scroll-Positionen wiederherstellen
+  container.querySelectorAll('.score-track-row').forEach((row, i) => {
+    if (scrollPositions[i]) row.scrollLeft = scrollPositions[i];
+  });
+
+  // Piano-Highlight + Info nach jedem Render synchronisieren
+  if (typeof updateScorePianoInfo === 'function') updateScorePianoInfo();
+  if (typeof scorePianoHighlightNext === 'function') scorePianoHighlightNext();
+}
+
+// ── Editor-Subpanel ───────────────────────────────────────────
+function scoreToggleEditor(tIdx, sIdx) {
+  // Gleichen Step nochmal klicken → schließen
+  if (scoreActive && scoreActive.tIdx===tIdx && scoreActive.sIdx===sIdx) {
+    scoreActive = null; scoreRender(); return;
+  }
+  scoreActive = {tIdx, sIdx};
+  scoreRender();
+}
+
+function scoreRenderEditor(tIdx, sIdx) {
+  const ed = document.getElementById(`scoreEd-${tIdx}`);
+  if (!ed) return;
+  const s = scoreTracks[tIdx].data[sIdx];
+  const pMap = scoreTracks[tIdx].clef==='treble' ? PITCH_MAP_T : PITCH_MAP_B;
+  const vals = ['1n','2n','4n','8n','16n','32n'];
+
+  // Notenwert-Buttons: doppeln sich mit Toolbar → hier kompakt als Text-Buttons
+  const lenBtns = vals.map(v =>
+    `<button class="score-btn ${s.len===v?'active':''}" style="padding:3px 7px;font-size:.6rem"
+      onclick="window.scoreTracks[${tIdx}].data[${sIdx}].len='${v}';window.scoreActive={tIdx:${tIdx},sIdx:${sIdx}};window.scoreRender();window.scoreRenderEditor(${tIdx},${sIdx})"
+      title="${v}">${v}</button>`
+  ).join('');
+
+  ed.style.display = 'flex';
+  ed.innerHTML = `
+    <div class="score-editor-inner">
+      <!-- Links: Notenwert + Pause/Punkt -->
+      <div class="score-editor-left" style="background:#0d1220">
+        <span style="font-size:.5rem;color:var(--accent);letter-spacing:.08em;text-transform:uppercase">✎ Step ${sIdx+1}</span>
+        <div style="display:flex;gap:3px;flex-wrap:wrap">${lenBtns}</div>
+        <label style="font-size:.6rem;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:4px">
+          <input type="checkbox" ${s.rest?'checked':''} onchange="window.scoreTracks[${tIdx}].data[${sIdx}].rest=this.checked;window.scoreActive={tIdx:${tIdx},sIdx:${sIdx}};window.scoreRender();window.scoreRenderEditor(${tIdx},${sIdx})"> Pause
+        </label>
+        <label style="font-size:.6rem;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:4px">
+          <input type="checkbox" ${s.dot?'checked':''} onchange="window.scoreTracks[${tIdx}].data[${sIdx}].dot=this.checked;window.scoreActive={tIdx:${tIdx},sIdx:${sIdx}};window.scoreRender();window.scoreRenderEditor(${tIdx},${sIdx})"> Punkt
+        </label>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">
+          <button class="score-btn danger" style="padding:3px 7px;font-size:.6rem" onclick="window.scoreTracks[${tIdx}].data.splice(${sIdx},1);window.scoreActive=null;window.scoreRender()">🗑</button>
+          <button class="score-btn" style="padding:3px 7px;font-size:.6rem" onclick="window.scoreActive=null;window.scoreRender()">✕</button>
+        </div>
+      </div>
+      <!-- Rechts: Tonhöhen + Aktionen -->
+      <div class="score-editor-right" style="background:#0a0e18">
+        ${!s.rest?`<button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreAddNoteToChord(${tIdx},${sIdx})">+ Akkord-Ton</button>`:''}
+        <button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreInsertStep(${tIdx},${sIdx+1})">+ Step danach</button>
+        <div id="scoreChordList-${tIdx}-${sIdx}" style="display:flex;flex-wrap:wrap;gap:6px;width:100%"></div>
+      </div>
+    </div>`;
+
+  // Akkord-Töne
+  if (!s.rest) {
+    const list = ed.querySelector(`#scoreChordList-${tIdx}-${sIdx}`);
+    s.notes.forEach((n, nIdx) => {
+      const div = document.createElement('div');
+      div.className = 'score-chord-item';
+      div.innerHTML = `
+        <select onchange="window.scoreTracks[${tIdx}].data[${sIdx}].notes[${nIdx}].p=this.value;window.scoreActive={tIdx:${tIdx},sIdx:${sIdx}};window.scoreRender();window.scoreRenderEditor(${tIdx},${sIdx})">
+          ${Object.keys(pMap).reverse().map(p=>`<option value="${p}" ${n.p===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+        <select onchange="window.scoreTracks[${tIdx}].data[${sIdx}].notes[${nIdx}].a=this.value||null;window.scoreActive={tIdx:${tIdx},sIdx:${sIdx}};window.scoreRender();window.scoreRenderEditor(${tIdx},${sIdx})">
+          <option value="">—</option>
+          <option value="#" ${n.a==='#'?'selected':''}>#</option>
+          <option value="b" ${n.a==='b'?'selected':''}>b</option>
+          <option value="n" ${n.a==='n'?'selected':''}>♮</option>
+        </select>
+        <button class="score-btn danger" style="padding:2px 7px"
+          onclick="window.scoreTracks[${tIdx}].data[${sIdx}].notes.splice(${nIdx},1);window.scoreActive={tIdx:${tIdx},sIdx:${sIdx}};window.scoreRender();window.scoreRenderEditor(${tIdx},${sIdx})">×</button>`;
+      list.appendChild(div);
+    });
+  }
+}
+
+// ── Step-Operationen ─────────────────────────────────────────
+window.scoreAddStep = function(tIdx) {
+  scoreTracks[tIdx].data.push({
+    notes:[{p:'C4',a:null}], len:scoreTool.len, rest:scoreTool.rest, dot:scoreTool.dot
+  });
+  scoreRender();
+};
+window.scoreInsertStep = function(tIdx, pos) {
+  scoreTracks[tIdx].data.splice(pos, 0, {
+    notes:[{p:'C4',a:null}], len:scoreTool.len, rest:scoreTool.rest, dot:scoreTool.dot
+  });
+  scoreActive = {tIdx, sIdx: pos};
+  scoreRender();
+};
+window.scoreAddNoteToChord = function(tIdx, sIdx) {
+  scoreTracks[tIdx].data[sIdx].notes.push({p:'E4',a:null});
+  scoreActive = {tIdx, sIdx};
+  scoreRender();
+};
+window.scoreAddTrack = function() {
+  const last = scoreTracks[scoreTracks.length-1];
+  scoreTracks.push({ clef:last.clef, key:last.key ?? 'C-Dur',
+    timeSig: last.timeSig ?? '4/4', layerIdx: last.layerIdx ?? 0,
+    data:[{notes:[{p:'C4',a:null}],len:'4n',rest:false,dot:false}] });
+  scoreRender();
+};
+
+// ── Klaviatur-Eingabe-Modus ───────────────────────────────────
+window.scoreToggleKbInput = function() {
+  scoreKbInput = !scoreKbInput;
+  const btn = document.getElementById('scoreKbInputBtn');
+  if (btn) {
+    btn.classList.toggle('active', scoreKbInput);
+    btn.textContent = scoreKbInput ? '🎹 Eingabe: AN' : '🎹 Klaviatur-Eingabe';
+  }
+  if (scoreKbInput) {
+    // Cursor ans Ende des ersten Tracks setzen
+    const t = scoreTracks[0];
+    scoreCursor = t ? {tIdx:0, sIdx: t.data.length} : null;
+    scoreActive = null;
+    scoreRender();
+  } else {
+    scoreCursor = null;
+    scoreRender();
+  }
+  // Piano-Info sofort updaten
+  setTimeout(() => {
+    if (typeof updateScorePianoInfo === 'function') updateScorePianoInfo();
+    if (typeof scorePianoHighlightNext === 'function') scorePianoHighlightNext();
+  }, 0);
+};
+
+// Wird von buildKb() aufgerufen — hooked in bestehende Keyboard-Events
+// Notennamen aus Keyboard parsen: 'C#4' → {p:'C4', a:'#'}
+// 'Bb3' → {p:'B3', a:'b'} (aber Klaviatur gibt 'A#3' nicht 'Bb3')
+function parseKbNote(noteName) {
+  // Format: NOTE[ACC]OCT z.B. 'C4', 'C#4', 'D#3'
+  const m = noteName.match(/^([A-G])(#?)(\d+)$/);
+  if (!m) return {p: noteName, a: null};
+  const [, note, acc, oct] = m;
+  return { p: note + oct, a: acc || null };
+}
+
+function scoreKbNoteInput(noteName) {
+  if (!scoreKbInput) return false;
+
+  // Cursor initialisieren falls nicht gesetzt
+  if (!scoreCursor) {
+    // Ersten Track, Ende als Startposition
+    if (!scoreTracks[0]) return false;
+    scoreCursor = {tIdx: 0, sIdx: scoreTracks[0].data.length};
+  }
+
+  const {tIdx, sIdx} = scoreCursor;
+  const track = scoreTracks[tIdx];
+  if (!track) return false;
+
+  // Note parsen: 'C#4' → p:'C4', a:'#'
+  const {p, a} = parseKbNote(noteName);
+
+  // Neuen Step an Cursor-Position einfügen
+  const newStep = {
+    notes: [{p, a}],
+    len:  scoreTool.len,
+    rest: false,
+    dot:  scoreTool.dot
+  };
+  track.data.splice(sIdx, 0, newStep);
+
+  // Cursor vorrücken
+  scoreCursor = {tIdx, sIdx: sIdx + 1};
+  // Editor zeigt den neuen Step
+  scoreActive = {tIdx, sIdx};
+
+  scoreRender();
+
+  // Cursor in Sicht scrollen + Piano-Sync
+  setTimeout(() => {
+    const units = document.querySelectorAll('.score-track-unit');
+    const steps = units[tIdx]?.querySelectorAll('.score-step');
+    steps?.[sIdx]?.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+    scorePianoHighlightNext();
+    updateScorePianoInfo();
+  }, 50);
+  return true;
+}
+
+// ── Playback ─────────────────────────────────────────────────
+window.scoreTogglePlay = function() {
+  if (scorePlayTimer) {
+    clearTimeout(scorePlayTimer);
+    scorePlayTimer = null;
+    scorePlayPos   = null;
+    document.getElementById('scorePlayBtn').textContent = '▶ Abspielen';
+    document.getElementById('scorePlayBtn').classList.remove('active');
+    scoreRender();
+    return;
+  }
+  // Starte von Anfang
+  document.getElementById('scorePlayBtn').textContent = '■ Stop';
+  document.getElementById('scorePlayBtn').classList.add('active');
+  scorePlayStep(0, 0);
+};
+
+function scorePlayStep(tIdx, sIdx) {
+  // Alle Tracks synchron abspielen (erster Track bestimmt Timing)
+  scorePlayPos = {tIdx:0, sIdx};
+  scoreRender();
+
+  // Alle Tracks an sIdx abspielen
+  let stepDurMs = 500; // Fallback
+  const bpm = (typeof metro !== 'undefined') ? metro.bpm : 120;
+
+  scoreTracks.forEach((track, ti) => {
+    const s = track.data[sIdx];
+    if (!s) return;
+    const dur = DUR_MAP[s.len] * (s.dot ? 1.5 : 1);
+    stepDurMs = Math.round((dur / 4) * (60000 / bpm));
+
+    if (!s.rest && typeof engine !== 'undefined' && engine.synths.length) {
+      // Layer-Kopplung: Nutze den gekoppelten Ensemble-Layer
+      const lIdx   = track.layerIdx ?? 0;
+      const layer  = (typeof layers !== 'undefined') ? layers[lIdx] : null;
+      const sfIdx  = layer ? (layer.sfIdx  ?? 0) : 0;
+      const pIdx   = layer ? (layer.presetIdx ?? 0) : 0;
+      const vol    = layer ? (layer.vol ?? 1.0) : 1.0;
+      const sfObj  = engine.synths[sfIdx];
+      if (!sfObj) return;
+      const layerId    = `score_${ti}`;
+      const noteOffMs  = Math.max(50, stepDurMs - 40);
+
+      s.notes.forEach(n => {
+        const midiBase = NOTE_MIDI[n.p] ?? 60;
+        const midi     = midiBase + (ACC_OFFSET[n.a] ?? 0);
+        try {
+          engine.ensureCtx().then(() => {
+            engine.playSync(midi, layerId, sfIdx, pIdx, 90, vol,
+              engine.ctx ? engine.ctx.currentTime : 0,
+              layer?.envOverride ?? {});
+            setTimeout(() => engine.stop(midi, layerId), noteOffMs);
+          });
+        } catch(e) {}
+      });
+    }
+  });
+
+  // Nächster Step
+  const nextSIdx = sIdx + 1;
+  const maxLen   = Math.max(...scoreTracks.map(t => t.data.length));
+  if (nextSIdx < maxLen && scorePlayTimer !== null || scorePlayTimer === undefined) {
+    scorePlayTimer = setTimeout(() => scorePlayStep(0, nextSIdx), stepDurMs);
+  } else {
+    // Ende
+    scorePlayTimer = null;
+    scorePlayPos   = null;
+    document.getElementById('scorePlayBtn').textContent = '▶ Abspielen';
+    document.getElementById('scorePlayBtn').classList.remove('active');
+    scoreRender();
+  }
+}
+
+// ── Export / Import ───────────────────────────────────────────
+window.scoreExportJSON = function() {
+  const blob = new Blob([JSON.stringify(scoreTracks, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'noten.json'; a.click();
+};
+window.scoreImportJSON = function() {
+  document.getElementById('scoreImportInput').click();
+};
+document.getElementById('scoreImportInput')?.addEventListener('change', function() {
+  if (!this.files[0]) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      scoreTracks = JSON.parse(e.target.result);
+      scoreRender();
+    } catch(err) { alert('Ungültige JSON-Datei'); }
+  };
+  r.readAsText(this.files[0]);
+});
+
+// ── Score-Piano ──────────────────────────────────────────────
+let scorePianoOct = 4;
+
+function buildScorePiano() {
+  const kb = document.getElementById('scoreKb');
+  if (!kb) return;
+  kb.innerHTML = '';
+
+  // Identische Maße wie buildKb()
+  const kw = window.innerWidth < 500 ? 36 : 42;
+  const bw = window.innerWidth < 500 ? 22 : 26;
+  const startOct = Math.max(0, scorePianoOct - 1);
+  const endOct   = Math.min(8, scorePianoOct + 1);
+  let wx = 0;
+
+  for (let oct = startOct; oct <= endOct; oct++) {
+    for (let n = 0; n < 12; n++) {
+      const midi = midiNote(oct, n);
+      const note = NOTES[n] + oct;
+      const k = document.createElement('div');
+      k.dataset.midi = midi;
+      k.dataset.note = note;
+      const lbl = document.createElement('div');
+      lbl.className = 'klabel';
+      if (BLACK[n]) {
+        k.className = 'key black';
+        k.style.left  = (wx - bw/2) + 'px';
+        k.style.width = bw + 'px';
+        lbl.textContent = NOTES[n];
+      } else {
+        k.className = 'key white';
+        k.style.left  = wx + 'px';
+        k.style.width = kw + 'px';
+        lbl.textContent = NOTES[n] + oct;
+        wx += kw;
+      }
+      k.appendChild(lbl);
+      kb.appendChild(k);
+    }
+  }
+  kb.style.width = wx + 'px';
+
+  // Events — identisch zu buildKb() + Score-Eingabe-Hook
+  kb.querySelectorAll('.key').forEach(k => {
+    const midi = parseInt(k.dataset.midi);
+    const note = k.dataset.note;
+    k.addEventListener('mousedown', e => {
+      e.preventDefault();
+      if (scoreKbInput && scoreKbNoteInput(note)) return;
+      k.classList.add('active');
+      if (typeof playMidi === 'function') playMidi(midi, 90, null, 'screen');
+    });
+    k.addEventListener('mouseup', () => {
+      k.classList.remove('active');
+      if (!scoreKbInput && typeof stopMidi === 'function') stopMidi(midi);
+    });
+    k.addEventListener('mouseleave', () => {
+      k.classList.remove('active');
+      if (!scoreKbInput && typeof stopMidi === 'function') stopMidi(midi);
+    });
+    k.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (scoreKbInput && scoreKbNoteInput(note)) return;
+      k.classList.add('active');
+      const t=e.touches[0],r=k.getBoundingClientRect();
+      const vel = ((t.clientY-r.top)/Math.max(1,r.height)) < 0.5 ? 80 : 110;
+      if (typeof playMidi === 'function') playMidi(midi, vel, null, 'screen');
+    }, {passive:false});
+    k.addEventListener('touchend', e => {
+      e.preventDefault();
+      k.classList.remove('active');
+      if (!scoreKbInput && typeof stopMidi === 'function') stopMidi(midi);
+    }, {passive:false});
+    k.addEventListener('touchcancel', () => k.classList.remove('active'));
+  });
+
+  scorePianoHighlightNext();
+}
+
+// Aktiven Step-Ton auf dem Piano hervorheben
+function scorePianoHighlightNext() {
+  const kb = document.getElementById('scoreKb');
+  if (!kb) return;
+  kb.querySelectorAll('.key').forEach(k => k.classList.remove('score-target'));
+  if (!scoreKbInput) return;
+  // Highlight: Ton des Steps AM Cursor (falls vorhanden)
+  const cur = scoreCursor || scoreActive;
+  if (!cur) return;
+  const {tIdx, sIdx} = cur;
+  const s = scoreTracks[tIdx]?.data[sIdx];
+  if (!s || s.rest || !s.notes.length) return;
+  // p kann 'C4' sein, Taste hat data-note='C4'
+  const note = s.notes[0].p;
+  const k = kb.querySelector(`.key[data-note="${note}"]`);
+  if (k) k.classList.add('score-target');
+}
+
+// Oktaven-Buttons
+document.getElementById('scorePianoOctDown')?.addEventListener('click', () => {
+  if (scorePianoOct > 2) { scorePianoOct--; updateScorePianoOctDisp(); buildScorePiano(); }
+});
+document.getElementById('scorePianoOctUp')?.addEventListener('click', () => {
+  if (scorePianoOct < 6) { scorePianoOct++; updateScorePianoOctDisp(); buildScorePiano(); }
+});
+function updateScorePianoOctDisp() {
+  const el = document.getElementById('scorePianoOctDisp');
+  if (el) el.textContent = scorePianoOct;
+}
+
+// Info-Text je nach Modus
+function updateScorePianoInfo() {
+  const el = document.getElementById('scorePianoInfo');
+  if (!el) return;
+  if (scoreKbInput && scoreCursor) {
+    const {tIdx, sIdx} = scoreCursor;
+    const total = scoreTracks[tIdx]?.data.length ?? 0;
+    el.textContent = `Track ${tIdx+1} · Cursor vor Step ${sIdx+1}/${total+1} — Taste = Note einfügen`;
+  } else if (scoreKbInput) {
+    el.textContent = 'Track anklicken um Cursor zu setzen';
+  } else {
+    el.textContent = 'Klaviatur-Eingabe aktivieren um Noten einzufügen';
+  }
+}
+
+// scoreKbNoteInput ist bereits via window-Exposition global zugänglich
+// (Piano-Highlight wird direkt am Ende von scoreKbNoteInput aufgerufen)
+
+// scoreToggleKbInput: Piano-Sync direkt im Original eingebaut (unten im Init)
+
+// Piano-Sync nach scoreRender — direkt in scoreRender eingebaut (kein Override nötig)
+// wird am Ende von scoreRender() aufgerufen via postRender-Hook
+
+window.addEventListener('resize', () => { buildScorePiano(); _updateScoreH(); });
+function _updateScoreH() {
+  const p = document.getElementById('scorePanel');
+  if (p) document.body.style.setProperty('--score-h', p.offsetHeight + 'px');
+}
+
+// ── Globale Exposition für inline-Handler ───────────────────
+window.scoreRender        = scoreRender;
+window.scoreToggleEditor  = scoreToggleEditor;
+window.scoreRenderEditor  = scoreRenderEditor;
+Object.defineProperty(window, 'scoreActive', {
+  get: () => scoreActive, set: v => { scoreActive = v; }, configurable: true });
+Object.defineProperty(window, 'scoreCursor', {
+  get: () => scoreCursor, set: v => { scoreCursor = v; }, configurable: true });
+Object.defineProperty(window, 'scoreTracks', {
+  get: () => scoreTracks, set: v => { scoreTracks = v; }, configurable: true });
+
+// ── Init ──────────────────────────────────────────────────────
+scoreRenderToolbar();
+scoreRender();
+buildScorePiano();
+setTimeout(_updateScoreH, 300);
+
+// Layer-Dropdown aktuell halten wenn Layer hinzugefügt/entfernt werden
+const _scoreLayerObserver = new MutationObserver(() => scoreRender());
+const _scoreLayerTarget = document.getElementById('layerList');
+if (_scoreLayerTarget) {
+  _scoreLayerObserver.observe(_scoreLayerTarget, {childList:true, subtree:false});
+}
+
+})(); // Ende IIFE Noten-Editor
+
 let midiAccess = null;
 let activeMidiInputs = new Set();
 let sustainPedal = false;
@@ -7593,14 +8612,89 @@ arpInstallBpmSync(); // jetzt ist metro definiert
 // ══════════════════════════════════════════════════════════════
 const rec = {
   state:    'idle',   // 'idle' | 'armed' | 'recording' | 'playing' | 'overdubbing'
-  events:   [],       // [{t, type:'on'|'off', midi, vel}]
+  tracks:   [],       // [{id, label, events, duration, muted}]  ← NEU: Spuren-Array
+  events:   [],       // flaches merged Array für Playback (wird aus tracks berechnet)
   overdubEvents: [],  // new events captured during overdub
   startT:   0,
   duration: 0,
   looping:  false,
   playTimers: [],
   animFrame: null,
+  _trackCounter: 0,  // aufsteigende ID
 };
+
+// ── Hilfsfunktion: events + duration aus allen aktiven Spuren berechnen ──
+function recRebuildEvents() {
+  const active = rec.tracks.filter(tr => !tr.muted);
+  if (!active.length) { rec.events = []; rec.duration = 0; return; }
+  rec.events = active.flatMap(tr => tr.events).sort((a,b) => a.t - b.t);
+  rec.duration = Math.max(...active.map(tr => tr.duration));
+}
+
+// ── Spur-UI rendern ──────────────────────────────────────────────────────
+function recRenderTracks() {
+  const list = document.getElementById('recTrackList');
+  if (!list) return;
+  list.innerHTML = '';
+  rec.tracks.forEach((tr, idx) => {
+    const row = document.createElement('div');
+    row.className = 'rec-track' + (tr.muted ? ' rec-track-muted-stripe' : '');
+    row.dataset.id = tr.id;
+
+    // Mute-Button
+    const muteBtn = document.createElement('button');
+    muteBtn.className = 'rec-track-mute' + (tr.muted ? ' muted' : '');
+    muteBtn.title = tr.muted ? 'Spur einschalten' : 'Spur stummschalten';
+    muteBtn.textContent = tr.muted ? '✕' : '♪';
+    muteBtn.addEventListener('click', () => {
+      tr.muted = !tr.muted;
+      recRebuildEvents();
+      recRenderTracks();
+      recUpdateUI();
+    });
+
+    // Spurnummer
+    const num = document.createElement('span');
+    num.className = 'rec-track-num';
+    num.textContent = idx + 1;
+
+    // Badge (BASE / OVERDUB)
+    const badge = document.createElement('span');
+    badge.className = 'rec-track-badge ' + (tr.isBase ? 'base' : 'overdub');
+    badge.textContent = tr.isBase ? 'BASE' : 'OD';
+
+    // Event-Anzahl / Label
+    const info = document.createElement('span');
+    info.className = 'rec-track-evcount';
+    info.textContent = tr.label + ' · ' + tr.events.length + ' Ev.';
+
+    // Dauer
+    const dur = document.createElement('span');
+    dur.className = 'rec-track-dur';
+    dur.textContent = fmtMs(tr.duration);
+
+    // Delete-Button
+    const del = document.createElement('button');
+    del.className = 'rec-track-del';
+    del.title = 'Spur löschen';
+    del.textContent = '🗑';
+    del.addEventListener('click', () => {
+      if (rec.state !== 'idle') return;
+      rec.tracks.splice(idx, 1);
+      recRebuildEvents();
+      recRenderTracks();
+      recUpdateUI();
+    });
+
+    row.appendChild(muteBtn);
+    row.appendChild(num);
+    row.appendChild(badge);
+    row.appendChild(info);
+    row.appendChild(dur);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
 
 // ── Hook into playMidi / stopMidi ─────────────────────────────
 // (rec object checked directly inside playMidi/stopMidi below)
@@ -7611,7 +8705,7 @@ function fmtMs(ms) {
 }
 
 function recUpdateUI() {
-  const hasRec = rec.events.length > 0;
+  const hasRec = rec.events.length > 0 || rec.tracks.length > 0;
   const dur    = rec.duration;
   const isOD   = rec.state === 'overdubbing';
   document.getElementById('recRecordBtn').classList.toggle('active',  rec.state==='recording'||rec.state==='armed');
@@ -7632,11 +8726,12 @@ function recUpdateUI() {
   document.getElementById('recProgressBar').style.width =
     dur>0 && (rec.state==='playing'||isOD) ? Math.min(100,(performance.now()-rec.startT)/dur*100).toFixed(1)+'%'
     : dur>0 && rec.state==='idle' ? '100%' : '0%';
+  const totalEvs = rec.tracks.reduce((s,tr) => s + tr.events.length, 0);
   document.getElementById('recInfo').textContent =
     rec.state==='armed'     ? '🔴 Warte auf ersten Ton…'
     : rec.state==='recording' ? rec.events.length+' Events aufgezeichnet'
     : isOD ? '⊕ Overdub · '+rec.overdubEvents.length+' neue Events'
-    : hasRec ? rec.events.length+' Events · '+fmtMs(dur) : 'Keine Aufnahme';
+    : hasRec ? rec.tracks.length+' Spur'+(rec.tracks.length===1?'':'en')+' · '+totalEvs+' Ev. · '+fmtMs(dur) : 'Keine Aufnahme';
 }
 
 function recTick() {
@@ -7646,7 +8741,12 @@ function recTick() {
 
 function recStart() {
   if (rec.state==='playing'||rec.state==='overdubbing') recStopPlayback();
-  rec.events=[]; rec.startT=0; rec.state='armed';
+  // Neue Basis-Aufnahme: alle alten Spuren löschen
+  rec.tracks = [];
+  rec.events = []; rec.startT=0; rec.state='armed';
+  rec.duration = 0;
+  rec._trackCounter = 0;
+  recRenderTracks();
   rec.animFrame = requestAnimationFrame(recTick);
 }
 
@@ -7655,8 +8755,23 @@ function recStop() {
   if (rec.state!=='recording') return;
   for (const midi of heldNotes)
     rec.events.push({ t: performance.now()-rec.startT, type:'off', midi });
-  rec.duration = performance.now()-rec.startT;
-  rec.state='idle'; cancelAnimationFrame(rec.animFrame); recUpdateUI();
+  const dur = performance.now()-rec.startT;
+  // Spur anlegen
+  rec._trackCounter++;
+  rec.tracks.push({
+    id: rec._trackCounter,
+    label: 'Aufnahme ' + rec._trackCounter,
+    isBase: rec.tracks.length === 0,
+    events: [...rec.events],
+    duration: dur,
+    muted: false,
+  });
+  rec.events = [...rec.events]; // keep for immediate use
+  rec.duration = dur;
+  rec.state='idle'; cancelAnimationFrame(rec.animFrame);
+  recRebuildEvents();
+  recRenderTracks();
+  recUpdateUI();
 }
 
 // ── Snapshot-aware playback helper ───────────────────────────
@@ -7716,15 +8831,26 @@ function recStopOverdub() {
   if (rec.state !== 'overdubbing') return;
   for (const midi of heldNotes)
     rec.overdubEvents.push({ t: performance.now()-rec.startT, type:'off', midi });
-  rec.events = [...rec.events, ...rec.overdubEvents].sort((a,b) => a.t - b.t);
-  rec.duration = Math.max(rec.duration,
-    rec.events.length ? rec.events[rec.events.length-1].t + 200 : rec.duration);
+  const odDur = Math.max(rec.duration,
+    rec.overdubEvents.length ? rec.overdubEvents[rec.overdubEvents.length-1].t + 200 : rec.duration);
+  // Overdub als eigene Spur speichern
+  rec._trackCounter++;
+  rec.tracks.push({
+    id: rec._trackCounter,
+    label: 'Overdub ' + (rec.tracks.length),
+    isBase: false,
+    events: [...rec.overdubEvents],
+    duration: odDur,
+    muted: false,
+  });
   rec.overdubEvents = [];
   rec.playTimers.forEach(t => clearTimeout(t));
   rec.playTimers = [];
   engine.stopAll();
   rec.state = 'idle';
   cancelAnimationFrame(rec.animFrame);
+  recRebuildEvents();
+  recRenderTracks();
   recUpdateUI();
 }
 
@@ -7751,19 +8877,28 @@ function recPlay(offset=0) {
   rec.animFrame=requestAnimationFrame(recTick);
 }
 
-function recStopPlayback() {
+function recStopPlayback(andRestart=false) {
   rec.playTimers.forEach(t=>clearTimeout(t));
   rec.playTimers=[]; engine.stopAll();
   if (rec.state==='overdubbing') {
-    rec.events = [...rec.events, ...rec.overdubEvents].sort((a,b)=>a.t-b.t);
+    // discard laufende overdub-events beim Abbruch
     rec.overdubEvents=[];
   }
   rec.state='idle'; cancelAnimationFrame(rec.animFrame); recUpdateUI();
+  if (andRestart && rec.looping && rec.events.length>0) {
+    setTimeout(() => recPlay(), 30);
+  }
 }
 
 function recSave() {
+  const payload = {
+    version: 2,
+    duration: rec.duration,
+    events: rec.events,          // flaches Array für Abwärtskompatibilität
+    tracks: rec.tracks,          // Spuren-Array (neu)
+  };
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([JSON.stringify({version:1,duration:rec.duration,events:rec.events})],{type:'application/json'}));
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(payload)],{type:'application/json'}));
   a.download='aufnahme_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.json';
   a.click(); URL.revokeObjectURL(a.href);
 }
@@ -7845,7 +8980,16 @@ function recExportMidi() {
 document.getElementById('recRecordBtn').addEventListener('click',  ()=>(rec.state==='recording'||rec.state==='armed')?recStop():recStart());
 document.getElementById('recOverdubBtn').addEventListener('click', ()=>rec.state==='overdubbing'?recStopOverdub():recOverdub());
 document.getElementById('recPlayBtn').addEventListener('click',    ()=>rec.state==='playing'?recStopPlayback():recPlay());
-document.getElementById('recStopBtn').addEventListener('click',  ()=>(rec.state==='recording'||rec.state==='armed')?recStop():recStopPlayback());
+document.getElementById('recStopBtn').addEventListener('click', () => {
+  if (rec.state==='recording'||rec.state==='armed') { recStop(); return; }
+  // Loop-Station: Stop → sofort wieder von vorn abspielen
+  if (rec.looping && rec.events.length > 0 && rec.state==='playing') {
+    recStopPlayback();
+    setTimeout(() => recPlay(), 50);
+  } else {
+    recStopPlayback();
+  }
+});
 document.getElementById('recLoopBtn').addEventListener('click',  function(){ rec.looping=!rec.looping; this.classList.toggle('active',rec.looping); });
 document.getElementById('recSaveBtn').addEventListener('click',  recSave);
 document.getElementById('recMidiBtn').addEventListener('click',  recExportMidi);
@@ -7992,7 +9136,18 @@ document.getElementById('recLoadInput').addEventListener('change',e=>{
       const d=JSON.parse(ev.target.result);
       if(!Array.isArray(d.events)) throw new Error('Ungültiges Format');
       if(rec.state!=='idle') recStopPlayback();
-      rec.events=d.events; rec.duration=d.duration||(d.events.length?d.events[d.events.length-1].t+500:0);
+      if (d.version >= 2 && Array.isArray(d.tracks) && d.tracks.length) {
+        // Neues Format mit Spuren
+        rec.tracks = d.tracks;
+        rec._trackCounter = Math.max(...d.tracks.map(tr => tr.id || 0), 0);
+      } else {
+        // Altes Format (v1): eine Spur daraus machen
+        rec.tracks = [{ id:1, label:'Aufnahme 1', isBase:true,
+          events: d.events, duration: d.duration||(d.events.length?d.events[d.events.length-1].t+500:0), muted:false }];
+        rec._trackCounter = 1;
+      }
+      recRebuildEvents();
+      recRenderTracks();
       recUpdateUI();
     } catch(err){ setStatus('error','Ladefehler: '+err.message); }
   };
@@ -8102,8 +9257,13 @@ document.getElementById('recMidiLoadInput').addEventListener('change', e=>{
     try {
       const parsed = parseMidiFile(ev.target.result);
       if(rec.state!=='idle') recStopPlayback();
-      rec.events   = parsed.events;
-      rec.duration = parsed.duration;
+      // MIDI als eigene Spur anlegen
+      rec.tracks = [];
+      rec._trackCounter = 1;
+      rec.tracks.push({ id:1, label:'MIDI Import', isBase:true,
+        events: parsed.events, duration: parsed.duration, muted:false });
+      recRebuildEvents();
+      recRenderTracks();
       recUpdateUI();
 
       // Auto-create layers for each MIDI channel found
@@ -8159,7 +9319,7 @@ document.getElementById('recMidiLoadInput').addEventListener('change', e=>{
   reader.readAsArrayBuffer(e.target.files[0]);
   e.target.value='';
 });
-document.getElementById('recClearBtn').addEventListener('click',()=>{ if(rec.state!=='idle')return; rec.events=[]; rec.duration=0; recUpdateUI(); });
+document.getElementById('recClearBtn').addEventListener('click',()=>{ if(rec.state!=='idle')return; rec.tracks=[]; rec.events=[]; rec.duration=0; rec._trackCounter=0; recRenderTracks(); recUpdateUI(); });
 
 // Click progress bar → jump
 document.querySelector('.rec-progress-wrap').addEventListener('click',function(e){
@@ -9818,7 +10978,39 @@ window.toggleFullscreen = () => {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
   else document.exitFullscreen();
 };
+// PDF-Overlay Recorder-Buttons an das globale rec-Objekt binden
+function initPdfRecorderButtons() {
+  const pdfRecBtn = document.getElementById('pdfRecBtn');
+  const pdfPlayBtn = document.getElementById('pdfPlayBtn');
+  const pdfStopBtn = document.getElementById('pdfStopBtn');
+  if (!pdfRecBtn) return;
 
+  // Status regelmäßig synchronisieren (alle 300ms)
+  setInterval(() => {
+    if (!pdfPlayBtn || !pdfStopBtn || !pdfRecBtn) return;
+    const hasEvents = rec.events.length > 0;
+    pdfPlayBtn.disabled = !hasEvents || (rec.state === 'recording' || rec.state === 'armed');
+    pdfStopBtn.disabled = rec.state === 'idle';
+    pdfRecBtn.textContent = (rec.state === 'recording' || rec.state === 'armed') ? '⏹ STOP' : '⏺ REC';
+    pdfRecBtn.style.borderColor = (rec.state === 'recording' || rec.state === 'armed') ? 'var(--accent2)' : 'var(--accent2)';
+  }, 300);
+
+  pdfRecBtn.addEventListener('click', () => {
+    if (rec.state === 'recording' || rec.state === 'armed') recStop();
+    else recStart();
+  });
+  pdfPlayBtn.addEventListener('click', () => {
+    if (rec.state === 'playing') recStopPlayback();
+    else recPlay();
+  });
+  pdfStopBtn.addEventListener('click', () => {
+    if (rec.state === 'recording' || rec.state === 'armed') recStop();
+    else if (rec.state === 'playing') recStopPlayback();
+  });
+}
+// Aufruf nachdem das DOM bereit ist
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPdfRecorderButtons);
+else initPdfRecorderButtons();
 </script>
 </body>
 </html>
