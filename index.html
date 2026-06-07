@@ -5417,14 +5417,15 @@ function buildKb(){
     kb.querySelectorAll('.key').forEach(k=>{
       k.addEventListener('mousedown',e=>{e.preventDefault();
         // Score Keyboard-Eingabe-Modus: Note setzen statt spielen
-        if (scoreKbNoteInput && scoreKbNoteInput(k.dataset.note)) return;
+        // Guard: scoreKbNoteInput ist erst nach dem Noteneditor-Block definiert
+        if (typeof scoreKbNoteInput === 'function' && scoreKbNoteInput(k.dataset.note)) return;
         (function(){const _yf=e.offsetY/Math.max(1,k.offsetHeight);const _vel=_yf<0.4?40:_yf<0.7?80:127;playMidi(parseInt(k.dataset.midi),_vel,null,'screen');})();});
-      k.addEventListener('mouseup',()=>{ if(!scoreKbInput) stopMidi(parseInt(k.dataset.midi)); });
-      k.addEventListener('mouseleave',()=>{ if(!scoreKbInput) stopMidi(parseInt(k.dataset.midi)); });
+      k.addEventListener('mouseup',()=>{ if(typeof scoreKbInput==='undefined'||!scoreKbInput) stopMidi(parseInt(k.dataset.midi)); });
+      k.addEventListener('mouseleave',()=>{ if(typeof scoreKbInput==='undefined'||!scoreKbInput) stopMidi(parseInt(k.dataset.midi)); });
       k.addEventListener('touchstart',e=>{e.preventDefault();
-        if (scoreKbNoteInput && scoreKbNoteInput(k.dataset.note)) return;
+        if (typeof scoreKbNoteInput === 'function' && scoreKbNoteInput(k.dataset.note)) return;
         const _t=e.touches[0],_r=k.getBoundingClientRect();(function(){const _yf=(_t.clientY-_r.top)/Math.max(1,_r.height);const _vel=_yf<0.4?40:_yf<0.7?80:127;playMidi(parseInt(k.dataset.midi),_vel,null,'screen');})();},{passive:false});
-      k.addEventListener('touchend',e=>{e.preventDefault();if(!scoreKbInput) stopMidi(parseInt(k.dataset.midi));},{passive:false});
+      k.addEventListener('touchend',e=>{e.preventDefault();if(typeof scoreKbInput==='undefined'||!scoreKbInput) stopMidi(parseInt(k.dataset.midi));},{passive:false});
       k.addEventListener('touchcancel',()=>stopMidi(parseInt(k.dataset.midi)));
     });
   });
