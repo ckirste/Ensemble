@@ -13,6 +13,7 @@
   --glow:0 0 18px rgba(0,229,255,.35); --glow2:0 0 18px rgba(255,64,96,.35);
   --ui-scale:1;
   --ui-base-size:14px; --ui-label-size:10px; --ui-mono-size:11px; --ui-key-height:130px;
+  font-size: var(--ui-base-size);
 }
 .pdf-rec-controls button:active { transform: scale(0.96); }
 .pdf-rec-controls button:disabled { opacity: 0.4; cursor: default; }
@@ -4897,7 +4898,7 @@ const COLOR_DEFS = [
 ];
 
 const SIZE_DEFS = [
-  { key:'--ui-base-size', label:'Basis-Schrift',  min:10, max:18, def:14, unit:'px', apply: v => document.body.style.fontSize = v+'px' },
+  { key:'--ui-base-size', label:'Basis-Schrift',  min:10, max:18, def:14, unit:'px', apply: v => applyCustomProp('--ui-base-size',  v+'px') },
   { key:'--ui-label-size',label:'Label-Schrift',  min:8,  max:14, def:10, unit:'px', apply: v => applyCustomProp('--ui-label-size', v+'px') },
   { key:'--ui-mono-size', label:'Mono-Schrift',   min:9,  max:16, def:11, unit:'px', apply: v => applyCustomProp('--ui-mono-size',  v+'px') },
 ];
@@ -5010,11 +5011,15 @@ function initSettingsPanel() {
     lbl.className = 'size-lbl';
     lbl.textContent = def.label;
     const sl = document.createElement('input');
-    sl.type = 'range'; sl.min = def.min; sl.max = def.max; sl.value = def.def;
+    sl.type = 'range'; sl.min = def.min; sl.max = def.max;
     sl.className = 'size-slider';
+    // Aktuellen Wert aus :root lesen statt immer def verwenden
+    const currentRaw = getComputedStyle(document.documentElement).getPropertyValue(def.key).trim();
+    const currentVal = currentRaw ? parseInt(currentRaw) : def.def;
+    sl.value = isNaN(currentVal) ? def.def : currentVal;
     const valEl = document.createElement('div');
     valEl.className = 'size-val';
-    valEl.textContent = def.def + def.unit;
+    valEl.textContent = sl.value + def.unit;
     sl.addEventListener('input', () => {
       valEl.textContent = sl.value + def.unit;
       def.apply(parseInt(sl.value));
@@ -5060,7 +5065,9 @@ function initSettingsPanel() {
     Object.entries(def).forEach(([k,v]) => applyCustomProp(k,v));
     applyCustomProp('--glow',  '0 0 18px rgba(0,229,255,.35)');
     applyCustomProp('--glow2', '0 0 18px rgba(255,64,96,.35)');
-    document.body.style.fontSize = '';
+    document.documentElement.style.removeProperty('--ui-base-size');
+    document.documentElement.style.removeProperty('--ui-label-size');
+    document.documentElement.style.removeProperty('--ui-mono-size');
     SIZE_DEFS.forEach(d => { d.apply(d.def); if(sizeInputs[d.key]) sizeInputs[d.key].value = d.def; });
     refreshColorInputs();
     themesEl.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
@@ -8879,10 +8886,12 @@ function recPlay(offset=0) {
 }
 
 function recStopPlayback(andRestart=false) {
-  // Overdub hat eigene Stop-Logik (Spur speichern)
-  if (rec.state==='overdubbing') { recStopOverdub(); return; }
   rec.playTimers.forEach(t=>clearTimeout(t));
   rec.playTimers=[]; engine.stopAll();
+  if (rec.state==='overdubbing') {
+    // discard laufende overdub-events beim Abbruch
+    rec.overdubEvents=[];
+  }
   rec.state='idle'; cancelAnimationFrame(rec.animFrame); recUpdateUI();
   if (andRestart && rec.looping && rec.events.length>0) {
     setTimeout(() => recPlay(), 30);
@@ -8981,8 +8990,6 @@ document.getElementById('recOverdubBtn').addEventListener('click', ()=>rec.state
 document.getElementById('recPlayBtn').addEventListener('click',    ()=>rec.state==='playing'?recStopPlayback():recPlay());
 document.getElementById('recStopBtn').addEventListener('click', () => {
   if (rec.state==='recording'||rec.state==='armed') { recStop(); return; }
-  // Overdub stoppen und als Spur speichern
-  if (rec.state==='overdubbing') { recStopOverdub(); return; }
   // Loop-Station: Stop → sofort wieder von vorn abspielen
   if (rec.looping && rec.events.length > 0 && rec.state==='playing') {
     recStopPlayback();
