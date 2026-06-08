@@ -8879,12 +8879,10 @@ function recPlay(offset=0) {
 }
 
 function recStopPlayback(andRestart=false) {
+  // Overdub hat eigene Stop-Logik (Spur speichern)
+  if (rec.state==='overdubbing') { recStopOverdub(); return; }
   rec.playTimers.forEach(t=>clearTimeout(t));
   rec.playTimers=[]; engine.stopAll();
-  if (rec.state==='overdubbing') {
-    // discard laufende overdub-events beim Abbruch
-    rec.overdubEvents=[];
-  }
   rec.state='idle'; cancelAnimationFrame(rec.animFrame); recUpdateUI();
   if (andRestart && rec.looping && rec.events.length>0) {
     setTimeout(() => recPlay(), 30);
@@ -8983,6 +8981,8 @@ document.getElementById('recOverdubBtn').addEventListener('click', ()=>rec.state
 document.getElementById('recPlayBtn').addEventListener('click',    ()=>rec.state==='playing'?recStopPlayback():recPlay());
 document.getElementById('recStopBtn').addEventListener('click', () => {
   if (rec.state==='recording'||rec.state==='armed') { recStop(); return; }
+  // Overdub stoppen und als Spur speichern
+  if (rec.state==='overdubbing') { recStopOverdub(); return; }
   // Loop-Station: Stop → sofort wieder von vorn abspielen
   if (rec.looping && rec.events.length > 0 && rec.state==='playing') {
     recStopPlayback();
