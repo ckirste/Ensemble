@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble</title>
+<title>Ensemble v89</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1114,7 +1114,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v85</h1>
+    <h1>Ensemble_v89</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -4660,6 +4660,52 @@ const FX_DEFS = [
   { id:'stereoWidth',label:'Stereo Breite',min:0, max:100, def:0,  step:1, fmt: v=>v+'%', toAudio: v=>v/100 },
 ];
 
+// ── FX-Persistenz ─────────────────────────────────────────────
+const FX_KEY = 'ensemble_fx';
+
+function fxSave() {
+  try {
+    const sliders = document.querySelectorAll('#fxSliders input[type=range]');
+    const vals = {};
+    FX_DEFS.forEach((def, i) => { vals[def.id] = parseFloat(sliders[i].value); });
+    localStorage.setItem(FX_KEY, JSON.stringify({ sliders: vals, filterType }));
+  } catch(e) {}
+}
+
+function fxLoad() {
+  try {
+    const raw = localStorage.getItem(FX_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    // Slider-Werte setzen und Audio anwenden
+    if (d.sliders) {
+      const sliders = document.querySelectorAll('#fxSliders input[type=range]');
+      FX_DEFS.forEach((def, i) => {
+        const v = d.sliders[def.id];
+        if (v === undefined) return;
+        sliders[i].value = v;
+        // Gradient-Fill aktualisieren
+        const pct = ((v - def.min) / (def.max - def.min) * 100).toFixed(1) + '%';
+        sliders[i].style.setProperty('--val', pct);
+        // Label aktualisieren
+        const valEl = sliders[i].closest('.fx-item')?.querySelector('.fx-value');
+        if (valEl) valEl.textContent = def.fmt(v);
+        applyFx(def.id, v);
+      });
+    }
+    // Filter-Typ wiederherstellen
+    if (d.filterType && d.filterType !== filterType) {
+      filterType = d.filterType;
+      const btns = document.querySelectorAll('#fxToggles button[data-filter]');
+      btns.forEach(b => b.classList.toggle('active', b.dataset.filter === filterType));
+      // Frequenz-Slider erneut anwenden mit dem gespeicherten FilterType
+      const freqDef = FX_DEFS.find(d => d.id === 'filterFreq');
+      const freqSlider = document.querySelector('#fxSliders input[data-fx-id="filterFreq"]');
+      if (freqDef && freqSlider) applyFx('filterFreq', parseFloat(freqSlider.value));
+    }
+  } catch(e) {}
+}
+
 function applyFx(id, sliderVal) {
   if (!engine.ctx) return;
   const def = FX_DEFS.find(d=>d.id===id);
@@ -4717,6 +4763,7 @@ FX_DEFS.forEach(def => {
     this.style.setProperty('--val', p);
     val.textContent = def.fmt(parseFloat(this.value));
     applyFx(def.id, parseFloat(this.value));
+    fxSave();
   });
 
   const learnBtn = makeLearnBtn('fx', def.id, mmMakeApplyFn('fx', def.id));
@@ -4744,6 +4791,7 @@ togglesRow.innerHTML = `
     const freqEl = fxSlidersEl.querySelectorAll('input')[FX_DEFS.findIndex(d=>d.id==='filterFreq')];
     const hz = freqSlider.toAudio(parseFloat(freqEl.value));
     engine.setFilterFreq(filterType==='off' ? 20000 : hz, filterType==='off' ? 'lowpass' : filterType);
+    fxSave();
   });
 });
 
@@ -5244,12 +5292,17 @@ function buildCinematicBtns() {
       btn.style.borderColor = 'var(--accent)';
       btn.style.color = 'var(--accent)';
       setTimeout(() => { btn.style.borderColor='var(--border)'; btn.style.color='var(--textbright)'; }, 600);
+      fxSave();
     });
     cinematicEl.appendChild(btn);
   });
 }
 
 settingsLoad();
+// FX-Werte aus localStorage laden (Slider + Labels sofort, Audio nach ctx-Start)
+fxLoad();
+// Sicherheitshalber nochmal anwenden sobald AudioContext bereit ist
+engine.ensureCtx().then(() => fxLoad()).catch(() => {});
 initSettingsPanel();
 setTimeout(() => { if(typeof buildCinematicBtns==='function') buildCinematicBtns(); }, 0);
 // ── Globale Hüllkurve ────────────────────────────────────────
