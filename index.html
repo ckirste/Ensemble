@@ -2255,6 +2255,7 @@ class AudioEngine {
 
     this._workletReady       = false; // addModule() wurde einmalig geladen
     this._channelSaturators  = new Map(); // `${sfIdx}_${ch}` → {shaper, wetGain}
+    this._layerDelays        = new Map(); // layerId → {delayNode, feedback, wetGain, dryGain}
   }
 
   // ── Compat-Getter: engine.synth → erste Instanz ───────────────
@@ -2700,6 +2701,48 @@ class AudioEngine {
     }
   }
 
+  // ── Per-Layer Delay ───────────────────────────────────────────
+  // Eigener Delay-Zweig pro Layer, gespeist von masterGain.
+  // Wet-Signal landet direkt am Ausgang (filterNode oder destination).
+  // Das globale Delay im FX-Panel bleibt unberührt.
+  setLayerDelay(layerId, wet, time) {
+    if (!this.ctx) return;
+    const key = String(layerId);
+    if (!this._layerDelays.has(key)) {
+      const delayNode = this.ctx.createDelay(2.0); delayNode.delayTime.value = 0.35;
+      const feedback  = this.ctx.createGain();     feedback.gain.value       = 0.35;
+      const wetGain   = this.ctx.createGain();     wetGain.gain.value        = 0;
+      // masterGain → delayNode → feedback-loop → wetGain → filterNode
+      this.masterGain.connect(delayNode);
+      delayNode.connect(feedback);
+      feedback.connect(delayNode);
+      delayNode.connect(wetGain);
+      wetGain.connect(this.filterNode ?? this.ctx.destination);
+      this._layerDelays.set(key, { delayNode, feedback, wetGain, _wet: 0 });
+    }
+    const ld = this._layerDelays.get(key);
+    if (wet !== undefined) {
+      ld._wet = Math.max(0, Math.min(1, wet));
+      ld.wetGain.gain.setTargetAtTime(ld._wet * 0.9, this.ctx.currentTime, 0.02);
+    }
+    if (time !== undefined) {
+      ld.delayNode.delayTime.setTargetAtTime(
+        Math.max(0.05, Math.min(2.0, time)), this.ctx.currentTime, 0.01);
+    }
+  }
+
+  removeLayerDelay(layerId) {
+    const key = String(layerId);
+    if (!this._layerDelays.has(key)) return;
+    const ld = this._layerDelays.get(key);
+    try { ld.wetGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.02); } catch(e) {}
+    setTimeout(() => {
+      try { this.masterGain.disconnect(ld.delayNode);
+            ld.delayNode.disconnect(); ld.feedback.disconnect(); ld.wetGain.disconnect(); } catch(e) {}
+    }, 300);
+    this._layerDelays.delete(key);
+  }
+
   // ── Compat-Stubs ──────────────────────────────────────────────
   async ensureAndGetStartT() {
     await this.ensureCtx();
@@ -2908,7 +2951,7 @@ function getActiveLayers() { return layers.filter(l => !l.muted); }
 
 function addLayer(sfIdx = 0, presetIdx = 0, midiCh = null) {
   const id = nextLayerId++;
-  layers.push({ id, sfIdx, presetIdx, vol: 0.8, muted: false, transpose: 0, keyLo: 0, keyHi: 127, melody: false, melodyNote: null, bass: false, bassNote: null, midiCh, midiDeviceId: null, velMode: 'free', sources: ['screen','keys','midi','player','remote'] });
+  layers.push({ id, sfIdx, presetIdx, vol: 0.8, muted: false, transpose: 0, keyLo: 0, keyHi: 127, melody: false, melodyNote: null, bass: false, bassNote: null, midiCh, midiDeviceId: null, velMode: 'free', sources: ['screen','keys','midi','player','remote'], delayWet: 0, delayTime: 37 });
   renderLayers();
 }
 
@@ -2919,6 +2962,7 @@ function removeLayer(id) {
     .forEach(k => engine._killVoice(k));
   layers = layers.filter(l => l.id !== id);
   engine.removeLayerNode(String(id));
+  engine.removeLayerDelay(String(id));
   renderLayers();
 }
 
@@ -3185,6 +3229,8 @@ function regSnapshot() {
       compThreshold: l.compThreshold ?? -24,
       compRatio:     l.compRatio     ?? 3,
       envOverride:   l.envOverride   ? {...l.envOverride} : {},
+      delayWet:      l.delayWet      ?? 0,
+      delayTime:     l.delayTime     ?? 37,
     };
   });
 }
@@ -3226,12 +3272,17 @@ function regLoad(slot) {
       compThreshold: ld.compThreshold ?? -24,
       compRatio:     ld.compRatio    ?? 3,
       envOverride:   ld.envOverride  ? {...ld.envOverride} : {},
+      delayWet:      ld.delayWet     ?? 0,
+      delayTime:     ld.delayTime    ?? 37,
       label: null,
     });
   });
   renderLayers();
   document.getElementById('addLayerBtn').disabled = !engine.soundfonts.length;
-  layers.forEach(l => engine.ensureAndGetStartT().then(() => engine.prewarmPreset(l.sfIdx, l.presetIdx)));
+  layers.forEach(l => {
+    engine.ensureAndGetStartT().then(() => engine.prewarmPreset(l.sfIdx, l.presetIdx));
+    if (l.delayWet > 0) engine.setLayerDelay(String(l.id), l.delayWet / 100, (50 + l.delayTime / 100 * 950) / 1000);
+  });
 }
 
 function regSave(slot, btnEl) {
@@ -4500,6 +4551,57 @@ function renderLayers() {
     adsrContainer.style.cssText = 'margin-top:4px';
     adsrContainer.appendChild(buildAdsrEditor(layer, color, adsrContainer));
     details.appendChild(adsrContainer);
+
+    // ── Per-Layer Delay ───────────────────────────────────────
+    if (!layer.delayWet)  layer.delayWet  = 0;
+    if (!layer.delayTime) layer.delayTime = 37; // 0–100 wie im FX-Panel
+    const delaySection = document.createElement('div');
+    delaySection.style.cssText = 'margin-top:6px;display:flex;flex-direction:column;gap:4px';
+
+    // Trennlinie + Label
+    const delayHdr = document.createElement('div');
+    delayHdr.style.cssText = 'font-size:.5rem;letter-spacing:.15em;color:var(--accent3);text-transform:uppercase;opacity:.8;padding-top:2px';
+    delayHdr.textContent = '⏱ Delay';
+    delaySection.appendChild(delayHdr);
+
+    // Hilfsfunktion: einen Slider-Row bauen (wie im FX-Panel)
+    function makeDelaySlider(labelTxt, min, max, value, fmtFn, onChange) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:6px';
+      const lbl = document.createElement('div');
+      lbl.style.cssText = 'font-size:.5rem;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;white-space:nowrap;width:52px;flex-shrink:0';
+      lbl.textContent = labelTxt;
+      const sl = document.createElement('input');
+      sl.type='range'; sl.min=min; sl.max=max; sl.step=1; sl.value=value;
+      sl.style.cssText = '-webkit-appearance:none;height:4px;flex:1;accent-color:var(--accent3);border-radius:2px;cursor:pointer';
+      const val = document.createElement('span');
+      val.style.cssText = 'font-size:.58rem;color:var(--accent3);font-family:Orbitron,monospace;min-width:44px;text-align:right';
+      val.textContent = fmtFn(value);
+      sl.addEventListener('input', function() {
+        val.textContent = fmtFn(parseInt(this.value));
+        onChange(parseInt(this.value));
+      });
+      row.appendChild(lbl); row.appendChild(sl); row.appendChild(val);
+      return row;
+    }
+
+    delaySection.appendChild(makeDelaySlider(
+      'Wet', 0, 100, layer.delayWet,
+      v => v + '%',
+      v => {
+        layer.delayWet = v;
+        engine.setLayerDelay(String(layer.id), v / 100, undefined);
+      }
+    ));
+    delaySection.appendChild(makeDelaySlider(
+      'Zeit', 0, 100, layer.delayTime,
+      v => Math.round(50 + v / 100 * 950) + 'ms',
+      v => {
+        layer.delayTime = v;
+        engine.setLayerDelay(String(layer.id), undefined, (50 + v / 100 * 950) / 1000);
+      }
+    ));
+    details.appendChild(delaySection);
 
     row.appendChild(details);
     list.appendChild(row);
@@ -8827,11 +8929,13 @@ function recOverdub() {
     }, ev.t);
     rec.playTimers.push(tid);
   });
-  rec.playTimers.push(setTimeout(() => {
-    if (rec.state !== 'overdubbing') return;
-    recStopOverdub();
-    if (rec.looping) recOverdub();
-  }, rec.duration));
+  if (rec.looping) {
+    rec.playTimers.push(setTimeout(() => {
+      if (rec.state !== 'overdubbing') return;
+      recStopOverdub();
+      recOverdub();
+    }, rec.duration));
+  }
   rec.animFrame = requestAnimationFrame(recTick);
 }
 
@@ -9446,11 +9550,12 @@ function sessionSave() {
       compThreshold: l.compThreshold ?? -24,
       compRatio:     l.compRatio    ?? 3,
       envOverride:   l.envOverride  ? {...l.envOverride} : {},
+      delayWet:      l.delayWet     ?? 0,
+      delayTime:     l.delayTime    ?? 37,
     })),
   };
 
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'session_' + new Date().toISOString().slice(0,10) + '.json';
   a.click();
@@ -9643,11 +9748,16 @@ function applySessionLayers(d) {
       compThreshold: ld.compThreshold ?? -24,
       compRatio:     ld.compRatio    ?? 3,
       envOverride:   ld.envOverride  ? {...ld.envOverride} : {},
+      delayWet:      ld.delayWet     ?? 0,
+      delayTime:     ld.delayTime    ?? 37,
     });
   });
 
   renderLayers();
   document.getElementById('addLayerBtn').disabled = !engine.soundfonts.length;
+  layers.forEach(l => {
+    if (l.delayWet > 0) engine.setLayerDelay(String(l.id), l.delayWet / 100, (50 + l.delayTime / 100 * 950) / 1000);
+  });
 
   // Visible confirmation showing which presets were actually loaded
   const info = layers.map(l => {
