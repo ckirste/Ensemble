@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v89</title>
+<title>Ensemble v90</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1114,7 +1114,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v89</h1>
+    <h1>Ensemble_v90</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -2676,6 +2676,72 @@ class AudioEngine {
   setSaturation(v) {}
   setWidth(v)      {}
 
+  // ── Per-Channel Delay (analog zu setChannelSaturation) ────────
+  // Greift das Signal exakt eines MIDI-Kanals über connectChannel ab
+  // (separater Worklet-Output, kein Doppel-Hören) und mischt nur
+  // das verzögerte Wet-Signal zusätzlich in masterGain ein.
+  // Das trockene Signal läuft weiterhin ganz normal durch den
+  // Haupt-Synth-Output → masterGain — hier wird NICHT noch einmal
+  // ein trockener Pfad hinzugefügt (Unterschied zur Saturation).
+  setChannelDelay(sfIdx, ch, wet, time) {
+    if (!this.synths[sfIdx] || !this.ctx) return;
+    const key = `${sfIdx}_${ch}`;
+
+    if (!this._layerDelays.has(key)) {
+      const tap        = this.ctx.createGain();  tap.gain.value = 1;
+      const delayNode  = this.ctx.createDelay(2.0); delayNode.delayTime.value = 0.35;
+      const feedback   = this.ctx.createGain();   feedback.gain.value = 0.3;
+      const wetGain    = this.ctx.createGain();   wetGain.gain.value = 0;
+      // tap (Kanal-Signal) → delayNode → feedback-loop → wetGain → masterGain
+      delayNode.connect(feedback);
+      feedback.connect(delayNode);
+      tap.connect(delayNode);
+      delayNode.connect(wetGain);
+      wetGain.connect(this.masterGain);
+      try { this.synths[sfIdx].synth.connectChannel(tap, ch); } catch(e) {
+        console.warn('connectChannel (delay) sfIdx', sfIdx, 'ch', ch, e);
+      }
+      this._layerDelays.set(key, { tap, delayNode, feedback, wetGain, _wet: 0 });
+    }
+
+    const ld = this._layerDelays.get(key);
+    if (wet !== undefined) {
+      ld._wet = Math.max(0, Math.min(1, wet));
+      ld.wetGain.gain.setTargetAtTime(ld._wet * 0.85, this.ctx.currentTime, 0.02);
+    }
+    if (time !== undefined) {
+      ld.delayNode.delayTime.setTargetAtTime(
+        Math.max(0.05, Math.min(2.0, time)), this.ctx.currentTime, 0.01);
+    }
+  }
+
+  removeChannelDelay(sfIdx, ch) {
+    const key = `${sfIdx}_${ch}`;
+    if (!this._layerDelays.has(key)) return;
+    const ld = this._layerDelays.get(key);
+    try { ld.wetGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.02); } catch(e) {}
+    setTimeout(() => {
+      try {
+        if (this.synths[sfIdx]) this.synths[sfIdx].synth.disconnectChannel(ld.tap, ch);
+        ld.tap.disconnect(); ld.delayNode.disconnect();
+        ld.feedback.disconnect(); ld.wetGain.disconnect();
+      } catch(e) {}
+    }, 300);
+    this._layerDelays.delete(key);
+  }
+
+  // Komfort-Wrapper: wendet Delay auf ALLE Channels eines Layers an
+  // (ein Layer kann mehrere Synth-Channels haben, falls SF2-übergreifend)
+  setLayerDelay(layerId, wet, time) {
+    const layerChannels = this.getLayerChannels(layerId);
+    layerChannels.forEach(({ ch, sfIdx }) => this.setChannelDelay(sfIdx, ch, wet, time));
+  }
+
+  removeLayerDelay(layerId) {
+    const layerChannels = this.getLayerChannels(layerId);
+    layerChannels.forEach(({ ch, sfIdx }) => this.removeChannelDelay(sfIdx, ch));
+  }
+
   // ── SF2 entfernen ─────────────────────────────────────────────
   removeSoundfont(sfIdx) {
     const sfObj = this.synths[sfIdx];
@@ -2699,48 +2765,6 @@ class AudioEngine {
         else if (l.sfIdx === sfIdx) l.sfIdx = Math.max(0, this.synths.length - 1);
       });
     }
-  }
-
-  // ── Per-Layer Delay ───────────────────────────────────────────
-  // Eigener Delay-Zweig pro Layer, gespeist von masterGain.
-  // Wet-Signal landet direkt am Ausgang (filterNode oder destination).
-  // Das globale Delay im FX-Panel bleibt unberührt.
-  setLayerDelay(layerId, wet, time) {
-    if (!this.ctx) return;
-    const key = String(layerId);
-    if (!this._layerDelays.has(key)) {
-      const delayNode = this.ctx.createDelay(2.0); delayNode.delayTime.value = 0.35;
-      const feedback  = this.ctx.createGain();     feedback.gain.value       = 0.35;
-      const wetGain   = this.ctx.createGain();     wetGain.gain.value        = 0;
-      // masterGain → delayNode → feedback-loop → wetGain → filterNode
-      this.masterGain.connect(delayNode);
-      delayNode.connect(feedback);
-      feedback.connect(delayNode);
-      delayNode.connect(wetGain);
-      wetGain.connect(this.filterNode ?? this.ctx.destination);
-      this._layerDelays.set(key, { delayNode, feedback, wetGain, _wet: 0 });
-    }
-    const ld = this._layerDelays.get(key);
-    if (wet !== undefined) {
-      ld._wet = Math.max(0, Math.min(1, wet));
-      ld.wetGain.gain.setTargetAtTime(ld._wet * 0.9, this.ctx.currentTime, 0.02);
-    }
-    if (time !== undefined) {
-      ld.delayNode.delayTime.setTargetAtTime(
-        Math.max(0.05, Math.min(2.0, time)), this.ctx.currentTime, 0.01);
-    }
-  }
-
-  removeLayerDelay(layerId) {
-    const key = String(layerId);
-    if (!this._layerDelays.has(key)) return;
-    const ld = this._layerDelays.get(key);
-    try { ld.wetGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.02); } catch(e) {}
-    setTimeout(() => {
-      try { this.masterGain.disconnect(ld.delayNode);
-            ld.delayNode.disconnect(); ld.feedback.disconnect(); ld.wetGain.disconnect(); } catch(e) {}
-    }, 300);
-    this._layerDelays.delete(key);
   }
 
   // ── Compat-Stubs ──────────────────────────────────────────────
@@ -3281,7 +3305,10 @@ function regLoad(slot) {
   document.getElementById('addLayerBtn').disabled = !engine.soundfonts.length;
   layers.forEach(l => {
     engine.ensureAndGetStartT().then(() => engine.prewarmPreset(l.sfIdx, l.presetIdx));
-    if (l.delayWet > 0) engine.setLayerDelay(String(l.id), l.delayWet / 100, (50 + l.delayTime / 100 * 950) / 1000);
+    if (l.delayWet > 0) {
+      if (engine._workletReady && engine.soundfonts[l.sfIdx]) engine.ensureChannel(l.id, l.sfIdx, l.presetIdx);
+      engine.setLayerDelay(l.id, l.delayWet / 100, (50 + l.delayTime / 100 * 950) / 1000);
+    }
   });
 }
 
@@ -4590,7 +4617,11 @@ function renderLayers() {
       v => v + '%',
       v => {
         layer.delayWet = v;
-        engine.setLayerDelay(String(layer.id), v / 100, undefined);
+        // Sicherstellen, dass der Layer einen Channel hat (falls noch keine Note gespielt wurde)
+        if (engine._workletReady && engine.soundfonts[layer.sfIdx]) {
+          engine.ensureChannel(layer.id, layer.sfIdx, layer.presetIdx);
+        }
+        engine.setLayerDelay(layer.id, v / 100, undefined);
       }
     ));
     delaySection.appendChild(makeDelaySlider(
@@ -4598,7 +4629,10 @@ function renderLayers() {
       v => Math.round(50 + v / 100 * 950) + 'ms',
       v => {
         layer.delayTime = v;
-        engine.setLayerDelay(String(layer.id), undefined, (50 + v / 100 * 950) / 1000);
+        if (engine._workletReady && engine.soundfonts[layer.sfIdx]) {
+          engine.ensureChannel(layer.id, layer.sfIdx, layer.presetIdx);
+        }
+        engine.setLayerDelay(layer.id, undefined, (50 + v / 100 * 950) / 1000);
       }
     ));
     details.appendChild(delaySection);
@@ -9809,7 +9843,10 @@ function applySessionLayers(d) {
   renderLayers();
   document.getElementById('addLayerBtn').disabled = !engine.soundfonts.length;
   layers.forEach(l => {
-    if (l.delayWet > 0) engine.setLayerDelay(String(l.id), l.delayWet / 100, (50 + l.delayTime / 100 * 950) / 1000);
+    if (l.delayWet > 0) {
+      if (engine._workletReady && engine.soundfonts[l.sfIdx]) engine.ensureChannel(l.id, l.sfIdx, l.presetIdx);
+      engine.setLayerDelay(l.id, l.delayWet / 100, (50 + l.delayTime / 100 * 950) / 1000);
+    }
   });
 
   // Visible confirmation showing which presets were actually loaded
