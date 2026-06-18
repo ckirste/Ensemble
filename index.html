@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v90</title>
+<title>Ensemble v91</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1114,7 +1114,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v90</h1>
+    <h1>Ensemble_v91</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -7093,10 +7093,73 @@ arpRenderDots();
 (function() {
 
 // ── Datentabellen ────────────────────────────────────────────
-const PITCH_MAP_T = { 'C4':50,'D4':55,'E4':60,'F4':65,'G4':70,'A4':75,'B4':80,
-                      'C5':85,'D5':90,'E5':95,'F5':100,'G5':105,'A5':110 };
-const PITCH_MAP_B = { 'E2':50,'F2':55,'G2':60,'A2':65,'B2':70,'C3':75,'D3':80,
-                      'E3':85,'F3':90,'G3':95,'A3':100,'B3':105,'C4':110 };
+// ── Pitch-Mapping: generisch für JEDE Tonhöhe (nicht nur das Notensystem) ──
+// Jede diatonische Stufe (C,D,E,F,G,A,B) = 5px Y-Differenz.
+// Referenzpunkt Violinschlüssel: C4 → y=50 (unterste Linie)
+// Referenzpunkt Bassschlüssel:   E2 → y=50 (unterste Linie)
+const NOTE_LETTERS = ['C','D','E','F','G','A','B'];
+function diatonicIndex(noteName) {
+  // 'C4' → {letter:'C', octave:4}; liefert eine fortlaufende diatonische Stufe
+  const letter = noteName[0];
+  const octave = parseInt(noteName.slice(1));
+  const letterIdx = NOTE_LETTERS.indexOf(letter);
+  return octave * 7 + letterIdx;
+}
+function fromDiatonicIndex(idx) {
+  const octave = Math.floor(idx / 7);
+  const letter  = NOTE_LETTERS[((idx % 7) + 7) % 7];
+  return letter + octave;
+}
+function makePitchMapFn(refNote, refY) {
+  const refIdx = diatonicIndex(refNote);
+  return function(noteName) {
+    const idx = diatonicIndex(noteName);
+    return refY + (idx - refIdx) * 5;
+  };
+}
+const pitchYTreble = makePitchMapFn('C4', 50);
+const pitchYBass    = makePitchMapFn('E2', 50);
+// Explizite, aufsteigend sortierte Notennamen-Liste für einen Bereich (für Dropdowns).
+// Object.keys() funktioniert nicht auf den Proxy-Objekten unten, daher eigenständig.
+function pitchRangeList(fromNote, toNote) {
+  const fromIdx = diatonicIndex(fromNote), toIdx = diatonicIndex(toNote);
+  const list = [];
+  for (let idx = fromIdx; idx <= toIdx; idx++) {
+    const octave = Math.floor(idx / 7);
+    const letter  = NOTE_LETTERS[idx % 7];
+    list.push(letter + octave);
+  }
+  return list;
+}
+// Sinnvoller editierbarer Bereich je Schlüssel (deutlich über das Notensystem hinaus
+// für Hilfslinien-Noten, aber begrenzt auf einen praktikablen Dropdown-Umfang).
+const PITCH_RANGE_T = pitchRangeList('C2', 'C7');
+const PITCH_RANGE_B = pitchRangeList('C1', 'C6');
+// Rückwärtskompatible Lookup-Objekte (Proxy): pMap[n.p] funktioniert weiterhin
+// für beliebige Notennamen, auch außerhalb des ursprünglichen 13-Werte-Bereichs.
+const PITCH_MAP_T = new Proxy({}, { get: (_, p) => typeof p === 'string' ? pitchYTreble(p) : undefined });
+const PITCH_MAP_B = new Proxy({}, { get: (_, p) => typeof p === 'string' ? pitchYBass(p)   : undefined });
+
+// ── Hilfslinien: liefert Array von Y-Positionen für alle benötigten Linien ──
+// Notensystem-Randlinien (verifiziert anhand bisheriger Spezialfälle C4/E2):
+//   Violinschlüssel: unterste Linie G4 (y=70), oberste Linie A5 (y=110)
+//   Bassschlüssel:   unterste Linie G2 (y=60), oberste Linie A3 (y=100)
+// Hilfslinien liegen im Abstand von 10 (= 2 diatonische Stufen) jenseits der
+// jeweiligen Randlinie. Eine Linie bei Position ly wird gezeichnet, wenn die
+// Note y mindestens so weit außerhalb liegt wie ly selbst (Standard-Notenschrift:
+// eine Zwischenraum-Note teilt sich die nächstgelegene Hilfslinie mit der
+// Liniennote direkt darunter/darüber).
+function getLedgerLines(y, clef) {
+  const lowLine  = clef === 'bass' ? 60 : 70;
+  const highLine = clef === 'bass' ? 100 : 110;
+  const lines = [];
+  if (y < lowLine) {
+    for (let ly = lowLine - 10; ly >= y; ly -= 10) lines.push(ly);
+  } else if (y > highLine) {
+    for (let ly = highLine + 10; ly <= y; ly += 10) lines.push(ly);
+  }
+  return lines;
+}
 
 // MIDI-Nummer pro Notenname
 const NOTE_MIDI = {
@@ -7145,15 +7208,13 @@ const KEY_SIGS = {
 };
 
 const DUR_MAP   = {'1n':4,'2n':2,'4n':1,'8n':.5,'16n':.25,'32n':.125};
-// Taktarten: Zähler/Nenner → Viertelnoten pro Takt
-const TIME_SIGS = {
-  '2/4': {num:2, den:4, beats:2.0},
-  '3/4': {num:3, den:4, beats:3.0},
-  '4/4': {num:4, den:4, beats:4.0},
-  '2/2': {num:2, den:2, beats:4.0},
-  '6/8': {num:6, den:8, beats:3.0},  // 2 Schläge à 3 Achtel = 3 Viertelnoten
-  '12/8':{num:12,den:8, beats:6.0},  // 4 Schläge à 3 Achtel = 6 Viertelnoten
-};
+// Taktart: frei wählbar über {num, den}. beats = Viertelnoten pro Takt.
+// num: Anzahl der Zähleinheiten (2,3,4,5,6,7,8,9,12...)
+// den: Notenwert der Zähleinheit (2=Halbe, 4=Viertel, 8=Achtel)
+function tsBeats(num, den) { return num * (4 / den); }
+function tsLabel(num, den) { return `${num}/${den}`; }
+// Sinnvolle Default-Nenner für den Stepper
+const TIME_SIG_DENS = [2, 4, 8];
 const STEP_W    = 120; // px pro Viertelnote
 
 // ── SVGs ─────────────────────────────────────────────────────
@@ -7235,15 +7296,33 @@ const restIcons = {
 };
 
 // ── State ─────────────────────────────────────────────────────
-let scoreTracks = [{ clef:'treble', key:'C-Dur', timeSig:'4/4', layerIdx:0, data:[
+let scoreTracks = [{ clef:'treble', key:'C-Dur', timeSigNum:4, timeSigDen:4, layerIdx:0, data:[
   {notes:[{p:'C4',a:null}],len:'4n',rest:false,dot:false}
 ]}];
+// Migriert alte Tracks mit timeSig:'4/4' (String) zu timeSigNum/timeSigDen
+function scoreMigrateTrack(track) {
+  if (track.timeSigNum === undefined || track.timeSigDen === undefined) {
+    const legacy = track.timeSig ?? '4/4';
+    const [n, d] = legacy.split('/').map(Number);
+    track.timeSigNum = n || 4;
+    track.timeSigDen = d || 4;
+  }
+  return track;
+}
 let scoreActive    = null;  // {tIdx, sIdx} — Editor-Subpanel
 let scoreCursor    = null;  // {tIdx, sIdx} — Einfüge-Cursor (Klaviatur-Eingabe)
 let scoreTool      = { len:'4n', rest:false, dot:false };
 let scorePlayTimer = null;
 let scorePlayPos   = null;  // {tIdx, sIdx}
 let scoreKbInput   = false; // Keyboard-Eingabe-Modus aktiv
+
+window.scoreChangeTimeSigNum = function(tIdx, delta) {
+  const track = scoreTracks[tIdx];
+  if (!track) return;
+  const next = (track.timeSigNum ?? 4) + delta;
+  track.timeSigNum = Math.max(2, Math.min(32, next));
+  scoreRender();
+};
 
 // ── Toolbar ───────────────────────────────────────────────────
 function scoreRenderToolbar() {
@@ -7286,6 +7365,7 @@ function scoreRender() {
   container.innerHTML = '';
 
   scoreTracks.forEach((track, tIdx) => {
+    scoreMigrateTrack(track);
     const pMap = track.clef === 'treble' ? PITCH_MAP_T : PITCH_MAP_B;
     const keySig = KEY_SIGS[track.key] || [];
 
@@ -7318,9 +7398,17 @@ function scoreRender() {
           ${Object.keys(KEY_SIGS).filter(k=>k.includes('Moll')).map(k=>`<option value="${k}" ${(track.key??'C-Dur')===k?'selected':''}>${k}</option>`).join('')}
         </optgroup>
       </select>
-      <select onchange="window.scoreTracks[${tIdx}].timeSig=this.value;window.scoreRender()" style="width:58px">
-        ${Object.keys(TIME_SIGS).map(t=>`<option value="${t}" ${(track.timeSig??'4/4')===t?'selected':''}>${t}</option>`).join('')}
-      </select>
+      <span class="score-ts-group" style="display:inline-flex;align-items:center;gap:2px;margin-left:2px">
+        <button class="score-btn" style="padding:2px 6px;font-size:.6rem;min-width:18px"
+          onclick="window.scoreChangeTimeSigNum(${tIdx},-1)" title="Zähler verringern">−</button>
+        <span style="font-size:.62rem;font-family:'Share Tech Mono',monospace;color:var(--accent3);min-width:14px;text-align:center;display:inline-block">${track.timeSigNum}</span>
+        <button class="score-btn" style="padding:2px 6px;font-size:.6rem;min-width:18px"
+          onclick="window.scoreChangeTimeSigNum(${tIdx},1)" title="Zähler erhöhen">+</button>
+        <span style="color:var(--dim);font-size:.6rem">/</span>
+        <select onchange="window.scoreTracks[${tIdx}].timeSigDen=parseInt(this.value);window.scoreRender()" style="width:42px;font-size:.62rem">
+          ${TIME_SIG_DENS.map(d=>`<option value="${d}" ${track.timeSigDen===d?'selected':''}>${d}</option>`).join('')}
+        </select>
+      </span>
       <span style="font-size:.6rem;color:var(--dim);margin-left:4px">↔ Layer:</span>
       <select onchange="window.scoreTracks[${tIdx}].layerIdx=parseInt(this.value);window.scoreRender()"
         title="Welcher Ensemble-Layer spielt diesen Track ab">${layerOpts}</select>
@@ -7343,8 +7431,9 @@ function scoreRender() {
     keyArea.className = 'score-key-sig';
     keySig.forEach(sig => {
       const pm = track.clef==='bass' ? PITCH_MAP_B : PITCH_MAP_T;
+      // Vorzeichen-Position für Bassschlüssel: 2 Oktaven (14 diatonische Stufen) tiefer transponiert
       const bpk = track.clef==='bass'
-        ? Object.keys(PITCH_MAP_B)[Object.keys(PITCH_MAP_T).indexOf(sig.p)-2] || 'E2'
+        ? fromDiatonicIndex(diatonicIndex(sig.p) - 14)
         : sig.p;
       const wrap = document.createElement('div');
       wrap.style.cssText = 'position:relative;width:14px;height:100%';
@@ -7357,12 +7446,12 @@ function scoreRender() {
     row.appendChild(keyArea);
 
     // Taktart-Anzeige
-    const ts = TIME_SIGS[track.timeSig ?? '4/4'] ?? TIME_SIGS['4/4'];
+    const tsNum = track.timeSigNum ?? 4, tsDen = track.timeSigDen ?? 4;
     const tsArea = document.createElement('div');
     tsArea.style.cssText = 'flex-shrink:0;width:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;background-color:#fff;border-right:1px solid rgba(0,0,0,0.15);background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;background-size:100% 1px';
     tsArea.innerHTML = `<svg viewBox="0 0 28 50" height="50" width="28">
-      <text x="14" y="24" text-anchor="middle" font-family="serif" font-size="22" font-weight="bold" fill="#000">${ts.num}</text>
-      <text x="14" y="46" text-anchor="middle" font-family="serif" font-size="22" font-weight="bold" fill="#000">${ts.den}</text>
+      <text x="14" y="24" text-anchor="middle" font-family="serif" font-size="22" font-weight="bold" fill="#000">${tsNum}</text>
+      <text x="14" y="46" text-anchor="middle" font-family="serif" font-size="22" font-weight="bold" fill="#000">${tsDen}</text>
     </svg>`;
     row.appendChild(tsArea);
 
@@ -7405,7 +7494,7 @@ function scoreRender() {
         }
       } else {
         s.notes.forEach(n => {
-          const y = pMap[n.p] || 70;
+          const y = pMap[n.p] ?? 70;
           // Vorzeichen
           if (n.a) {
             const ac = document.createElement('div');
@@ -7425,14 +7514,11 @@ function scoreRender() {
             const d = document.createElement('div');
             d.className = 'score-dot'; d.style.top = `${165-y}px`; step.appendChild(d);
           }
-          // Hilfslinien
-          const needsLedger =
-            (track.clef==='treble' && n.p==='C4') ||
-            (track.clef==='bass'   && (n.p==='E2'||n.p==='C4'));
-          if (needsLedger) {
+          // Hilfslinien — beliebig viele, je nach Abstand zum Notensystem
+          getLedgerLines(y, track.clef).forEach(ly => {
             const l = document.createElement('div');
-            l.className = 'score-ledger'; l.style.top = `${169-y}px`; step.appendChild(l);
-          }
+            l.className = 'score-ledger'; l.style.top = `${169 - ly}px`; step.appendChild(l);
+          });
         });
       }
 
@@ -7443,7 +7529,7 @@ function scoreRender() {
       totalX += baseW * (s.dot ? 1.5 : 1);
 
       // Taktstrich: nach beatsPerBar Viertelnoten
-      const beatsPerBar = (TIME_SIGS[track.timeSig ?? '4/4'] ?? TIME_SIGS['4/4']).beats;
+      const beatsPerBar = tsBeats(track.timeSigNum ?? 4, track.timeSigDen ?? 4);
       if (Math.round(durSum * 1000) % Math.round(beatsPerBar * 1000) === 0) {
         const b = document.createElement('div');
         b.className = 'score-bar-line';
@@ -7509,7 +7595,7 @@ function scoreRenderEditor(tIdx, sIdx) {
   const ed = document.getElementById(`scoreEd-${tIdx}`);
   if (!ed) return;
   const s = scoreTracks[tIdx].data[sIdx];
-  const pMap = scoreTracks[tIdx].clef==='treble' ? PITCH_MAP_T : PITCH_MAP_B;
+  const pRange = scoreTracks[tIdx].clef==='treble' ? PITCH_RANGE_T : PITCH_RANGE_B;
   const vals = ['1n','2n','4n','8n','16n','32n'];
 
   // Notenwert-Buttons: doppeln sich mit Toolbar → hier kompakt als Text-Buttons
@@ -7553,7 +7639,7 @@ function scoreRenderEditor(tIdx, sIdx) {
       div.className = 'score-chord-item';
       div.innerHTML = `
         <select onchange="window.scoreTracks[${tIdx}].data[${sIdx}].notes[${nIdx}].p=this.value;window.scoreActive={tIdx:${tIdx},sIdx:${sIdx}};window.scoreRender();window.scoreRenderEditor(${tIdx},${sIdx})">
-          ${Object.keys(pMap).reverse().map(p=>`<option value="${p}" ${n.p===p?'selected':''}>${p}</option>`).join('')}
+          ${pRange.slice().reverse().map(p=>`<option value="${p}" ${n.p===p?'selected':''}>${p}</option>`).join('')}
         </select>
         <select onchange="window.scoreTracks[${tIdx}].data[${sIdx}].notes[${nIdx}].a=this.value||null;window.scoreActive={tIdx:${tIdx},sIdx:${sIdx}};window.scoreRender();window.scoreRenderEditor(${tIdx},${sIdx})">
           <option value="">—</option>
@@ -7590,7 +7676,7 @@ window.scoreAddNoteToChord = function(tIdx, sIdx) {
 window.scoreAddTrack = function() {
   const last = scoreTracks[scoreTracks.length-1];
   scoreTracks.push({ clef:last.clef, key:last.key ?? 'C-Dur',
-    timeSig: last.timeSig ?? '4/4', layerIdx: last.layerIdx ?? 0,
+    timeSigNum: last.timeSigNum ?? 4, timeSigDen: last.timeSigDen ?? 4, layerIdx: last.layerIdx ?? 0,
     data:[{notes:[{p:'C4',a:null}],len:'4n',rest:false,dot:false}] });
   scoreRender();
 };
