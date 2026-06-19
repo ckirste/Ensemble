@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v91</title>
+<title>Ensemble v92</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1114,7 +1114,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v91</h1>
+    <h1>Ensemble_v92</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -5455,26 +5455,6 @@ async function playMidi(midi, vel=100, ch=null, source='keys', inputId=null) {
     rec.startT = performance.now();
     rec.state = 'recording';
   }
-  if (typeof rec !== 'undefined' && rec.state === 'overdub-armed') {
-    // Overdub startet erst beim ersten Ton — dann bestehende Spuren abspielen
-    rec.startT = performance.now();
-    rec.state = 'overdubbing';
-    // Bestehende Spuren ab t=0 abspielen
-    rec.events.forEach(ev => {
-      const tid = setTimeout(() => {
-        if (rec.state !== 'overdubbing') return;
-        recPlayEvent(ev);
-      }, ev.t);
-      rec.playTimers.push(tid);
-    });
-    if (rec.looping) {
-      rec.playTimers.push(setTimeout(() => {
-        if (rec.state !== 'overdubbing') return;
-        recStopOverdub();
-        recOverdub();
-      }, rec.duration));
-    }
-  }
   if (typeof rec !== 'undefined' && rec.state === 'recording')
     rec.events.push({ t: performance.now() - rec.startT, type: 'on', midi, vel, ch, source,
       layerSnap: getActiveLayers().filter(l => midi >= l.keyLo && midi <= l.keyHi)
@@ -8914,7 +8894,8 @@ arpInstallBpmSync(); // jetzt ist metro definiert
 //  MIDI RECORDER / PLAYER
 // ══════════════════════════════════════════════════════════════
 const rec = {
-  state:    'idle',   // 'idle' | 'armed' | 'recording' | 'playing' | 'overdub-armed' | 'overdubbing'
+  state:    'idle',   // 'idle' | 'armed' | 'recording' | 'playing' | 'countdown' | 'overdubbing'
+  _countdownBeat: 0, // Countdown-Zähler (4..1 während countdown)
   tracks:   [],       // [{id, label, events, duration, muted}]  ← NEU: Spuren-Array
   events:   [],       // flaches merged Array für Playback (wird aus tracks berechnet)
   overdubEvents: [],  // new events captured during overdub
@@ -9010,7 +8991,7 @@ function fmtMs(ms) {
 function recUpdateUI() {
   const hasRec = rec.events.length > 0 || rec.tracks.length > 0;
   const dur    = rec.duration;
-  const isOD   = rec.state === 'overdubbing' || rec.state === 'overdub-armed';
+  const isOD   = rec.state === 'overdubbing' || rec.state === 'countdown';
   document.getElementById('recRecordBtn').classList.toggle('active',  rec.state==='recording'||rec.state==='armed');
   document.getElementById('recOverdubBtn').classList.toggle('active', isOD);
   document.getElementById('recPlayBtn').classList.toggle('active',    rec.state==='playing');
@@ -9023,22 +9004,25 @@ function recUpdateUI() {
   document.getElementById('recClearBtn').disabled  = !hasRec || rec.state!=='idle';
   const ind = document.getElementById('recIndicator');
   ind.className = 'rec-indicator' +
-    (rec.state==='armed' ? ' recording'
+    (rec.state==='armed'      ? ' recording'
     : rec.state==='recording' ? ' recording'
-    : rec.state==='overdub-armed' ? ' recording'
+    : rec.state==='countdown' ? ' recording'
     : rec.state==='overdubbing' ? ' recording'
-    : rec.state==='playing' ? ' playing' : '');
+    : rec.state==='playing'   ? ' playing' : '');
   const elapsed = (rec.state==='recording'||rec.state==='playing'||rec.state==='overdubbing') ? performance.now()-rec.startT : dur;
   document.getElementById('recTime').textContent =
-    (rec.state==='armed' || rec.state==='overdub-armed') ? '0:00.0' : fmtMs(Math.min(elapsed, dur||elapsed));
+    rec.state==='armed'     ? '0:00.0'
+    : rec.state==='countdown' ? '0:00.0'
+    : fmtMs(Math.min(elapsed, dur||elapsed));
   document.getElementById('recProgressBar').style.width =
     dur>0 && (rec.state==='playing'||rec.state==='overdubbing') ? Math.min(100,(performance.now()-rec.startT)/dur*100).toFixed(1)+'%'
     : dur>0 && rec.state==='idle' ? '100%' : '0%';
   const totalEvs = rec.tracks.reduce((s,tr) => s + tr.events.length, 0);
+  const cdBeat = rec._countdownBeat ?? 0;
   document.getElementById('recInfo').textContent =
-    rec.state==='armed'         ? '🔴 Warte auf ersten Ton…'
-    : rec.state==='recording'   ? rec.events.length+' Events aufgezeichnet'
-    : rec.state==='overdub-armed' ? '⊕ Warte auf ersten Ton (Overdub)…'
+    rec.state==='armed'       ? '🔴 Warte auf ersten Ton…'
+    : rec.state==='recording' ? rec.events.length+' Events aufgezeichnet'
+    : rec.state==='countdown' ? `⏱ Einsatz in ${cdBeat}…`
     : rec.state==='overdubbing' ? '⊕ Overdub · '+rec.overdubEvents.length+' neue Events'
     : hasRec ? rec.tracks.length+' Spur'+(rec.tracks.length===1?'':'en')+' · '+totalEvs+' Ev. · '+fmtMs(dur) : 'Keine Aufnahme';
 }
@@ -9049,7 +9033,7 @@ function recTick() {
 }
 
 function recStart() {
-  if (rec.state==='playing'||rec.state==='overdubbing'||rec.state==='overdub-armed') recStopPlayback();
+  if (rec.state==='playing'||rec.state==='overdubbing'||rec.state==='countdown') recStopPlayback();
   // Neue Basis-Aufnahme: alle alten Spuren löschen
   rec.tracks = [];
   rec.events = []; rec.startT=0; rec.state='armed';
@@ -9112,16 +9096,94 @@ function recPlayEvent(ev) {
   }
 }
 
+// ── Overdub-Countdown ─────────────────────────────────────────
+// Spielt 4 Klicks im aktuellen BPM, dann startet Playback + Aufnahme exakt auf Beat 5.
+function recCountdownAndOverdub() {
+  const BEATS    = 4;
+  const bpm      = (typeof metro !== 'undefined') ? metro.bpm : 120;
+  const msPerBeat = 60000 / bpm;
+
+  rec.state = 'countdown';
+  rec._countdownBeat = BEATS; // zählt rückwärts
+  rec.animFrame = requestAnimationFrame(recTick);
+
+  // Klick-Sounds über AudioContext schedulen
+  engine.ensureCtx().then(() => {
+    const ctx = engine.ctx;
+    if (!ctx) return;
+    const now = ctx.currentTime + 0.05; // kleiner Vorlauf
+
+    for (let i = 0; i < BEATS; i++) {
+      const t = now + i * (msPerBeat / 1000);
+      const isAccent = i === 0;
+      const freq  = isAccent ? 1800 : 900;
+      const gain  = isAccent ? 0.9 : 0.6;
+      const dur   = isAccent ? 0.04 : 0.03;
+      const osc = ctx.createOscillator();
+      const g   = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.5, t + dur);
+      g.gain.setValueAtTime(gain, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.connect(g); g.connect(engine.masterGain);
+      osc.start(t); osc.stop(t + dur + 0.01);
+
+      // Visueller Countdown-Zähler
+      const delayMs = Math.max(0, (t - ctx.currentTime) * 1000);
+      const beat = i;
+      const tid = setTimeout(() => {
+        if (rec.state !== 'countdown') return;
+        rec._countdownBeat = BEATS - beat;
+        recUpdateUI();
+      }, delayMs);
+      rec.playTimers.push(tid);
+    }
+
+    // Beat 5: Playback + Aufnahme starten
+    const startDelay = BEATS * msPerBeat;
+    const tid = setTimeout(() => {
+      if (rec.state !== 'countdown') return;
+      rec._countdownBeat = 0;
+      rec.overdubEvents = [];
+      rec.startT = performance.now();
+      rec.state = 'overdubbing';
+      engine.stopAll();
+
+      // Bestehende Spuren abspielen
+      rec.events.forEach(ev => {
+        const t2 = setTimeout(() => {
+          if (rec.state !== 'overdubbing') return;
+          recPlayEvent(ev);
+        }, ev.t);
+        rec.playTimers.push(t2);
+      });
+
+      // Loop: nach rec.duration wieder von vorn
+      if (rec.looping) {
+        rec.playTimers.push(setTimeout(() => {
+          if (rec.state !== 'overdubbing') return;
+          recStopOverdub();
+          recCountdownAndOverdub();
+        }, rec.duration));
+      }
+
+      recUpdateUI();
+    }, startDelay);
+    rec.playTimers.push(tid);
+  });
+}
+
 function recOverdub() {
   if (!rec.events.length || rec.state==='recording') return;
-  if (rec.state==='overdubbing' || rec.state==='overdub-armed') { recStopOverdub(); return; }
+  if (rec.state==='overdubbing' || rec.state==='countdown') { recStopOverdub(); return; }
   if (rec.state==='playing') recStopPlayback();
   rec.overdubEvents = [];
   rec.playTimers = [];
   engine.stopAll();
-  // Ohne Loop: erst auf ersten Ton warten, dann startet Aufnahme + Playback bestehender Spuren
-  // Mit Loop: sofort starten (klassisches Loop-Station-Verhalten)
+
   if (rec.looping) {
+    // Loop-Station: sofort starten, kein Countdown
     rec.startT = performance.now();
     rec.state = 'overdubbing';
     rec.events.forEach(ev => {
@@ -9136,19 +9198,21 @@ function recOverdub() {
       recStopOverdub();
       recOverdub();
     }, rec.duration));
+    rec.animFrame = requestAnimationFrame(recTick);
   } else {
-    rec.state = 'overdub-armed';
+    // DAW-Modus: 4-Beat-Countdown, dann starten
+    recCountdownAndOverdub();
   }
-  rec.animFrame = requestAnimationFrame(recTick);
 }
 
 function recStopOverdub() {
-  if (rec.state !== 'overdubbing' && rec.state !== 'overdub-armed') return;
-  // Wenn noch bewaffnet aber noch keine Note gespielt: einfach abbrechen, keine Spur speichern
-  if (rec.state === 'overdub-armed') {
+  if (rec.state !== 'overdubbing' && rec.state !== 'countdown') return;
+  // Countdown läuft noch: abbrechen, keine Spur speichern
+  if (rec.state === 'countdown') {
     rec.playTimers.forEach(t => clearTimeout(t));
     rec.playTimers = [];
     rec.overdubEvents = [];
+    rec._countdownBeat = 0;
     rec.state = 'idle';
     cancelAnimationFrame(rec.animFrame);
     recUpdateUI();
@@ -9182,7 +9246,7 @@ function recStopOverdub() {
 function recPlay(offset=0) {
   if (!rec.events.length) return;
   if (rec.state==='recording') recStop();
-  if (rec.state==='overdubbing' || rec.state==='overdub-armed') recStopOverdub();
+  if (rec.state==='overdubbing' || rec.state==='countdown') recStopOverdub();
   rec.state='playing'; rec.startT=performance.now()-offset;
   rec.playTimers=[];
   engine.stopAll();
@@ -9204,7 +9268,7 @@ function recPlay(offset=0) {
 
 function recStopPlayback(andRestart=false) {
   // Overdub hat eigene Stop-Logik (Spur speichern / Abbrechen)
-  if (rec.state==='overdubbing' || rec.state==='overdub-armed') { recStopOverdub(); return; }
+  if (rec.state==='overdubbing' || rec.state==='countdown') { recStopOverdub(); return; }
   rec.playTimers.forEach(t=>clearTimeout(t));
   rec.playTimers=[]; engine.stopAll();
   rec.state='idle'; cancelAnimationFrame(rec.animFrame); recUpdateUI();
@@ -9301,11 +9365,11 @@ function recExportMidi() {
 }
 
 document.getElementById('recRecordBtn').addEventListener('click',  ()=>(rec.state==='recording'||rec.state==='armed')?recStop():recStart());
-document.getElementById('recOverdubBtn').addEventListener('click', ()=>(rec.state==='overdubbing'||rec.state==='overdub-armed')?recStopOverdub():recOverdub());
+document.getElementById('recOverdubBtn').addEventListener('click', ()=>(rec.state==='overdubbing'||rec.state==='countdown')?recStopOverdub():recOverdub());
 document.getElementById('recPlayBtn').addEventListener('click',    ()=>rec.state==='playing'?recStopPlayback():recPlay());
 document.getElementById('recStopBtn').addEventListener('click', () => {
   if (rec.state==='recording'||rec.state==='armed') { recStop(); return; }
-  if (rec.state==='overdubbing'||rec.state==='overdub-armed') { recStopOverdub(); return; }
+  if (rec.state==='overdubbing'||rec.state==='countdown') { recStopOverdub(); return; }
   // Loop-Station: Stop → sofort wieder von vorn abspielen
   if (rec.looping && rec.events.length > 0 && rec.state==='playing') {
     recStopPlayback();
