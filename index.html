@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v97</title>
+<title>Ensemble v98</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -309,6 +309,72 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 }
 .panel-toggle-btn.closed .ptb-arrow { transform: rotate(-90deg); }
 .panel-toggle-btn.closed { border-radius: 8px; border-bottom: 1px solid var(--border); margin-bottom: 0; }
+
+/* ── Quintenzirkel Panel ─────────────────────────────────────── */
+.qz-panel {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 14px 16px; margin-bottom: 12px;
+}
+.qz-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+.qz-title {
+  font-size: .55rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--accent); font-family: 'Orbitron', monospace;
+}
+#qz-circle-wrapper {
+  position: relative; width: 340px; height: 340px; margin: 0 auto;
+}
+#qz-circle-container svg {
+  display: block; width: 100%; height: auto; cursor: pointer;
+  border-radius: 50%;
+}
+.qz-tonart-text {
+  font-size: 15px; font-weight: bold; fill: var(--textbright); cursor: pointer;
+  transition: fill .15s;
+}
+.qz-tonart-text:hover { fill: var(--accent); }
+.qz-tonart-text.minor { fill: var(--dim); font-size: 13px; }
+.qz-tonart-text.minor:hover { fill: var(--accent3); }
+#qz-chord-overlay {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(16,16,26,.97); border-radius: 50%;
+  border: 1px solid var(--border);
+  padding: 38px 14px 14px; overflow-y: auto;
+  display: none; z-index: 10;
+}
+#qz-chord-overlay.open { display: block; }
+#qz-chord-overlay .qz-close-btn {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 50%; width: 28px; height: 28px; font-size: 14px;
+  line-height: 28px; text-align: center; color: var(--dim);
+  cursor: pointer; z-index: 20; padding: 0; transition: all .15s;
+}
+#qz-chord-overlay .qz-close-btn:hover { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+#qz-chord-overlay h3 {
+  margin: 0 0 6px; color: var(--accent); font-size: .8rem; text-align: center;
+  font-family: 'Orbitron', monospace; letter-spacing: .06em;
+  border-bottom: 1px solid var(--border); padding-bottom: 4px;
+}
+#qz-chord-overlay .qz-keyboard-container { text-align: center; margin: 4px 0 8px; }
+#qz-chord-overlay .qz-keyboard-container svg { max-width: 100%; height: auto; display: inline-block; }
+#qz-chord-overlay table { width: 100%; border-collapse: collapse; font-size: .75rem; margin-top: 4px; }
+#qz-chord-overlay th { text-align: left; padding: 3px 5px; color: var(--dim); font-weight: 600; border-bottom: 1px solid var(--border); }
+#qz-chord-overlay td { padding: 6px 5px; border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: middle; }
+#qz-chord-overlay tr:last-child td { border-bottom: none; }
+#qz-chord-overlay .qz-chord-name { font-weight: 600; color: var(--textbright); font-size: .8rem; }
+#qz-chord-overlay .qz-chord-svg { display: block; max-width: 110px; margin: 0 auto; }
+.qz-legend { display: flex; justify-content: center; gap: 12px; font-size: .58rem; color: var(--dim); margin: 2px 0; }
+.qz-legend span { display: inline-flex; align-items: center; gap: 3px; }
+.qz-dot-red  { width: 8px; height: 8px; border-radius: 50%; background: #e74c3c; display: inline-block; }
+.qz-dot-blue { width: 8px; height: 8px; border-radius: 50%; background: #2980b9; display: inline-block; }
+.qz-hint { color: var(--dim); font-size: .55rem; text-align: center; margin-top: 6px; font-family: 'Share Tech Mono', monospace; }
+#qz-chord-overlay::-webkit-scrollbar { width: 3px; }
+#qz-chord-overlay::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+@media (max-width: 500px) {
+  #qz-circle-wrapper { width: 280px; height: 280px; }
+}
 
 .fx-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
 .fx-title{font-size:.62rem;letter-spacing:.2em;color:var(--accent);text-transform:uppercase}
@@ -1133,7 +1199,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v97</h1>
+    <h1>Ensemble_v98</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -1253,7 +1319,22 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
     </div>
   
   <div class="viz" id="viz"></div>
-  
+
+  <!-- Quintenzirkel Panel -->
+  <div class="qz-panel" id="qzPanel">
+    <div class="qz-header">
+      <span class="qz-title">🎸 Quintenzirkel</span>
+      <span style="font-size:.55rem;color:var(--dim);font-family:'Share Tech Mono',monospace">Klick auf Dur oder Moll → Griffe &amp; Klaviatur</span>
+    </div>
+    <div id="qz-circle-wrapper">
+      <div id="qz-circle-container"></div>
+      <div id="qz-chord-overlay">
+        <button class="qz-close-btn" id="qz-close-overlay">✕</button>
+        <div id="qz-overlay-content"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Chord Panel -->
   <div class="chord-panel" id="chordPanel">
     <div class="chord-header" id="chordHeader">
@@ -1590,7 +1671,9 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
     <div class="tbone-note-display" id="tboneNoteDisplay">—</div>
     <div class="tbone-partial-display" id="tbonePartialDisplay">—</div>
   </div>
-</div>
+</div><!-- /tboneFullArea -->
+</div><!-- /tboneBody -->
+</div><!-- /tbonePanel -->
 </div><!-- /tboneWrap -->
 
   <!-- Mega blow area — fills landscape gap, invisible on portrait -->
@@ -11502,6 +11585,187 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else initPdfRecorderButtons();
 
 // ══════════════════════════════════════════════════════════════
+// ── Quintenzirkel ─────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+(function() {
+  const qzNotes = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+  const qzOpenChords = {
+    'C':[0,1,0,2,3,-1],'D':[2,3,2,0,-1,-1],'E':[0,0,1,2,2,0],
+    'G':[3,2,0,0,0,3],'A':[0,2,2,2,0,-1],
+    'Am':[0,1,2,2,0,-1],'Dm':[1,3,2,0,-1,-1],'Em':[0,0,0,2,2,0]
+  };
+  const qzBaseShapes = {
+    major:[0,2,2,1,0,0], minor:[0,2,2,0,0,0], diminished:[0,1,2,0,1,0]
+  };
+
+  function qzGetFrets(root, type) {
+    let full = root + (type==='minor'?'m':type==='diminished'?'dim':'');
+    if (qzOpenChords[full]) return qzOpenChords[full];
+    const rootIdx = qzNotes.indexOf(root);
+    const shift = (rootIdx - qzNotes.indexOf('E') + 12) % 12;
+    return qzBaseShapes[type].map(f => f===0 ? shift : f+shift);
+  }
+
+  function qzGetMajorChords(root) {
+    const ri = qzNotes.indexOf(root);
+    return [0,2,4,5,7,9,11].map((step,i) => {
+      const type = ['major','minor','minor','major','major','minor','diminished'][i];
+      const n = qzNotes[(ri+step)%12];
+      return { name: n+(type==='minor'?'m':type==='diminished'?'dim':''), type, root: n };
+    });
+  }
+
+  function qzGetMinorChords(root) {
+    const rel = qzNotes[(qzNotes.indexOf(root)+3)%12];
+    const mc = qzGetMajorChords(rel);
+    const si = mc.findIndex(c => c.root===root && c.type==='minor');
+    return si===-1 ? mc : mc.slice(si).concat(mc.slice(0,si));
+  }
+
+  function qzGetScaleNotes(root, mode) {
+    const ri = qzNotes.indexOf(root);
+    return (mode==='major'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10]).map(i=>qzNotes[(ri+i)%12]);
+  }
+  function qzGetChordNotes(root, type) {
+    const ri = qzNotes.indexOf(root);
+    return (type==='major'?[0,4,7]:[0,3,7]).map(i=>qzNotes[(ri+i)%12]);
+  }
+
+  function qzDrawKeyboard(root, mode) {
+    const white=['C','D','E','F','G','A','B'], black=['C#','D#','F#','G#','A#'];
+    const kw=28,kh=50,bw=18,bh=34,pad=4;
+    const scale = qzGetScaleNotes(root, mode);
+    let c1n, c2n;
+    if (mode==='major') {
+      const ch=qzGetMajorChords(root);
+      c1n=qzGetChordNotes(ch[0].root,'major'); c2n=qzGetChordNotes(ch[5].root,'minor');
+    } else {
+      const ch=qzGetMinorChords(root);
+      c1n=qzGetChordNotes(ch[0].root,'minor'); c2n=qzGetChordNotes(ch[3].root,'major');
+    }
+    const tw=white.length*kw+2*pad, th=kh+2*pad+20;
+    let svg=`<svg width="${tw}" height="${th}" xmlns="http://www.w3.org/2000/svg">`;
+    for (let i=0;i<white.length;i++) {
+      const n=white[i],x=pad+i*kw,y=pad;
+      const fill=scale.includes(n)?'#1a3a4a':'#1a1a2e';
+      svg+=`<rect x="${x}" y="${y}" width="${kw}" height="${kh}" fill="${fill}" stroke="#444" stroke-width="1.5"/>`;
+      svg+=`<text x="${x+kw/2}" y="${y+kh-6}" text-anchor="middle" font-size="9" fill="#888">${n}</text>`;
+    }
+    for (let i=0;i<black.length;i++) {
+      const n=black[i],idx=white.indexOf(n[0]);
+      const x=pad+idx*kw+kw-bw/2,y=pad;
+      const fill=scale.includes(n)?'#2a5a6e':'#111';
+      svg+=`<rect x="${x}" y="${y}" width="${bw}" height="${bh}" fill="${fill}" stroke="#333" stroke-width="1"/>`;
+      svg+=`<text x="${x+bw/2}" y="${y+bh-4}" text-anchor="middle" font-size="7" fill="#aaa">${n}</text>`;
+    }
+    // Akkordton-Punkte (rot = I/i höher, blau = vi/III tiefer)
+    [c1n, c2n].forEach((chNotes, ci) => {
+      const col = ci===0 ? '#e74c3c' : '#2980b9';
+      // Weisse Tasten: rot y=kh-18, blau y=kh-8 (wie Original)
+      // Schwarze Tasten: rot y=bh-14, blau y=bh-6
+      const yWhite = pad + (ci===0 ? kh-18 : kh-8);
+      const yBlack = pad + (ci===0 ? bh-14 : bh-6);
+      chNotes.forEach(n => {
+        if (white.includes(n)) {
+          const x = pad + white.indexOf(n)*kw + kw/2;
+          svg+=`<circle cx="${x}" cy="${yWhite}" r="6" fill="${col}" stroke="#0b0b10" stroke-width="1.5"/>`;
+        } else {
+          const idx = white.indexOf(n[0]);
+          const x = pad + idx*kw + kw - bw/2 + bw/2;
+          svg+=`<circle cx="${x}" cy="${yBlack}" r="5" fill="${col}" stroke="#0b0b10" stroke-width="1.5"/>`;
+        }
+      });
+    });
+    svg+=`</svg>`;
+    return svg;
+  }
+
+  function qzCreateChordSVG(frets) {
+    const ss=15,fs=20,pad=16;
+    const w=6*ss+pad*2, h=5*fs+pad*2;
+    const valid=frets.filter(f=>f>=0);
+    const startFret=Math.max(0,(valid.length?Math.min(...valid):0)-1);
+    let svg=`<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" class="qz-chord-svg">`;
+    for (let j=0;j<5;j++) { const y=pad+j*fs; svg+=`<line x1="${pad}" y1="${y}" x2="${w-pad}" y2="${y}" stroke="#666" stroke-width="1.5"/>`; }
+    for (let i=0;i<6;i++) { const x=pad+i*ss; svg+=`<line x1="${x}" y1="${pad}" x2="${x}" y2="${pad+4*fs}" stroke="#666" stroke-width="1.5"/>`; }
+    for (let i=0;i<6;i++) {
+      const fret=frets[i], x=pad+i*ss;
+      if (fret===-1) { svg+=`<text x="${x}" y="${pad-fs/2+4}" text-anchor="middle" font-size="11" fill="#666">✕</text>`; }
+      else if (fret===0) { svg+=`<circle cx="${x}" cy="${pad-fs/2}" r="5" fill="none" stroke="${'var(--accent)'}" stroke-width="1.5"/>`; }
+      else { const y=pad+(fret-startFret)*fs+fs/2; svg+=`<circle cx="${x}" cy="${y}" r="5" fill="${'var(--accent3)'}"/><text x="${x+9}" y="${y+4}" font-size="8" fill="#aaa">${fret}</text>`; }
+    }
+    svg+=`</svg>`;
+    return svg;
+  }
+
+  function qzShowOverlay(root, mode) {
+    let ch1,ch2,l1,l2,title;
+    if (mode==='major') {
+      const ch=qzGetMajorChords(root);
+      ch1=ch[0]; ch2=ch[5]; l1='I'; l2='vi';
+      title=`${root}‑Dur / ${ch2.name}‑Moll`;
+    } else {
+      const ch=qzGetMinorChords(root);
+      ch1=ch[0]; ch2=ch[3]; l1='i'; l2='III';
+      title=`${root}‑Moll / ${ch2.name}‑Dur`;
+    }
+    const s1=qzCreateChordSVG(qzGetFrets(ch1.root,ch1.type));
+    const s2=qzCreateChordSVG(qzGetFrets(ch2.root,ch2.type));
+    const kb=qzDrawKeyboard(root,mode);
+    let html=`<h3>${title}</h3>`;
+    html+=`<div class="qz-keyboard-container">${kb}</div>`;
+    html+=`<div class="qz-legend"><span><span class="qz-dot-red"></span>${l1}</span><span><span class="qz-dot-blue"></span>${l2}</span><span style="color:#2a5a6e;font-size:.55rem">● Tonleiter</span></div>`;
+    html+=`<table><tr><th>Stufe</th><th>Akkord</th><th>Gitarre</th></tr>`;
+    html+=`<tr><td><strong>${l1}</strong></td><td class="qz-chord-name">${ch1.name}</td><td>${s1}</td></tr>`;
+    html+=`<tr><td><strong>${l2}</strong></td><td class="qz-chord-name">${ch2.name}</td><td>${s2}</td></tr>`;
+    html+=`</table><div class="qz-hint">💡 Offene Griffe · × = Saite nicht spielen</div>`;
+    document.getElementById('qz-overlay-content').innerHTML = html;
+    document.getElementById('qz-chord-overlay').classList.add('open');
+  }
+
+  function qzDrawCircle() {
+    const container = document.getElementById('qz-circle-container');
+    if (!container) return;
+    const size=340, cx=170, cy=170, outerR=168, innerR=100, labelR=145, minorR=116;
+    const keys=[
+      {dur:'C',moll:'Am'},{dur:'G',moll:'Em'},{dur:'D',moll:'Bm'},
+      {dur:'A',moll:'F#m'},{dur:'E',moll:'C#m'},{dur:'B',moll:'G#m'},
+      {dur:'F#',moll:'D#m'},{dur:'C#',moll:'A#m'},{dur:'G#',moll:'Fm'},
+      {dur:'D#',moll:'Cm'},{dur:'A#',moll:'Gm'},{dur:'F',moll:'Dm'}
+    ];
+    let svg=`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">`;
+    svg+=`<circle cx="${cx}" cy="${cy}" r="${outerR}" fill="#0d0d1a" stroke="var(--border)" stroke-width="1"/>`;
+    svg+=`<circle cx="${cx}" cy="${cy}" r="${innerR}" fill="none" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 3"/>`;
+    for (let i=0;i<12;i++) {
+      const a=(i*30-90)*Math.PI/180;
+      svg+=`<line x1="${cx}" y1="${cy}" x2="${cx+outerR*Math.cos(a)}" y2="${cy+outerR*Math.sin(a)}" stroke="rgba(255,255,255,.08)" stroke-width="0.8"/>`;
+    }
+    for (let i=0;i<12;i++) {
+      const a=(i*30-90)*Math.PI/180;
+      const dx=cx+labelR*Math.cos(a), dy=cy+labelR*Math.sin(a);
+      const mx=cx+minorR*Math.cos(a), my=cy+minorR*Math.sin(a);
+      svg+=`<text x="${dx}" y="${dy}" text-anchor="middle" dominant-baseline="central" class="qz-tonart-text" onclick="qzShowOverlay('${keys[i].dur}','major')">${keys[i].dur}</text>`;
+      svg+=`<text x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="central" class="qz-tonart-text minor" onclick="qzShowOverlay('${keys[i].moll}','minor')">${keys[i].moll}</text>`;
+    }
+    svg+=`<circle cx="${cx}" cy="${cy}" r="5" fill="var(--accent2)"/>`;
+    svg+=`<text x="${cx}" y="${cy+18}" text-anchor="middle" font-size="9" fill="var(--dim)">Dur / Moll</text>`;
+    svg+=`</svg>`;
+    container.innerHTML = svg;
+  }
+
+  // close-button
+  document.getElementById('qz-close-overlay').addEventListener('click', function() {
+    document.getElementById('qz-chord-overlay').classList.remove('open');
+  });
+
+  // global damit onclick im SVG funktioniert
+  window.qzShowOverlay = qzShowOverlay;
+
+  qzDrawCircle();
+})();
+
+// ══════════════════════════════════════════════════════════════
 // ── Panel-Toggle-Streifen ─────────────────────────────────────
 // ══════════════════════════════════════════════════════════════
 const PANEL_TOGGLE_KEY = 'ensemble_panel_toggles';
@@ -11558,6 +11822,7 @@ function addPanelToggle(panelId, label, storageKey, defaultOpen = true) {
   addPanelToggle('ancFX',        '🎛 Effekte & EQ',       'fx',      true);
   addPanelToggle('drawbarPanel', '🎹 Zugriegel',          'drawbar', false);
   addPanelToggle('viz',          '📊 Visualizer',         'viz',     false);
+  addPanelToggle('qzPanel',      '🎸 Quintenzirkel',      'qz',      false);
   addPanelToggle('chordPanel',   '🎼 Akkorde',            'chord',   true);
   addPanelToggle('metroPanel',   '♩ Metronom',            'metro',   true);
   addPanelToggle('seqPanel',     '🥁 Beat Sequenzer',     'seq',     true);
