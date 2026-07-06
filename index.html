@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v92</title>
+<title>Ensemble v97</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -291,6 +291,25 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 .info-box b{color:var(--accent3)}
 
 /* Effects panel */
+/* ── Panel-Toggle-Streifen ───────────────────────────────────── */
+.panel-toggle-btn {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; box-sizing: border-box;
+  padding: 3px 12px; margin-bottom: -4px;
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 8px 8px 0 0; border-bottom: none;
+  cursor: pointer; user-select: none;
+  font-size: .48rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--dim); font-family: 'Share Tech Mono', monospace;
+  transition: background .15s, color .15s;
+}
+.panel-toggle-btn:hover { background: var(--panel); color: var(--textbright); }
+.panel-toggle-btn .ptb-arrow {
+  font-size: .6rem; transition: transform .2s; flex-shrink: 0;
+}
+.panel-toggle-btn.closed .ptb-arrow { transform: rotate(-90deg); }
+.panel-toggle-btn.closed { border-radius: 8px; border-bottom: 1px solid var(--border); margin-bottom: 0; }
+
 .fx-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
 .fx-title{font-size:.62rem;letter-spacing:.2em;color:var(--accent);text-transform:uppercase}
 .fx-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
@@ -1114,7 +1133,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v92</h1>
+    <h1>Ensemble_v97</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -1347,7 +1366,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
   
   <!-- Drawbar Panel -->
   
-  <div class="panel">
+  <div class="panel" id="masterPanel">
       <div class="ps" style="max-width:180px">
         <label>Master-Lautstärke</label>
         <input type="range" id="volSlider" min="0" max="100" value="75">
@@ -1531,6 +1550,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <!-- Beat Sequencer -->
   <!-- Trombone Panel -->
+  <div id="tboneWrap">
   <div class="tbone-panel" id="tbonePanel">
     <div class="tbone-header" id="tboneHeader">
       <span class="tbone-title">🎺 Zugposaune</span>
@@ -1570,7 +1590,10 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
     <div class="tbone-note-display" id="tboneNoteDisplay">—</div>
     <div class="tbone-partial-display" id="tbonePartialDisplay">—</div>
   </div>
-</div>
+</div><!-- /tboneFullArea -->
+</div><!-- /tboneBody -->
+</div><!-- /tbonePanel -->
+</div><!-- /tboneWrap -->
 
   <!-- Mega blow area — fills landscape gap, invisible on portrait -->
   <div class="tbone-mega-blow" id="tbone-megaBlow">
@@ -6663,7 +6686,23 @@ const CHORD_TYPES = [
   { label:'m7b5',   intervals:[0,3,6,10] },
 ];
 
-const CHORD_NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const CHORD_NOTE_NAMES   = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const CHORD_NOTE_NAMES_B = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+
+// Gibt den korrekten Tonnamen für einen Halbtonabstand vom Grundton zurück.
+// Grundtöne mit b (Db=1→aber als Db, Eb=3, F=5, Gb=6→als Gb, Ab=8, Bb=10)
+// nutzen b-Schreibweise. CHORD_ROOT_DISPLAY zeigt: Eb, Ab, Bb als b; C#, F# als #.
+// rootIdx: 0=C,1=C#,2=D,3=Eb,4=E,5=F,6=F#,7=G,8=Ab,9=A,10=Bb,11=B
+const FLAT_ROOTS = new Set([3, 8, 10]); // Eb, Ab, Bb → b-Schreibweise
+// F (5) hat gemischte Praxis — F A C braucht kein b, aber Bb braucht es → F nutzt b
+// Damit Bb in F-Akkorden korrekt erscheint:
+const FLAT_ROOTS_EXTENDED = new Set([3, 5, 8, 10]); // Eb, F, Ab, Bb
+function chordNoteName(semitone, rootIdx) {
+  const useFlatNames = FLAT_ROOTS_EXTENDED.has(rootIdx);
+  return useFlatNames
+    ? CHORD_NOTE_NAMES_B[semitone % 12]
+    : CHORD_NOTE_NAMES[semitone % 12];
+}
 
 let chordOpen = false;
 let chordSelRoot = 0;
@@ -6718,7 +6757,7 @@ function chordUpdate() {
   midiNotes.forEach(m => {
     const chip = document.createElement('div');
     chip.className = 'chord-note-chip';
-    chip.textContent = CHORD_NOTE_NAMES[m % 12];
+    chip.textContent = chordNoteName(m, chordSelRoot);
     notesEl.appendChild(chip);
   });
 
@@ -6822,11 +6861,10 @@ function arpRebuildRootBtns() {
   wrap.innerHTML = '';
   if (chordSelRoot < 0 || chordSelType < 0) return;
   const intervals = CHORD_TYPES[chordSelType].intervals;
-  const NOTE_NAMES = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
   intervals.forEach((iv, i) => {
     const btn = document.createElement('button');
     btn.className = 'arp-btn' + (i === arp.rootNoteIdx ? ' active' : '');
-    btn.textContent = NOTE_NAMES[(chordSelRoot + iv) % 12];
+    btn.textContent = chordNoteName(chordSelRoot + iv, chordSelRoot);
     btn.addEventListener('click', () => {
       arp.rootNoteIdx = i;
       wrap.querySelectorAll('.arp-btn').forEach((b, j) => b.classList.toggle('active', j === i));
@@ -8640,6 +8678,24 @@ function seqScheduleStep(stepIdx, time) {
       rowSynth.programChange(DRUM_CH, p.program);
       rowSynth.controllerChange(DRUM_CH, 7, Math.round(row.vel));
       rowSynth.noteOn(DRUM_CH, row.note, row.vel);
+
+      // ── Recorder-Hook ────────────────────────────────────────
+      // Sequenzer-Events in die laufende Aufnahme einschreiben,
+      // genau wie playMidi/stopMidi es für Keyboard-Events tut.
+      if (typeof rec !== 'undefined' &&
+          (rec.state === 'recording' || rec.state === 'overdubbing')) {
+        const tRel = performance.now() - rec.startT;
+        const snap = [{ id: `seq_${row.id}`, sfIdx: row.sfIdx,
+                        presetIdx: row.presetIdx, transpose: 0,
+                        vol: (row.vel / 127), envOverride: {} }];
+        const target = rec.state === 'recording' ? rec.events : rec.overdubEvents;
+        target.push({ t: tRel, type: 'on',  midi: row.note, vel: row.vel,
+                      ch: DRUM_CH, source: 'seq', layerSnap: snap });
+        target.push({ t: tRel + noteDurMs, type: 'off', midi: row.note,
+                      ch: DRUM_CH, source: 'seq', layerSnap: snap });
+      }
+      // ─────────────────────────────────────────────────────────
+
       setTimeout(() => { try { rowSynth.noteOff(DRUM_CH, row.note); } catch(e) {} }, noteDurMs);
     }, msDelay);
 
@@ -9043,6 +9099,27 @@ function recStart() {
   rec.animFrame = requestAnimationFrame(recTick);
 }
 
+// ── Spurbezeichnung aus aktiven Preset-Kurznamen ─────────────
+function recTrackLabel() {
+  // Kurznamen aller aktiven (nicht gemuteten) Layer sammeln
+  const names = layers
+    .filter(l => !l.muted)
+    .map(l => {
+      const sf = engine.soundfonts[l.sfIdx];
+      const full = sf?.presets[l.presetIdx]?.name ?? '?';
+      // Kurzname: erstes Wort, max 12 Zeichen
+      return full.split(' ')[0].slice(0, 12);
+    });
+  const raw = names.length ? names.join('+') : 'Aufnahme';
+
+  // Doppelten Namen eindeutig machen: falls schon vorhanden, (1), (2), ... anhängen
+  const existing = rec.tracks.map(tr => tr.label);
+  if (!existing.includes(raw)) return raw;
+  let n = 1;
+  while (existing.includes(`${raw}(${n})`)) n++;
+  return `${raw}(${n})`;
+}
+
 function recStop() {
   if (rec.state==='armed') { rec.state='idle'; cancelAnimationFrame(rec.animFrame); recUpdateUI(); return; }
   if (rec.state!=='recording') return;
@@ -9053,7 +9130,7 @@ function recStop() {
   rec._trackCounter++;
   rec.tracks.push({
     id: rec._trackCounter,
-    label: 'Aufnahme ' + rec._trackCounter,
+    label: recTrackLabel(),
     isBase: rec.tracks.length === 0,
     events: [...rec.events],
     duration: dur,
@@ -9074,7 +9151,18 @@ function recStop() {
 function recPlayEvent(ev) {
   const ctx = engine.ctx;
   if (ev.type === 'on') {
-    if (ev.layerSnap && ev.layerSnap.length) {
+    if (ev.source === 'seq' && ev.layerSnap && ev.layerSnap.length) {
+      // Sequenzer-Events: direkt auf Channel 9 (Drums) abspielen wie der Sequenzer selbst
+      ev.layerSnap.forEach(snap => {
+        const sfObj = engine.synths[snap.sfIdx];
+        if (!sfObj || !sfObj.ready) return;
+        const DRUM_CH = 9;
+        try { sfObj.synth.setDrums(DRUM_CH, true); } catch(e) {}
+        sfObj.synth.programChange(DRUM_CH, sfObj.presets[snap.presetIdx]?.program ?? 0);
+        sfObj.synth.controllerChange(DRUM_CH, 7, Math.round(Math.min(127, snap.vol * 127)));
+        sfObj.synth.noteOn(DRUM_CH, ev.midi, ev.vel ?? 80);
+      });
+    } else if (ev.layerSnap && ev.layerSnap.length) {
       ev.layerSnap.forEach(snap => {
         const t = ev.midi + globalTranspose + snap.transpose;
         if (t < 0 || t > 127) return;
@@ -9086,7 +9174,13 @@ function recPlayEvent(ev) {
       playMidi(ev.midi, ev.vel, ev.ch ?? null, ev.source ?? 'player');
     }
   } else {
-    if (ev.layerSnap && ev.layerSnap.length) {
+    if (ev.source === 'seq' && ev.layerSnap && ev.layerSnap.length) {
+      ev.layerSnap.forEach(snap => {
+        const sfObj = engine.synths[snap.sfIdx];
+        if (!sfObj) return;
+        try { sfObj.synth.noteOff(9, ev.midi); } catch(e) {}
+      });
+    } else if (ev.layerSnap && ev.layerSnap.length) {
       ev.layerSnap.forEach(snap => {
         engine.stop(ev.midi + globalTranspose + snap.transpose, snap.id);
       });
@@ -9226,7 +9320,7 @@ function recStopOverdub() {
   rec._trackCounter++;
   rec.tracks.push({
     id: rec._trackCounter,
-    label: 'Overdub ' + (rec.tracks.length),
+    label: recTrackLabel(),
     isBase: false,
     events: [...rec.overdubEvents],
     duration: odDur,
@@ -11408,6 +11502,77 @@ function initPdfRecorderButtons() {
 // Aufruf nachdem das DOM bereit ist
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPdfRecorderButtons);
 else initPdfRecorderButtons();
+
+// ══════════════════════════════════════════════════════════════
+// ── Panel-Toggle-Streifen ─────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+const PANEL_TOGGLE_KEY = 'ensemble_panel_toggles';
+
+function panelToggleLoad() {
+  try { return JSON.parse(localStorage.getItem(PANEL_TOGGLE_KEY) || '{}'); } catch(e) { return {}; }
+}
+function panelToggleSave(states) {
+  try { localStorage.setItem(PANEL_TOGGLE_KEY, JSON.stringify(states)); } catch(e) {}
+}
+
+// Fügt einen Toggle-Streifen vor einem Panel-Element ein.
+// panelId      : ID des Panel-Divs das gezeigt/versteckt wird
+// label        : Text im Streifen
+// storageKey   : localStorage-Key
+// defaultOpen  : ob Panel beim ersten Besuch sichtbar ist
+function addPanelToggle(panelId, label, storageKey, defaultOpen = true) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+
+  const states = panelToggleLoad();
+  let open = storageKey in states ? states[storageKey] : defaultOpen;
+
+  const btn = document.createElement('button');
+  btn.className = 'panel-toggle-btn' + (open ? '' : ' closed');
+  btn.innerHTML = `<span>${label}</span><span class="ptb-arrow">▾</span>`;
+  btn.title = open ? 'Panel einklappen' : 'Panel aufklappen';
+
+  function apply(isOpen) {
+    open = isOpen;
+    panel.style.display = open ? '' : 'none';
+    btn.classList.toggle('closed', !open);
+    btn.title = open ? 'Panel einklappen' : 'Panel aufklappen';
+    const s = panelToggleLoad();
+    s[storageKey] = open;
+    panelToggleSave(s);
+  }
+
+  apply(open);
+  btn.addEventListener('click', () => apply(!open));
+
+  panel.parentNode.insertBefore(btn, panel);
+}
+
+(function initPanelToggles() {
+  addPanelToggle('ancKeys',      '🎹 Klaviatur',          'keys1',   true);
+  addPanelToggle('masterPanel',  '🔊 Master / Transport', 'master',  true);
+  addPanelToggle('ancSF2',       '🗂 Soundfonts',         'sf2',     true);
+  addPanelToggle('sessionPanel', '💾 Session',            'session', true);
+  addPanelToggle('midiPanel',    '🎹 MIDI Input',         'midi',    false);
+  addPanelToggle('favPanel',     '⭐ Favoriten',           'fav',     false);
+  addPanelToggle('regPanel',     '🔵 Register',           'reg',     true);
+  addPanelToggle('ancLayer',     '🎵 Preset-Layer',       'layer',   true);
+  addPanelToggle('ancFX',        '🎛 Effekte & EQ',       'fx',      true);
+  addPanelToggle('drawbarPanel', '🎹 Zugriegel',          'drawbar', false);
+  addPanelToggle('viz',          '📊 Visualizer',         'viz',     false);
+  addPanelToggle('chordPanel',   '🎼 Akkorde',            'chord',   true);
+  addPanelToggle('metroPanel',   '♩ Metronom',            'metro',   true);
+  addPanelToggle('seqPanel',     '🥁 Beat Sequenzer',     'seq',     true);
+  addPanelToggle('recPanel',     '⏺ Aufnahme',            'rec',     true);
+  addPanelToggle('kbWrap2',      '🎹 Klaviatur 2',        'keys2',   true);
+  addPanelToggle('drawbarPanel2','🎹 Zugriegel 2',        'drawbar2',false);
+  addPanelToggle('tboneWrap',    '🎺 Zugposaune',         'tbone',   false);
+  addPanelToggle('drumPanel',    '🥁 Drum Pads',          'drums',   true);
+  addPanelToggle('pdfPanel',     '🎼 Noten (PDF)',        'pdf',     false);
+  addPanelToggle('scorePanel',   '🎵 Noten-Editor',       'score',   false);
+  addPanelToggle('jamPanel',     '🌐 Live Jam',           'jam',     false);
+})();
+
 </script>
 </body>
 </html>
