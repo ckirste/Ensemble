@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v98</title>
+<title>Ensemble v99</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -291,6 +291,90 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 .info-box b{color:var(--accent3)}
 
 /* Effects panel */
+/* ── Light Mode ──────────────────────────────────────────────── */
+body.light-mode {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+}
+body.light-mode .container,
+body.light-mode .sf-loader-panel,
+body.light-mode .session-panel,
+body.light-mode .midi-panel,
+body.light-mode .fav-panel,
+body.light-mode .reg-panel,
+body.light-mode .layers-panel,
+body.light-mode .fx-panel,
+body.light-mode .metro-panel,
+body.light-mode .seq-panel,
+body.light-mode .rec-panel,
+body.light-mode .pdf-panel,
+body.light-mode .score-panel,
+body.light-mode .jam-panel,
+body.light-mode .chord-panel,
+body.light-mode .qz-panel,
+body.light-mode .drum-panel,
+body.light-mode .tbone-panel,
+body.light-mode .drawbar-panel,
+body.light-mode .kb-wrap,
+body.light-mode .kb-sidebar,
+body.light-mode .panel,
+body.light-mode [class*="-panel"],
+body.light-mode [class*="-header"],
+body.light-mode [class*="-body"] {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+body.light-mode .keyboard .key {
+  background: #f8f8f8 !important; border-color: #bbb !important;
+}
+body.light-mode .keyboard .key.black {
+  background: #222 !important; color: #fff !important;
+}
+body.light-mode .keyboard .key.active {
+  background: var(--accent) !important;
+}
+body.light-mode .layer-card,
+body.light-mode .reg-btn,
+body.light-mode .fav-item,
+body.light-mode .seq-row,
+body.light-mode .rec-track,
+body.light-mode .midi-device-row {
+  background: #f0f2f5 !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+body.light-mode input[type=range] { accent-color: var(--accent); }
+body.light-mode select,
+body.light-mode input[type=text],
+body.light-mode input[type=number],
+body.light-mode textarea {
+  background: #fff !important; color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+body.light-mode button {
+  color: var(--text) !important; border-color: var(--border) !important;
+  background: #fff !important;
+}
+body.light-mode button:hover { border-color: var(--accent) !important; color: var(--accent) !important; }
+body.light-mode .score-body { background: #fff !important; }
+body.light-mode .score-toolbar { background: #f0f2f5 !important; }
+body.light-mode .sf-loader-header,
+body.light-mode .score-header { background: #f0f2f5 !important; }
+body.light-mode .panel-toggle-btn {
+  background: #e8eaee !important; color: #555 !important;
+  border-color: var(--border) !important;
+}
+body.light-mode .panel-toggle-btn:hover { background: var(--accent) !important; color: #fff !important; }
+/* Quintenzirkel im Light-Mode */
+body.light-mode #qz-circle-container svg circle:first-child { fill: #f8f9fa !important; }
+body.light-mode .qz-tonart-text { fill: #1a252f !important; }
+body.light-mode .qz-tonart-text.minor { fill: #7f8c8d !important; }
+body.light-mode #qz-chord-overlay { background: rgba(248,249,250,.97) !important; }
+body.light-mode #qz-chord-overlay h3 { color: var(--accent) !important; }
+body.light-mode #qz-chord-overlay th,
+body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-color: var(--border) !important; }
+
 /* ── Panel-Toggle-Streifen ───────────────────────────────────── */
 .panel-toggle-btn {
   display: flex; align-items: center; justify-content: space-between;
@@ -299,7 +383,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
   background: var(--panel2); border: 1px solid var(--border);
   border-radius: 8px 8px 0 0; border-bottom: none;
   cursor: pointer; user-select: none;
-  font-size: .90rem; letter-spacing: .12em; text-transform: uppercase;
+  font-size: .96rem; letter-spacing: .12em; text-transform: uppercase;
   color: var(--dim); font-family: 'Share Tech Mono', monospace;
   transition: background .15s, color .15s;
 }
@@ -1199,7 +1283,7 @@ input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v98</h1>
+    <h1>Ensemble_v99</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -5167,11 +5251,12 @@ console.log("CHECKPOINT 3: window.loadFile gesetzt");
 const SETTINGS_KEY = 'sf2player_settings';
 
 const THEMES = [
-  { name:'Cyan',    vars:{ '--accent':'#00e5ff','--accent2':'#ff4060','--accent3':'#9b7fe8','--bg':'#0b0b10','--panel':'#10101a','--border':'#1f1f35','--text':'#b0b0c8','--textbright':'#ddddf0' }},
-  { name:'Grün',    vars:{ '--accent':'#69ff47','--accent2':'#ff6d00','--accent3':'#40c4ff','--bg':'#080f08','--panel':'#0f1a0f','--border':'#1a301a','--text':'#a8c8a0','--textbright':'#d8f0d0' }},
-  { name:'Lila',    vars:{ '--accent':'#e040fb','--accent2':'#ff4081','--accent3':'#40c4ff','--bg':'#0d080f','--panel':'#170f1a','--border':'#2a1535','--text':'#c0a8d0','--textbright':'#edddf8' }},
-  { name:'Gold',    vars:{ '--accent':'#ffd740','--accent2':'#ff4060','--accent3':'#69ff47','--bg':'#0f0d06','--panel':'#1a160a','--border':'#302510','--text':'#c8b880','--textbright':'#f0e0a0' }},
-  { name:'Weiß',    vars:{ '--accent':'#ffffff','--accent2':'#ff4060','--accent3':'#aaaaff','--bg':'#0a0a0a','--panel':'#141414','--border':'#2a2a2a','--text':'#c0c0c0','--textbright':'#ffffff' }},
+  { name:'Cyan',    vars:{ '--accent':'#00e5ff','--accent2':'#ff4060','--accent3':'#9b7fe8','--bg':'#0b0b10','--panel':'#10101a','--border':'#1f1f35','--text':'#b0b0c8','--textbright':'#ddddf0','--dim':'#6060a0' }},
+  { name:'Grün',    vars:{ '--accent':'#69ff47','--accent2':'#ff6d00','--accent3':'#40c4ff','--bg':'#080f08','--panel':'#0f1a0f','--border':'#1a301a','--text':'#a8c8a0','--textbright':'#d8f0d0','--dim':'#508050' }},
+  { name:'Lila',    vars:{ '--accent':'#e040fb','--accent2':'#ff4081','--accent3':'#40c4ff','--bg':'#0d080f','--panel':'#170f1a','--border':'#2a1535','--text':'#c0a8d0','--textbright':'#edddf8','--dim':'#806090' }},
+  { name:'Gold',    vars:{ '--accent':'#ffd740','--accent2':'#ff4060','--accent3':'#69ff47','--bg':'#0f0d06','--panel':'#1a160a','--border':'#302510','--text':'#c8b880','--textbright':'#f0e0a0','--dim':'#907840' }},
+  { name:'Weiß',    vars:{ '--accent':'#ffffff','--accent2':'#ff4060','--accent3':'#aaaaff','--bg':'#0a0a0a','--panel':'#141414','--border':'#2a2a2a','--text':'#c0c0c0','--textbright':'#ffffff','--dim':'#707070' }},
+  { name:'☀ Hell',  vars:{ '--accent':'#1a6abf','--accent2':'#e03050','--accent3':'#7040c0','--bg':'#f0f2f5','--panel':'#ffffff','--border':'#d0d4dc','--text':'#2c3e50','--textbright':'#1a252f','--dim':'#7f8c8d' }, light: true },
 ];
 
 const COLOR_DEFS = [
@@ -5183,6 +5268,7 @@ const COLOR_DEFS = [
   { key:'--border',    label:'Rahmen' },
   { key:'--text',      label:'Text' },
   { key:'--textbright',label:'Text hell' },
+  { key:'--dim',       label:'Gedimmt' },
 ];
 
 const SIZE_DEFS = [
@@ -5198,7 +5284,10 @@ function settingsLoad() {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return;
     const s = JSON.parse(raw);
-    if (s.colors) Object.entries(s.colors).forEach(([k,v]) => applyCustomProp(k, v));
+    if (s.colors) {
+      Object.entries(s.colors).forEach(([k,v]) => { if (!k.startsWith('_')) applyCustomProp(k, v); });
+      document.body.classList.toggle('light-mode', !!s.colors._lightMode);
+    }
     if (s.sizes)  s.sizes.forEach(({key, val}) => {
       const def = SIZE_DEFS.find(d => d.key === key);
       if (def) def.apply(val);
@@ -5237,11 +5326,11 @@ function initSettingsPanel() {
     btn.style.color       = theme.vars['--accent'];
     btn.addEventListener('click', () => {
       Object.entries(theme.vars).forEach(([k,v]) => applyCustomProp(k,v));
-      // Update glow vars too
       const a = theme.vars['--accent'];
       applyCustomProp('--glow',  `0 0 18px ${a}55`);
       applyCustomProp('--glow2', `0 0 18px ${theme.vars['--accent2']}55`);
-      settingsSave(theme.vars, getCurrentSizes());
+      document.body.classList.toggle('light-mode', !!theme.light);
+      settingsSave({...theme.vars, _lightMode: !!theme.light}, getCurrentSizes());
       refreshColorInputs();
       themesEl.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
