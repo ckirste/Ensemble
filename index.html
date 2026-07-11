@@ -7626,6 +7626,8 @@ function scoreRender() {
       <button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreStartPlay(${tIdx},0)" title="Nur diesen Track von Anfang">▶</button>
       <button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreStartPlayTrackCursor(${tIdx})" title="Nur diesen Track ab Cursor">▶✦</button>
       ${tIdx>0?`<button class="score-btn danger" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreTracks.splice(${tIdx},1);window.scoreRender()">✕</button>`:''}`;
+      unit.appendChild(hdr);
+
 
     // Notensystem-Zeile
     const row = document.createElement('div');
