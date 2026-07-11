@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v100</title>
+<title>Ensemble v101</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1283,7 +1283,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v100</h1>
+    <h1>Ensemble_v101</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -8019,6 +8019,7 @@ window.scoreTogglePlay = function() {
 
 function scorePlayStep(sIdx) {
   scorePlayPos = { tIdx: 0, sIdx };
+  if (scorePlayTimer === null) scorePlayTimer = -1; // Sentinel: läuft, aber noch kein Timer-ID
   scoreRender();
 
   let stepDurMs = 500;
@@ -8050,8 +8051,10 @@ function scorePlayStep(sIdx) {
         const midi     = midiBase + (ACC_OFFSET[n.a] ?? 0);
         try {
           engine.ensureCtx().then(() => {
+            // Preset explizit sicherstellen, damit der interne Channel das richtige Preset hat
+            engine.ensureChannel(layerId, sfIdx, pIdx);
             engine.playSync(midi, layerId, sfIdx, pIdx, 90, vol,
-              engine.ctx ? engine.ctx.currentTime : 0,
+              engine.ctx ? engine.ctx.currentTime + 0.01 : 0,
               layer?.envOverride ?? {});
             setTimeout(() => engine.stop(midi, layerId), noteOffMs);
           });
@@ -8060,16 +8063,20 @@ function scorePlayStep(sIdx) {
     }
   });
 
-  // Maximale Tracklänge — nur über die gespielten Tracks
+  // Nächster Step — Bug-Fix: Operator-Priorität war falsch (&&/|| Konflikt)
+  const nextSIdx = sIdx + 1;
   const maxLen = scorePlayTrackFilter !== null
     ? scoreTracks[scorePlayTrackFilter].data.length
     : Math.max(...scoreTracks.map(t => t.data.length));
 
-  const nextSIdx = sIdx + 1;
-  if (nextSIdx < maxLen && scorePlayTimer !== null || scorePlayTimer === undefined) {
-    scorePlayTimer = setTimeout(() => scorePlayStep(nextSIdx), stepDurMs);
+  if (nextSIdx < maxLen) {
+    // Playback läuft weiter
+    scorePlayTimer = setTimeout(() => {
+      if (scorePlayTimer !== null) scorePlayStep(nextSIdx);
+    }, stepDurMs);
   } else {
-    scoreStopPlay();
+    // Ende erreicht
+    scorePlayTimer = setTimeout(() => scoreStopPlay(), stepDurMs);
   }
 }
 
