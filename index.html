@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v99</title>
+<title>Ensemble v100</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1283,7 +1283,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v99</h1>
+    <h1>Ensemble_v100</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -1830,7 +1830,9 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
       <button class="score-btn" onclick="scoreAddTrack()">+ Track</button>
       <button class="score-btn" id="scoreKbInputBtn" onclick="scoreToggleKbInput()"
         title="Klaviatur-Eingabe: Taste drücken = Note setzen + nächster Step">🎹 Klaviatur-Eingabe</button>
-      <button class="score-btn active" id="scorePlayBtn" onclick="scoreTogglePlay()">▶ Abspielen</button>
+      <button class="score-btn active" id="scorePlayBtn"       onclick="scoreStartPlay(null,0)"       title="Alle Tracks von Anfang abspielen">▶ Alle</button>
+      <button class="score-btn"        id="scorePlayCursorBtn" onclick="scoreStartPlayCursor()"       title="Alle Tracks ab Cursor-Position abspielen">▶ Ab ✦</button>
+      <button class="score-btn"        id="scoreStopBtn"       onclick="scoreStopPlay()"              title="Stop" style="display:none">■ Stop</button>
       <button class="score-btn" onclick="scoreExportJSON()">⬇ JSON</button>
       <button class="score-btn" onclick="scoreImportJSON()">⬆ JSON laden</button>
       <input type="file" id="scoreImportInput" accept=".json" style="display:none">
@@ -7621,8 +7623,9 @@ function scoreRender() {
       <select onchange="window.scoreTracks[${tIdx}].layerIdx=parseInt(this.value);window.scoreRender()"
         title="Welcher Ensemble-Layer spielt diesen Track ab">${layerOpts}</select>
       <button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreAddStep(${tIdx})">+ Step</button>
+      <button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreStartPlay(${tIdx},0)" title="Nur diesen Track von Anfang">▶</button>
+      <button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreStartPlayTrackCursor(${tIdx})" title="Nur diesen Track ab Cursor">▶✦</button>
       ${tIdx>0?`<button class="score-btn danger" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreTracks.splice(${tIdx},1);window.scoreRender()">✕</button>`:''}`;
-    unit.appendChild(hdr);
 
     // Notensystem-Zeile
     const row = document.createElement('div');
@@ -7970,39 +7973,68 @@ function scoreKbNoteInput(noteName) {
 }
 
 // ── Playback ─────────────────────────────────────────────────
-window.scoreTogglePlay = function() {
-  if (scorePlayTimer) {
-    clearTimeout(scorePlayTimer);
-    scorePlayTimer = null;
-    scorePlayPos   = null;
-    document.getElementById('scorePlayBtn').textContent = '▶ Abspielen';
-    document.getElementById('scorePlayBtn').classList.remove('active');
-    scoreRender();
-    return;
-  }
-  // Starte von Anfang
-  document.getElementById('scorePlayBtn').textContent = '■ Stop';
-  document.getElementById('scorePlayBtn').classList.add('active');
-  scorePlayStep(0, 0);
+// ── Score Playback ─────────────────────────────────────────────
+// playTrackFilter: null = alle Tracks, number = nur dieser Track-Index
+let scorePlayTrackFilter = null;
+
+function scoreStopPlay() {
+  if (scorePlayTimer) { clearTimeout(scorePlayTimer); scorePlayTimer = null; }
+  scorePlayPos = null;
+  scorePlayTrackFilter = null;
+  const playBtn   = document.getElementById('scorePlayBtn');
+  const cursorBtn = document.getElementById('scorePlayCursorBtn');
+  const stopBtn   = document.getElementById('scoreStopBtn');
+  if (playBtn)   { playBtn.classList.remove('active');   playBtn.style.display   = ''; }
+  if (cursorBtn) { cursorBtn.classList.remove('active'); cursorBtn.style.display = ''; }
+  if (stopBtn)   stopBtn.style.display = 'none';
+  scoreRender();
+}
+
+function scoreStartPlay(trackFilter, startSIdx) {
+  scoreStopPlay();
+  scorePlayTrackFilter = trackFilter;
+  const playBtn  = document.getElementById(trackFilter===null ? 'scorePlayBtn' : 'scorePlayBtn');
+  const stopBtn  = document.getElementById('scoreStopBtn');
+  if (stopBtn) stopBtn.style.display = '';
+  scorePlayStep(startSIdx);
+}
+
+window.scoreStartPlay = scoreStartPlay;
+
+window.scoreStartPlayCursor = function() {
+  const start = scoreActive ? scoreActive.sIdx : 0;
+  scoreStartPlay(null, start);
 };
 
-function scorePlayStep(tIdx, sIdx) {
-  // Alle Tracks synchron abspielen (erster Track bestimmt Timing)
-  scorePlayPos = {tIdx:0, sIdx};
+window.scoreStartPlayTrackCursor = function(tIdx) {
+  const start = (scoreActive && scoreActive.tIdx === tIdx) ? scoreActive.sIdx : 0;
+  scoreStartPlay(tIdx, start);
+};
+
+// Rückwärtskompatibilität für bestehende onclick
+window.scoreTogglePlay = function() {
+  if (scorePlayTimer) { scoreStopPlay(); return; }
+  scoreStartPlay(null, 0);
+};
+
+function scorePlayStep(sIdx) {
+  scorePlayPos = { tIdx: 0, sIdx };
   scoreRender();
 
-  // Alle Tracks an sIdx abspielen
-  let stepDurMs = 500; // Fallback
+  let stepDurMs = 500;
   const bpm = (typeof metro !== 'undefined') ? metro.bpm : 120;
 
-  scoreTracks.forEach((track, ti) => {
+  const tracksToPlay = scorePlayTrackFilter !== null
+    ? [{ track: scoreTracks[scorePlayTrackFilter], ti: scorePlayTrackFilter }]
+    : scoreTracks.map((track, ti) => ({ track, ti }));
+
+  tracksToPlay.forEach(({ track, ti }) => {
     const s = track.data[sIdx];
     if (!s) return;
     const dur = DUR_MAP[s.len] * (s.dot ? 1.5 : 1);
     stepDurMs = Math.round((dur / 4) * (60000 / bpm));
 
     if (!s.rest && typeof engine !== 'undefined' && engine.synths.length) {
-      // Layer-Kopplung: Nutze den gekoppelten Ensemble-Layer
       const lIdx   = track.layerIdx ?? 0;
       const layer  = (typeof layers !== 'undefined') ? layers[lIdx] : null;
       const sfIdx  = layer ? (layer.sfIdx  ?? 0) : 0;
@@ -8010,8 +8042,8 @@ function scorePlayStep(tIdx, sIdx) {
       const vol    = layer ? (layer.vol ?? 1.0) : 1.0;
       const sfObj  = engine.synths[sfIdx];
       if (!sfObj) return;
-      const layerId    = `score_${ti}`;
-      const noteOffMs  = Math.max(50, stepDurMs - 40);
+      const layerId   = `score_${ti}`;
+      const noteOffMs = Math.max(50, stepDurMs - 40);
 
       s.notes.forEach(n => {
         const midiBase = NOTE_MIDI[n.p] ?? 60;
@@ -8028,18 +8060,16 @@ function scorePlayStep(tIdx, sIdx) {
     }
   });
 
-  // Nächster Step
+  // Maximale Tracklänge — nur über die gespielten Tracks
+  const maxLen = scorePlayTrackFilter !== null
+    ? scoreTracks[scorePlayTrackFilter].data.length
+    : Math.max(...scoreTracks.map(t => t.data.length));
+
   const nextSIdx = sIdx + 1;
-  const maxLen   = Math.max(...scoreTracks.map(t => t.data.length));
   if (nextSIdx < maxLen && scorePlayTimer !== null || scorePlayTimer === undefined) {
-    scorePlayTimer = setTimeout(() => scorePlayStep(0, nextSIdx), stepDurMs);
+    scorePlayTimer = setTimeout(() => scorePlayStep(nextSIdx), stepDurMs);
   } else {
-    // Ende
-    scorePlayTimer = null;
-    scorePlayPos   = null;
-    document.getElementById('scorePlayBtn').textContent = '▶ Abspielen';
-    document.getElementById('scorePlayBtn').classList.remove('active');
-    scoreRender();
+    scoreStopPlay();
   }
 }
 
