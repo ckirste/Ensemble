@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v101</title>
+<title>Ensemble v102</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1283,7 +1283,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v101</h1>
+    <h1>Ensemble_v102</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -7628,7 +7628,6 @@ function scoreRender() {
       ${tIdx>0?`<button class="score-btn danger" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreTracks.splice(${tIdx},1);window.scoreRender()">✕</button>`:''}`;
       unit.appendChild(hdr);
 
-
     // Notensystem-Zeile
     const row = document.createElement('div');
     row.className = 'score-track-row';
@@ -8026,16 +8025,25 @@ function scorePlayStep(sIdx) {
 
   let stepDurMs = 500;
   const bpm = (typeof metro !== 'undefined') ? metro.bpm : 120;
+  const msPerBeat = 60000 / bpm; // ms pro Viertelschlag
 
   const tracksToPlay = scorePlayTrackFilter !== null
     ? [{ track: scoreTracks[scorePlayTrackFilter], ti: scorePlayTrackFilter }]
     : scoreTracks.map((track, ti) => ({ track, ti }));
 
+  // stepDurMs = längster Step über alle gespielten Tracks (damit alle synchron bleiben)
+  stepDurMs = msPerBeat; // Fallback: eine Viertel
+  tracksToPlay.forEach(({ track }) => {
+    const s = track.data[sIdx];
+    if (!s) return;
+    const dur = DUR_MAP[s.len] * (s.dot ? 1.5 : 1); // dur=1 → Viertel, dur=2 → Halbe, dur=4 → Ganze
+    const ms  = Math.round(dur * msPerBeat);
+    if (ms > stepDurMs) stepDurMs = ms;
+  });
+
   tracksToPlay.forEach(({ track, ti }) => {
     const s = track.data[sIdx];
     if (!s) return;
-    const dur = DUR_MAP[s.len] * (s.dot ? 1.5 : 1);
-    stepDurMs = Math.round((dur / 4) * (60000 / bpm));
 
     if (!s.rest && typeof engine !== 'undefined' && engine.synths.length) {
       const lIdx   = track.layerIdx ?? 0;
@@ -8045,8 +8053,11 @@ function scorePlayStep(sIdx) {
       const vol    = layer ? (layer.vol ?? 1.0) : 1.0;
       const sfObj  = engine.synths[sfIdx];
       if (!sfObj) return;
-      const layerId   = `score_${ti}`;
-      const noteOffMs = Math.max(50, stepDurMs - 40);
+      const layerId    = `score_${ti}`;
+      // noteOff nach der tatsächlichen Dauer dieses Steps (nicht globalem Max)
+      const thisDur    = DUR_MAP[s.len] * (s.dot ? 1.5 : 1);
+      const thisDurMs  = Math.round(thisDur * msPerBeat);
+      const noteOffMs  = Math.max(50, thisDurMs - 40);
 
       s.notes.forEach(n => {
         const midiBase = NOTE_MIDI[n.p] ?? 60;
