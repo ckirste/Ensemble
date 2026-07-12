@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v103</title>
+<title>Ensemble v104</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1283,7 +1283,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v103</h1>
+    <h1>Ensemble_v104</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -7519,12 +7519,15 @@ function scoreMigrateTrack(track) {
   }
   return track;
 }
-let scoreActive    = null;  // {tIdx, sIdx} — Editor-Subpanel
-let scoreCursor    = null;  // {tIdx, sIdx} — Einfüge-Cursor (Klaviatur-Eingabe)
-let scoreTool      = { len:'4n', rest:false, dot:false };
-let scorePlayTimer = null;
-let scorePlayPos   = null;  // {tIdx, sIdx}
-let scoreKbInput   = false; // Keyboard-Eingabe-Modus aktiv
+let scoreActive      = null;  // {tIdx, sIdx} — Editor-Subpanel
+let scoreCursor      = null;  // {tIdx, sIdx} — Einfüge-Cursor (Klaviatur-Eingabe)
+let scoreTool        = { len:'4n', rest:false, dot:false };
+let scorePlayTimer   = null;
+let scorePlayPos     = null;  // {tIdx, sIdx}
+let scorePlayTrackFilter = null;
+let scoreTrackTimers = [];    // Timer-IDs pro Track
+let scoreTrackPos    = [];    // Step-Zeiger pro Track
+let scoreKbInput     = false; // Keyboard-Eingabe-Modus aktiv
 
 window.scoreChangeTimeSigNum = function(tIdx, delta) {
   const track = scoreTracks[tIdx];
@@ -7975,12 +7978,14 @@ function scoreKbNoteInput(noteName) {
 
 // ── Playback ─────────────────────────────────────────────────
 // ── Score Playback ─────────────────────────────────────────────
-// playTrackFilter: null = alle Tracks, number = nur dieser Track-Index
-let scorePlayTrackFilter = null;
+// Jeder Track hat seinen eigenen Timer und Step-Zeiger — vollständig unabhängig.
 
 function scoreStopPlay() {
-  if (scorePlayTimer) { clearTimeout(scorePlayTimer); scorePlayTimer = null; }
-  scorePlayPos = null;
+  scoreTrackTimers.forEach(t => { if (t) clearTimeout(t); });
+  scoreTrackTimers = [];
+  scoreTrackPos    = [];
+  scorePlayTimer   = null;
+  scorePlayPos     = null;
   scorePlayTrackFilter = null;
   const playBtn   = document.getElementById('scorePlayBtn');
   const cursorBtn = document.getElementById('scorePlayCursorBtn');
@@ -7994,10 +7999,23 @@ function scoreStopPlay() {
 function scoreStartPlay(trackFilter, startSIdx) {
   scoreStopPlay();
   scorePlayTrackFilter = trackFilter;
-  const playBtn  = document.getElementById(trackFilter===null ? 'scorePlayBtn' : 'scorePlayBtn');
-  const stopBtn  = document.getElementById('scoreStopBtn');
+  const stopBtn = document.getElementById('scoreStopBtn');
   if (stopBtn) stopBtn.style.display = '';
-  scorePlayStep(startSIdx);
+  scorePlayTimer = -1; // Sentinel: läuft
+
+  const bpm       = (typeof metro !== 'undefined') ? metro.bpm : 120;
+  const msPerBeat = 60000 / bpm;
+
+  const tracksToPlay = trackFilter !== null
+    ? [{ track: scoreTracks[trackFilter], ti: trackFilter }]
+    : scoreTracks.map((track, ti) => ({ track, ti }));
+
+  // Jeden Track unabhängig starten
+  tracksToPlay.forEach(({ track, ti }) => {
+    scoreTrackPos[ti]   = startSIdx ?? 0;
+    scoreTrackTimers[ti] = null;
+    scheduleTrackStep(ti, track, msPerBeat, 0);
+  });
 }
 
 window.scoreStartPlay = scoreStartPlay;
@@ -8012,77 +8030,64 @@ window.scoreStartPlayTrackCursor = function(tIdx) {
   scoreStartPlay(tIdx, start);
 };
 
-// Rückwärtskompatibilität für bestehende onclick
 window.scoreTogglePlay = function() {
-  if (scorePlayTimer) { scoreStopPlay(); return; }
+  if (scorePlayTimer !== null) { scoreStopPlay(); return; }
   scoreStartPlay(null, 0);
 };
 
-function scorePlayStep(sIdx) {
-  scorePlayPos = { tIdx: 0, sIdx };
-  if (scorePlayTimer === null) scorePlayTimer = -1; // Sentinel: läuft, aber noch kein Timer-ID
-  scoreRender();
+function scheduleTrackStep(ti, track, msPerBeat, delayMs) {
+  scoreTrackTimers[ti] = setTimeout(() => {
+    if (scorePlayTimer === null) return; // gestoppt
+    const sIdx = scoreTrackPos[ti];
+    const s    = track.data[sIdx];
 
-  let stepDurMs = 500;
-  const bpm = (typeof metro !== 'undefined') ? metro.bpm : 120;
-  const msPerBeat = 60000 / bpm;
+    // Cursor-Anzeige nur für Track 0 (oder Einzel-Track)
+    if (ti === 0 || scorePlayTrackFilter !== null) {
+      scorePlayPos = { tIdx: ti, sIdx };
+      scoreRender();
+    }
 
-  const tracksToPlay = scorePlayTrackFilter !== null
-    ? [{ track: scoreTracks[scorePlayTrackFilter], ti: scorePlayTrackFilter }]
-    : scoreTracks.map((track, ti) => ({ track, ti }));
+    // Note spielen
+    const dur       = s ? DUR_MAP[s.len] * (s.dot ? 1.5 : 1) : 1;
+    const thisDurMs = Math.round(dur * msPerBeat);
 
-  // stepDurMs = längster Step aller gespielten Tracks
-  stepDurMs = msPerBeat;
-  tracksToPlay.forEach(({ track }) => {
-    const s = track.data[sIdx];
-    if (!s) return;
-    const ms = Math.round(DUR_MAP[s.len] * (s.dot ? 1.5 : 1) * msPerBeat);
-    if (ms > stepDurMs) stepDurMs = ms;
-  });
-
-  // Alle Tracks synchron schedulen — gemeinsamer AudioContext-Zeitstempel
-  engine.ensureCtx().then(() => {
-    const ctx  = engine.ctx;
-    const tAbs = ctx ? ctx.currentTime + 0.015 : 0; // gemeinsamer Start-Zeitpunkt
-
-    tracksToPlay.forEach(({ track, ti }) => {
-      const s = track.data[sIdx];
-      if (!s || s.rest) return;
+    if (s && !s.rest && typeof engine !== 'undefined' && engine.synths.length) {
       const lIdx  = track.layerIdx ?? 0;
       const layer = (typeof layers !== 'undefined') ? layers[lIdx] : null;
       const sfIdx = layer ? (layer.sfIdx     ?? 0) : 0;
       const pIdx  = layer ? (layer.presetIdx ?? 0) : 0;
       const vol   = layer ? (layer.vol       ?? 1) : 1;
-      if (!engine.synths[sfIdx]) return;
-      const layerId   = `score_${ti}`;
-      const thisDurMs = Math.round(DUR_MAP[s.len] * (s.dot ? 1.5 : 1) * msPerBeat);
-      const noteOffMs = Math.max(50, thisDurMs - 40);
+      if (engine.synths[sfIdx]) {
+        const layerId   = `score_${ti}`;
+        const noteOffMs = Math.max(50, thisDurMs - 40);
+        engine.ensureCtx().then(() => {
+          if (scorePlayTimer === null) return;
+          const tAbs = engine.ctx.currentTime + 0.012;
+          engine.ensureChannel(layerId, sfIdx, pIdx);
+          s.notes.forEach(n => {
+            const midi = (NOTE_MIDI[n.p] ?? 60) + (ACC_OFFSET[n.a] ?? 0);
+            try {
+              engine.playSync(midi, layerId, sfIdx, pIdx, 90, vol, tAbs, layer?.envOverride ?? {});
+              setTimeout(() => engine.stop(midi, layerId), noteOffMs);
+            } catch(e) {}
+          });
+        });
+      }
+    }
 
-      engine.ensureChannel(layerId, sfIdx, pIdx);
-      s.notes.forEach(n => {
-        const midi = (NOTE_MIDI[n.p] ?? 60) + (ACC_OFFSET[n.a] ?? 0);
-        try {
-          engine.playSync(midi, layerId, sfIdx, pIdx, 90, vol,
-            tAbs, layer?.envOverride ?? {});
-          setTimeout(() => engine.stop(midi, layerId), noteOffMs + 15);
-        } catch(e) {}
-      });
-    });
-  });
+    // Nächsten Step planen
+    const nextSIdx = sIdx + 1;
+    scoreTrackPos[ti] = nextSIdx;
 
-  // Nächster Step
-  const nextSIdx = sIdx + 1;
-  const maxLen = scorePlayTrackFilter !== null
-    ? scoreTracks[scorePlayTrackFilter].data.length
-    : Math.max(...scoreTracks.map(t => t.data.length));
-
-  if (nextSIdx < maxLen) {
-    scorePlayTimer = setTimeout(() => {
-      if (scorePlayTimer !== null) scorePlayStep(nextSIdx);
-    }, stepDurMs);
-  } else {
-    scorePlayTimer = setTimeout(() => scoreStopPlay(), stepDurMs);
-  }
+    if (nextSIdx < track.data.length) {
+      scheduleTrackStep(ti, track, msPerBeat, thisDurMs);
+    } else {
+      scoreTrackTimers[ti] = null;
+      // Alle Tracks fertig? → Stop
+      const allDone = scoreTrackTimers.every(t => t === null);
+      if (allDone) setTimeout(() => scoreStopPlay(), thisDurMs);
+    }
+  }, delayMs);
 }
 
 // ── Export / Import ───────────────────────────────────────────
