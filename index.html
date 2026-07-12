@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v104</title>
+<title>Ensemble v105</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1238,6 +1238,25 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .score-step{flex-shrink:0;height:100%;position:relative;border-right:1px solid rgba(0,0,0,.06);cursor:pointer;background:rgba(0,0,0,.01);transition:background .1s}
 .score-step:hover{background:rgba(0,100,255,.05)}
 .score-step.selected{background:rgba(0,100,255,.12);outline:2px solid #0066ff}
+.score-step.sel-marked { outline: 2px solid var(--accent3); outline-offset: -2px; background: rgba(155,127,232,.18) !important; }
+.score-step-selbox {
+  position: absolute; top: 2px; right: 2px; width: 12px; height: 12px;
+  border: 1.5px solid var(--accent3); border-radius: 3px; background: transparent;
+  cursor: pointer; z-index: 10; box-sizing: border-box;
+}
+.score-step-selbox.checked { background: var(--accent3); }
+.score-step-selbox.checked::after {
+  content: '✓'; position: absolute; top: -1px; left: 1px;
+  font-size: 9px; color: #fff; line-height: 12px;
+}
+.score-sel-toolbar {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 4px 8px; background: rgba(155,127,232,.12);
+  border: 1px solid var(--accent3); border-radius: 8px; margin: 4px 0;
+}
+.score-sel-toolbar span { font-size: .55rem; color: var(--accent3); font-family: 'Share Tech Mono',monospace; }
+.score-sel-toolbar button { font-size: .58rem; padding: 3px 10px; }
+.score-sel-clear { color: var(--dim) !important; border-color: var(--border) !important; }
 .score-step.playhead{background:rgba(0,255,150,.15);outline:2px solid #00ff96}
 .score-bar-line{position:absolute;top:70px;width:2px;height:41px;background:#000;pointer-events:none;z-index:60}
 .score-ledger{position:absolute;left:12px;width:32px;height:1.5px;background:#000;pointer-events:none}
@@ -1283,7 +1302,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v104</h1>
+    <h1>Ensemble_v105</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -1830,9 +1849,15 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
       <button class="score-btn" onclick="scoreAddTrack()">+ Track</button>
       <button class="score-btn" id="scoreKbInputBtn" onclick="scoreToggleKbInput()"
         title="Klaviatur-Eingabe: Taste drücken = Note setzen + nächster Step">🎹 Klaviatur-Eingabe</button>
-      <button class="score-btn active" id="scorePlayBtn"       onclick="scoreStartPlay(null,0)"       title="Alle Tracks von Anfang abspielen">▶ Alle</button>
-      <button class="score-btn"        id="scorePlayCursorBtn" onclick="scoreStartPlayCursor()"       title="Alle Tracks ab Cursor-Position abspielen">▶ Ab ✦</button>
-      <button class="score-btn"        id="scoreStopBtn"       onclick="scoreStopPlay()"              title="Stop" style="display:none">■ Stop</button>
+      <button class="score-btn active" id="scorePlayBtn"       onclick="scoreStartPlay(null,0)"   title="Alle Tracks von Anfang">▶ Alle</button>
+      <button class="score-btn"        id="scorePlayCursorBtn" onclick="scoreStartPlayCursor()"   title="Alle Tracks ab Cursor">▶ Ab ✦</button>
+      <button class="score-btn"        id="scoreStopBtn"       onclick="scoreStopPlay()"          title="Stop" style="display:none">■ Stop</button>
+      <div class="score-sel-toolbar" id="scoreSelToolbar" style="display:none">
+        <span id="scoreSelCount">0 markiert</span>
+        <button class="score-btn" onclick="scoreSelCopyPaste()" title="Markierte Steps nach Cursor einfügen">📋 Kopieren+Einfügen</button>
+        <button class="score-btn" onclick="scoreSelDelete()"    title="Markierte Steps löschen">🗑 Löschen</button>
+        <button class="score-btn score-sel-clear" onclick="scoreSelClearAll()" title="Auswahl aufheben">✕ Auswahl</button>
+      </div>
       <button class="score-btn" onclick="scoreExportJSON()">⬇ JSON</button>
       <button class="score-btn" onclick="scoreImportJSON()">⬆ JSON laden</button>
       <input type="file" id="scoreImportInput" accept=".json" style="display:none">
@@ -7519,15 +7544,97 @@ function scoreMigrateTrack(track) {
   }
   return track;
 }
-let scoreActive      = null;  // {tIdx, sIdx} — Editor-Subpanel
-let scoreCursor      = null;  // {tIdx, sIdx} — Einfüge-Cursor (Klaviatur-Eingabe)
+let scoreActive      = null;
+let scoreCursor      = null;
 let scoreTool        = { len:'4n', rest:false, dot:false };
 let scorePlayTimer   = null;
-let scorePlayPos     = null;  // {tIdx, sIdx}
+let scorePlayPos     = null;
 let scorePlayTrackFilter = null;
-let scoreTrackTimers = [];    // Timer-IDs pro Track
-let scoreTrackPos    = [];    // Step-Zeiger pro Track
-let scoreKbInput     = false; // Keyboard-Eingabe-Modus aktiv
+let scoreTrackTimers = [];
+let scoreTrackPos    = [];
+let scoreKbInput     = false;
+let scoreSelection   = new Set(); // Keys: 'tIdx_sIdx'
+
+function scoreSelKey(tIdx, sIdx) { return `${tIdx}_${sIdx}`; }
+function scoreSelAdd(tIdx, sIdx) { scoreSelection.add(scoreSelKey(tIdx, sIdx)); }
+function scoreSelRemove(tIdx, sIdx) { scoreSelection.delete(scoreSelKey(tIdx, sIdx)); }
+function scoreSelHas(tIdx, sIdx) { return scoreSelection.has(scoreSelKey(tIdx, sIdx)); }
+function scoreSelToggle(tIdx, sIdx) {
+  const k = scoreSelKey(tIdx, sIdx);
+  if (scoreSelection.has(k)) scoreSelection.delete(k); else scoreSelection.add(k);
+}
+function scoreSelClear() { scoreSelection.clear(); }
+
+function scoreSelUpdateToolbar() {
+  const tb    = document.getElementById('scoreSelToolbar');
+  const count = document.getElementById('scoreSelCount');
+  if (!tb) return;
+  const n = scoreSelection.size;
+  tb.style.display = n > 0 ? '' : 'none';
+  if (count) count.textContent = `${n} markiert`;
+}
+
+window.scoreSelClearAll = function() {
+  scoreSelClear();
+  scoreSelUpdateToolbar();
+  scoreRender();
+};
+
+// Kopieren: alle markierten Steps geordnet sammeln und nach Cursor einfügen
+window.scoreSelCopyPaste = function() {
+  if (!scoreSelection.size) return;
+
+  // Gruppiere nach Track
+  const byTrack = {};
+  scoreSelection.forEach(key => {
+    const [ti, si] = key.split('_').map(Number);
+    if (!byTrack[ti]) byTrack[ti] = [];
+    byTrack[ti].push(si);
+  });
+
+  Object.entries(byTrack).forEach(([tiStr, sIdxArr]) => {
+    const ti    = Number(tiStr);
+    const track = scoreTracks[ti];
+    if (!track) return;
+    // Sortiert nach Position
+    sIdxArr.sort((a, b) => a - b);
+    // Deep-Copy der Steps
+    const copies = sIdxArr.map(si => JSON.parse(JSON.stringify(track.data[si])));
+    // Einfügeposition: nach Cursor (scoreActive) wenn im selben Track, sonst am Ende
+    let insertAt = track.data.length;
+    if (scoreActive && scoreActive.tIdx === ti) {
+      insertAt = scoreActive.sIdx + 1;
+    }
+    track.data.splice(insertAt, 0, ...copies);
+  });
+
+  scoreSelClear();
+  scoreSelUpdateToolbar();
+  scoreRender();
+};
+
+window.scoreSelDelete = function() {
+  if (!scoreSelection.size) return;
+  // Gruppiere nach Track, lösche von hinten nach vorne (Index-Shift vermeiden)
+  const byTrack = {};
+  scoreSelection.forEach(key => {
+    const [ti, si] = key.split('_').map(Number);
+    if (!byTrack[ti]) byTrack[ti] = [];
+    byTrack[ti].push(si);
+  });
+  Object.entries(byTrack).forEach(([tiStr, sIdxArr]) => {
+    const ti    = Number(tiStr);
+    const track = scoreTracks[ti];
+    if (!track) return;
+    sIdxArr.sort((a, b) => b - a); // Rückwärts löschen
+    sIdxArr.forEach(si => {
+      if (track.data.length > 1) track.data.splice(si, 1);
+    });
+  });
+  scoreSelClear();
+  scoreSelUpdateToolbar();
+  scoreRender();
+};
 
 window.scoreChangeTimeSigNum = function(tIdx, delta) {
   const track = scoreTracks[tIdx];
@@ -7684,13 +7791,33 @@ function scoreRender() {
       const isSelected = scoreActive && scoreActive.tIdx===tIdx && scoreActive.sIdx===sIdx;
       const isPlay     = scorePlayPos && scorePlayPos.tIdx===tIdx && scorePlayPos.sIdx===sIdx;
       const isCursor   = scoreKbInput && scoreCursor && scoreCursor.tIdx===tIdx && scoreCursor.sIdx===sIdx;
+      const isMarked   = scoreSelHas(tIdx, sIdx);
       if (isSelected) step.classList.add('selected');
       if (isPlay)     step.classList.add('playhead');
       if (isCursor)   step.classList.add('cursor');
+      if (isMarked)   step.classList.add('sel-marked');
 
-      step.addEventListener('click', () => {
+      // Selektions-Checkbox (kleines Kästchen oben rechts)
+      const selbox = document.createElement('div');
+      selbox.className = 'score-step-selbox' + (isMarked ? ' checked' : '');
+      selbox.title = isMarked ? 'Auswahl aufheben' : 'Step markieren';
+      selbox.addEventListener('click', e => {
+        e.stopPropagation();
+        scoreSelToggle(tIdx, sIdx);
+        scoreSelUpdateToolbar();
+        scoreRender();
+      });
+      step.appendChild(selbox);
+
+      step.addEventListener('click', e => {
+        if (e.shiftKey) {
+          // Shift+Click: Step markieren ohne Editor zu öffnen
+          scoreSelToggle(tIdx, sIdx);
+          scoreSelUpdateToolbar();
+          scoreRender();
+          return;
+        }
         if (scoreKbInput) {
-          // Im Eingabe-Modus: Cursor setzen statt Editor öffnen
           scoreCursor = {tIdx, sIdx};
           scoreRender();
         } else {
