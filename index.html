@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v105</title>
+<title>Ensemble v106</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1239,6 +1239,12 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .score-step:hover{background:rgba(0,100,255,.05)}
 .score-step.selected{background:rgba(0,100,255,.12);outline:2px solid #0066ff}
 .score-step.sel-marked { outline: 2px solid var(--accent3); outline-offset: -2px; background: rgba(155,127,232,.18) !important; }
+.score-step.tied-from { border-right: none; }
+.score-tie-svg {
+  position: absolute; bottom: 60px; right: -16px;
+  width: 32px; height: 20px; overflow: visible;
+  pointer-events: none; z-index: 5;
+}
 .score-step-selbox {
   position: absolute; top: 2px; right: 2px; width: 12px; height: 12px;
   border: 1.5px solid var(--accent3); border-radius: 3px; background: transparent;
@@ -1302,7 +1308,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v105</h1>
+    <h1>Ensemble_v106</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -1854,6 +1860,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
       <button class="score-btn"        id="scoreStopBtn"       onclick="scoreStopPlay()"          title="Stop" style="display:none">■ Stop</button>
       <div class="score-sel-toolbar" id="scoreSelToolbar" style="display:none">
         <span id="scoreSelCount">0 markiert</span>
+        <button class="score-btn" id="scoreTieBtn" onclick="scoreToggleTie()" title="Haltebogen zur nächsten Note" style="display:none">⌒ Haltebogen</button>
         <button class="score-btn" onclick="scoreSelCopyPaste()" title="Markierte Steps nach Cursor einfügen">📋 Kopieren+Einfügen</button>
         <button class="score-btn" onclick="scoreSelDelete()"    title="Markierte Steps löschen">🗑 Löschen</button>
         <button class="score-btn score-sel-clear" onclick="scoreSelClearAll()" title="Auswahl aufheben">✕ Auswahl</button>
@@ -7568,11 +7575,42 @@ function scoreSelClear() { scoreSelection.clear(); }
 function scoreSelUpdateToolbar() {
   const tb    = document.getElementById('scoreSelToolbar');
   const count = document.getElementById('scoreSelCount');
+  const tieBtn = document.getElementById('scoreTieBtn');
   if (!tb) return;
   const n = scoreSelection.size;
   tb.style.display = n > 0 ? '' : 'none';
   if (count) count.textContent = `${n} markiert`;
+
+  // Tie-Button nur wenn genau 1 Step selektiert und dieser einen Nachfolger hat
+  if (tieBtn) {
+    if (n === 1) {
+      const [tiStr, siStr] = [...scoreSelection][0].split('_');
+      const ti = Number(tiStr), si = Number(siStr);
+      const track = scoreTracks[ti];
+      const hasTie = track && si < track.data.length - 1;
+      tieBtn.style.display = hasTie ? '' : 'none';
+      if (hasTie) {
+        const isTied = track.data[si].tie;
+        tieBtn.textContent  = isTied ? '⌒ Haltebogen entfernen' : '⌒ Haltebogen';
+        tieBtn.classList.toggle('active', !!isTied);
+      }
+    } else {
+      tieBtn.style.display = 'none';
+    }
+  }
 }
+
+window.scoreToggleTie = function() {
+  if (scoreSelection.size !== 1) return;
+  const [tiStr, siStr] = [...scoreSelection][0].split('_');
+  const ti = Number(tiStr), si = Number(siStr);
+  const track = scoreTracks[ti];
+  if (!track || si >= track.data.length - 1) return;
+  const step = track.data[si];
+  step.tie = !step.tie;
+  scoreSelUpdateToolbar();
+  scoreRender();
+};
 
 window.scoreSelClearAll = function() {
   scoreSelClear();
@@ -7862,6 +7900,29 @@ function scoreRender() {
             l.className = 'score-ledger'; l.style.top = `${169 - ly}px`; step.appendChild(l);
           });
         });
+      }
+
+      // Haltebogen: von Notenkopf-Mitte dieses Steps zur Mitte des nächsten
+      if (s.tie && !s.rest) {
+        const noteY   = pMap[s.notes[0]?.p] ?? 70;
+        const topPx   = (122 - noteY) + 58;
+        // Bogen-Breite = Breite dieses Steps (reicht bis zur Mitte des nächsten Notenkopfs)
+        const arcW    = Math.round(baseW * (s.dot ? 1.5 : 1));
+        const arcH    = Math.max(12, Math.round(arcW * 0.12));
+        const svg     = document.createElementNS('http://www.w3.org/2000/svg','svg');
+        svg.setAttribute('width', arcW);
+        svg.setAttribute('height', arcH + 4);
+        // left: ~30px = rechte Kante des Notenkopfs
+        svg.style.cssText = `position:absolute;top:${topPx}px;left:30px;overflow:visible;pointer-events:none;z-index:5`;
+        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d', `M 0 0 Q ${arcW/2} ${arcH} ${arcW} 0`);
+        path.setAttribute('fill','none');
+        path.setAttribute('stroke','var(--accent3)');
+        path.setAttribute('stroke-width','2.5');
+        path.setAttribute('stroke-linecap','round');
+        svg.appendChild(path);
+        step.appendChild(svg);
+        step.classList.add('tied-from');
       }
 
       timeline.appendChild(step);
@@ -8186,7 +8247,11 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs) {
       const vol   = layer ? (layer.vol       ?? 1) : 1;
       if (engine.synths[sfIdx]) {
         const layerId   = `score_${ti}`;
-        const noteOffMs = Math.max(50, thisDurMs - 40);
+        // Bei Haltebogen: noteOff erst nach der nächsten Note (akkumulierte Dauer)
+        const nextS     = track.data[sIdx + 1];
+        const noteOffMs = (s.tie && nextS)
+          ? thisDurMs + Math.round(DUR_MAP[nextS.len] * (nextS.dot ? 1.5 : 1) * msPerBeat) - 40
+          : Math.max(50, thisDurMs - 40);
         engine.ensureCtx().then(() => {
           if (scorePlayTimer === null) return;
           const tAbs = engine.ctx.currentTime + 0.012;
