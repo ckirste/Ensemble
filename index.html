@@ -8247,23 +8247,31 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs) {
       const vol   = layer ? (layer.vol       ?? 1) : 1;
       if (engine.synths[sfIdx]) {
         const layerId   = `score_${ti}`;
-        // Bei Haltebogen: noteOff erst nach der nächsten Note (akkumulierte Dauer)
+        const prevS     = sIdx > 0 ? track.data[sIdx - 1] : null;
+        const isTiedTo  = prevS && prevS.tie; // diese Note ist angebunden → kein neuer noteOn
         const nextS     = track.data[sIdx + 1];
         const noteOffMs = (s.tie && nextS)
           ? thisDurMs + Math.round(DUR_MAP[nextS.len] * (nextS.dot ? 1.5 : 1) * msPerBeat) - 40
           : Math.max(50, thisDurMs - 40);
-        engine.ensureCtx().then(() => {
-          if (scorePlayTimer === null) return;
-          const tAbs = engine.ctx.currentTime + 0.012;
-          engine.ensureChannel(layerId, sfIdx, pIdx);
-          s.notes.forEach(n => {
-            const midi = (NOTE_MIDI[n.p] ?? 60) + (ACC_OFFSET[n.a] ?? 0);
-            try {
-              engine.playSync(midi, layerId, sfIdx, pIdx, 90, vol, tAbs, layer?.envOverride ?? {});
-              setTimeout(() => engine.stop(midi, layerId), noteOffMs);
-            } catch(e) {}
+
+        if (!isTiedTo) {
+          // Normale Note oder Start eines Tie-Bogens: noteOn spielen
+          engine.ensureCtx().then(() => {
+            if (scorePlayTimer === null) return;
+            const tAbs = engine.ctx.currentTime + 0.012;
+            engine.ensureChannel(layerId, sfIdx, pIdx);
+            s.notes.forEach(n => {
+              const midi = (NOTE_MIDI[n.p] ?? 60) + (ACC_OFFSET[n.a] ?? 0);
+              try {
+                engine.playSync(midi, layerId, sfIdx, pIdx, 90, vol, tAbs, layer?.envOverride ?? {});
+                // noteOff erst nach akkumulierter Tie-Dauer (oder normal)
+                setTimeout(() => engine.stop(midi, layerId), noteOffMs);
+              } catch(e) {}
+            });
           });
-        });
+        }
+        // Wenn isTiedTo: kein neuer noteOn — die Note klingt bereits durch den
+        // verlängerten noteOffMs des vorherigen Steps weiter
       }
     }
 
