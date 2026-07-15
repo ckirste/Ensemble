@@ -7420,6 +7420,22 @@ const NOTE_MIDI = {
 };
 const ACC_OFFSET = { '#':1, 'b':-1, 'n':0, null:0 };
 
+// Berechnet MIDI-Nummer aus Notenname (mit oder ohne eingebautem Vorzeichen)
+// und optionalem expliziten Vorzeichen-Feld n.a
+// 'F#4', null  → 66   (F4=65 + #=1)
+// 'F4',  '#'  → 66
+// 'Bb3', null → 58   (B3=59 + b=-1)
+function noteToMidi(p, a) {
+  if (!p) return 60;
+  let base = p, accidental = a ?? null;
+  // Eingebautes Vorzeichen extrahieren: 'F#4' → base='F4', acc='#'
+  if (p.length >= 3 && (p[1] === '#' || p[1] === 'b')) {
+    accidental = p[1];            // '#' oder 'b'
+    base = p[0] + p.slice(2);    // Stammton + Oktave
+  }
+  return (NOTE_MIDI[base] ?? 60) + (ACC_OFFSET[accidental] ?? 0);
+}
+
 // Tonart → Vorzeichen (Standard-Notenpositionen für Violinschlüssel)
 // Bass-Schlüssel-Positionen werden beim Rendern automatisch verschoben
 const KEY_SIGS = {
@@ -8358,7 +8374,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs) {
             const tAbs = engine.ctx.currentTime + 0.012;
             engine.ensureChannel(layerId, sfIdx, pIdx);
             s.notes.forEach(n => {
-              const midi = (NOTE_MIDI[n.p] ?? 60) + (ACC_OFFSET[n.a] ?? 0);
+              const midi = noteToMidi(n.p, n.a);
               try {
                 engine.playSync(midi, layerId, sfIdx, pIdx, 90, vol, tAbs, layer?.envOverride ?? {});
               } catch(e) {}
@@ -8368,7 +8384,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs) {
           setTimeout(() => {
             if (s.tie) return; // Tie-Noten: stop kommt vom Ende der gebundenen Note
             s.notes.forEach(n => {
-              const midi = (NOTE_MIDI[n.p] ?? 60) + (ACC_OFFSET[n.a] ?? 0);
+              const midi = noteToMidi(n.p, n.a);
               engine.stop(midi, layerId);
             });
           }, noteOffDelay);
@@ -8377,7 +8393,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs) {
           if (s.tie && nextS) {
             setTimeout(() => {
               s.notes.forEach(n => {
-                const midi = (NOTE_MIDI[n.p] ?? 60) + (ACC_OFFSET[n.a] ?? 0);
+                const midi = noteToMidi(n.p, n.a);
                 engine.stop(midi, layerId);
               });
             }, noteOffMs);
