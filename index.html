@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v108</title>
+<title>Ensemble v109</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1308,7 +1308,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v108</h1>
+    <h1>Ensemble_v109</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -8149,12 +8149,11 @@ function scoreRenderEditor(tIdx, sIdx) {
       div.className = 'score-chord-item';
       div.innerHTML = `
         <select onchange="window.scoreChangePitch(${tIdx},${sIdx},${nIdx},this.value)">
-          <optgroup label="── ${trackKey} ──">
-            ${inKey.slice().reverse().map(p=>`<option value="${p}" ${n.p===p?'selected':''}>${p}</option>`).join('')}
-          </optgroup>
-          <optgroup label="── Chromatisch ──">
-            ${outKey.slice().reverse().map(p=>`<option value="${p}" ${n.p===p?'selected':''}>${p}</option>`).join('')}
-          </optgroup>
+          ${inKey.slice().reverse().map(p=>{
+            // Selektion: exakter Match oder Stammton-Match (für Altdaten mit F#4 etc.)
+            const sel = n.p===p || baseNoteName(n.p)===baseNoteName(p);
+            return `<option value="${p}" ${sel?'selected':''}>${p}</option>`;
+          }).join('')}
         </select>
         <select onchange="window.scoreTracks[${tIdx}].data[${sIdx}].notes[${nIdx}].a=this.value||null;window.scoreActive={tIdx:${tIdx},sIdx:${sIdx}};window.scoreRender();window.scoreRenderEditor(${tIdx},${sIdx})">
           <option value="">—</option>
