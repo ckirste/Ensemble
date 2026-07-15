@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v106</title>
+<title>Ensemble v108</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1308,7 +1308,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v107</h1>
+    <h1>Ensemble_v108</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -7379,8 +7379,16 @@ const PITCH_RANGE_T = pitchRangeList('C2', 'C7');
 const PITCH_RANGE_B = pitchRangeList('C1', 'C6');
 // Rückwärtskompatible Lookup-Objekte (Proxy): pMap[n.p] funktioniert weiterhin
 // für beliebige Notennamen, auch außerhalb des ursprünglichen 13-Werte-Bereichs.
-const PITCH_MAP_T = new Proxy({}, { get: (_, p) => typeof p === 'string' ? pitchYTreble(p) : undefined });
-const PITCH_MAP_B = new Proxy({}, { get: (_, p) => typeof p === 'string' ? pitchYBass(p)   : undefined });
+// Hilfsfunktion: extrahiert den Stammton aus einem Notennamen mit/ohne Vorzeichen
+// 'F#4' → 'F4', 'Bb3' → 'B3', 'C4' → 'C4'
+function baseNoteName(p) {
+  if (typeof p !== 'string' || p.length < 2) return p;
+  const letter = p[0];
+  const octave = p[p.length - 1];
+  return letter + octave;
+}
+const PITCH_MAP_T = new Proxy({}, { get: (_, p) => typeof p === 'string' ? pitchYTreble(baseNoteName(p)) : undefined });
+const PITCH_MAP_B = new Proxy({}, { get: (_, p) => typeof p === 'string' ? pitchYBass(baseNoteName(p))   : undefined });
 
 // ── Hilfslinien: liefert Array von Y-Positionen für alle benötigten Linien ──
 // Notensystem-Randlinien (verifiziert anhand bisheriger Spezialfälle C4/E2):
@@ -7448,6 +7456,74 @@ const KEY_SIGS = {
   'es-Moll':[{p:'B4',t:'b'},{p:'E5',t:'b'},{p:'A4',t:'b'},{p:'D5',t:'b'},{p:'G4',t:'b'},{p:'C5',t:'b'}],
   'as-Moll':[{p:'B4',t:'b'},{p:'E5',t:'b'},{p:'A4',t:'b'},{p:'D5',t:'b'},{p:'G4',t:'b'},{p:'C5',t:'b'},{p:'F5',t:'b'}],
 };
+
+// ── Tonart → Skalentöne ──────────────────────────────────────
+// Gibt die 7 Tonnamen (Buchstaben C-B) der Tonart zurück,
+// mit korrekter b/#-Schreibweise (z.B. G-Dur → [C,D,E,F#,G,A,H])
+// Rückgabe: Set von Notennamen ohne Oktave z.B. {'C','D','E','F#','G','A','B'}
+function getKeyScaleLetters(key) {
+  const sig = KEY_SIGS[key] || [];
+  const type = sig.length ? sig[0].t : null; // '#' oder 'b'
+  // Alle 7 Grundtöne
+  const base = ['C','D','E','F','G','A','B'];
+  // Welche Buchstaben sind durch Vorzeichen betroffen?
+  // sig.p ist z.B. 'F5' → Buchstabe 'F'
+  const affected = new Set(sig.map(s => s.p[0]));
+  return new Set(base.map(l => {
+    if (affected.has(l)) return l + (type === '#' ? '#' : 'b');
+    return l;
+  }));
+}
+
+// Gibt eine sortierte Pitch-Liste für das Dropdown zurück:
+// Töne der Tonart erscheinen mit korrekter Vorzeichen-Schreibweise (F#4 statt F4 in G-Dur).
+// Aufgeteilt in: inKey (Skalentöne) und outKey (chromatische Töne).
+function getKeyAwarePitchRange(key, clef) {
+  const fullRange = (clef === 'bass' ? PITCH_RANGE_B : PITCH_RANGE_T).slice();
+  const sig       = KEY_SIGS[key] || [];
+  const type      = sig.length ? sig[0].t : null; // '#' oder 'b'
+
+  // Map: Stammton-Buchstabe → modifizierter Buchstabe (z.B. 'F' → 'F#')
+  const accMap = {};
+  sig.forEach(s => { accMap[s.p[0]] = s.p[0] + s.t; });
+
+  const inKey  = [];
+  const outKey = [];
+
+  fullRange.forEach(p => {
+    const letter = p[0]; // Stammton-Buchstabe
+    const octave = p.slice(p.length - 1); // letzte Ziffer
+    if (accMap[letter]) {
+      // Dieser Ton ist durch Tonart-Vorzeichen betroffen → ersetze durch akkordierte Version
+      inKey.push(accMap[letter] + octave); // z.B. 'F#4'
+    } else {
+      // Ton ohne Vorzeichen in dieser Tonart
+      // Gehört er zur Skala? Ja, wenn er nicht durch ein Vorzeichen ersetzt wurde
+      inKey.push(p);
+    }
+  });
+
+  // outKey: chromatische Töne die NICHT in der Skala sind
+  // Das sind alle Halbtöne die durch Vorzeichen entstehen aber NICHT in der Tonart sind
+  const NOTE_LETTERS_ALL = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B',
+                             'C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+  // Einfacher: wir fügen die chromatischen Töne die nicht in inKey sind als outKey hinzu
+  // Für jede Oktave: alle 12 Halbtöne prüfen
+  const inKeySet = new Set(inKey);
+  const SHARPS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const FLATS  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+  const useFlats = type === 'b';
+  const chromatic = useFlats ? FLATS : SHARPS;
+  const octaves = clef === 'bass' ? [1,2,3,4,5] : [2,3,4,5,6];
+  octaves.forEach(oct => {
+    chromatic.forEach(n => {
+      const pitch = n + oct;
+      if (!inKeySet.has(pitch)) outKey.push(pitch);
+    });
+  });
+
+  return { inKey, outKey };
+}
 
 const DUR_MAP   = {'1n':4,'2n':2,'4n':1,'8n':.5,'16n':.25,'32n':.125};
 // Taktart: frei wählbar über {num, den}. beats = Viertelnoten pro Takt.
@@ -7600,8 +7676,21 @@ function scoreSelUpdateToolbar() {
   }
 }
 
+window.getKeyAwarePitchRange = getKeyAwarePitchRange;
+
+// Pitch-Änderung mit Auto-Vorzeichen-Clearing
+window.scoreChangePitch = function(tIdx, sIdx, nIdx, newP) {
+  const track = window.scoreTracks[tIdx];
+  const note  = track.data[sIdx].notes[nIdx];
+  note.p = newP;
+  const { inKey } = getKeyAwarePitchRange(track.key ?? 'C-Dur', track.clef ?? 'treble');
+  if (inKey.includes(newP)) note.a = null;
+  window.scoreActive = { tIdx, sIdx };
+  window.scoreRender();
+  window.scoreRenderEditor(tIdx, sIdx);
+};
+
 window.scoreToggleTie = function() {
-  if (scoreSelection.size !== 1) return;
   const [tiStr, siStr] = [...scoreSelection][0].split('_');
   const ti = Number(tiStr), si = Number(siStr);
   const track = scoreTracks[ti];
@@ -7998,7 +8087,9 @@ function scoreRenderEditor(tIdx, sIdx) {
   const ed = document.getElementById(`scoreEd-${tIdx}`);
   if (!ed) return;
   const s = scoreTracks[tIdx].data[sIdx];
-  const pRange = scoreTracks[tIdx].clef==='treble' ? PITCH_RANGE_T : PITCH_RANGE_B;
+  const trackKey  = scoreTracks[tIdx].key ?? 'C-Dur';
+  const trackClef = scoreTracks[tIdx].clef ?? 'treble';
+  const { inKey, outKey } = getKeyAwarePitchRange(trackKey, trackClef);
   const vals = ['1n','2n','4n','8n','16n','32n'];
 
   // Notenwert-Buttons: doppeln sich mit Toolbar → hier kompakt als Text-Buttons
@@ -8041,8 +8132,13 @@ function scoreRenderEditor(tIdx, sIdx) {
       const div = document.createElement('div');
       div.className = 'score-chord-item';
       div.innerHTML = `
-        <select onchange="window.scoreTracks[${tIdx}].data[${sIdx}].notes[${nIdx}].p=this.value;window.scoreActive={tIdx:${tIdx},sIdx:${sIdx}};window.scoreRender();window.scoreRenderEditor(${tIdx},${sIdx})">
-          ${pRange.slice().reverse().map(p=>`<option value="${p}" ${n.p===p?'selected':''}>${p}</option>`).join('')}
+        <select onchange="window.scoreChangePitch(${tIdx},${sIdx},${nIdx},this.value)">
+          <optgroup label="── ${trackKey} ──">
+            ${inKey.slice().reverse().map(p=>`<option value="${p}" ${n.p===p?'selected':''}>${p}</option>`).join('')}
+          </optgroup>
+          <optgroup label="── Chromatisch ──">
+            ${outKey.slice().reverse().map(p=>`<option value="${p}" ${n.p===p?'selected':''}>${p}</option>`).join('')}
+          </optgroup>
         </select>
         <select onchange="window.scoreTracks[${tIdx}].data[${sIdx}].notes[${nIdx}].a=this.value||null;window.scoreActive={tIdx:${tIdx},sIdx:${sIdx}};window.scoreRender();window.scoreRenderEditor(${tIdx},${sIdx})">
           <option value="">—</option>
@@ -8256,6 +8352,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs) {
 
         if (!isTiedTo) {
           // Normale Note oder Start eines Tie-Bogens: noteOn spielen
+          const noteOffDelay = noteOffMs; // Wert sichern vor async
           engine.ensureCtx().then(() => {
             if (scorePlayTimer === null) return;
             const tAbs = engine.ctx.currentTime + 0.012;
@@ -8264,14 +8361,28 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs) {
               const midi = (NOTE_MIDI[n.p] ?? 60) + (ACC_OFFSET[n.a] ?? 0);
               try {
                 engine.playSync(midi, layerId, sfIdx, pIdx, 90, vol, tAbs, layer?.envOverride ?? {});
-                // noteOff erst nach akkumulierter Tie-Dauer (oder normal)
-                setTimeout(() => engine.stop(midi, layerId), noteOffMs);
               } catch(e) {}
             });
           });
+          // noteOff separat schedulen — außerhalb von .then() damit der Delay korrekt läuft
+          setTimeout(() => {
+            if (s.tie) return; // Tie-Noten: stop kommt vom Ende der gebundenen Note
+            s.notes.forEach(n => {
+              const midi = (NOTE_MIDI[n.p] ?? 60) + (ACC_OFFSET[n.a] ?? 0);
+              engine.stop(midi, layerId);
+            });
+          }, noteOffDelay);
+
+          // Bei Tie: stop erst nach akkumulierter Gesamtdauer
+          if (s.tie && nextS) {
+            setTimeout(() => {
+              s.notes.forEach(n => {
+                const midi = (NOTE_MIDI[n.p] ?? 60) + (ACC_OFFSET[n.a] ?? 0);
+                engine.stop(midi, layerId);
+              });
+            }, noteOffMs);
+          }
         }
-        // Wenn isTiedTo: kein neuer noteOn — die Note klingt bereits durch den
-        // verlängerten noteOffMs des vorherigen Steps weiter
       }
     }
 
