@@ -7427,12 +7427,20 @@ const ACC_OFFSET = { '#':1, 'b':-1, 'n':0, null:0 };
 // 'Bb3', null → 58   (B3=59 + b=-1)
 function noteToMidi(p, a) {
   if (!p) return 60;
-  let base = p, accidental = a ?? null;
-  // Eingebautes Vorzeichen extrahieren: 'F#4' → base='F4', acc='#'
+  let base = p, accidental = null;
+
+  // Eingebautes Vorzeichen aus dem Namen extrahieren: 'F#4' → base='F4', acc='#'
   if (p.length >= 3 && (p[1] === '#' || p[1] === 'b')) {
-    accidental = p[1];            // '#' oder 'b'
-    base = p[0] + p.slice(2);    // Stammton + Oktave
+    accidental = p[1];
+    base = p[0] + p.slice(2);
   }
+
+  // Explizites n.a hat IMMER Vorrang über das eingebaute Vorzeichen:
+  // 'F#4' + n='n' → F natural (Auflösungszeichen hebt # auf)
+  // 'F#4' + n='b' → Fb (theoretisch, aber möglich)
+  // 'F#4' + n=null → F# (kein Override)
+  if (a !== null && a !== undefined) accidental = a;
+
   return (NOTE_MIDI[base] ?? 60) + (ACC_OFFSET[accidental] ?? 0);
 }
 
