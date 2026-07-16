@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v109</title>
+<title>Ensemble v110</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1308,7 +1308,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v109</h1>
+    <h1>Ensemble_v110</h1>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -7703,6 +7703,87 @@ function scoreSelUpdateToolbar() {
 window.getKeyAwarePitchRange = getKeyAwarePitchRange;
 
 // Pitch-Änderung mit Auto-Vorzeichen-Clearing
+// ── Tonart-Transponierung ─────────────────────────────────────
+// MIDI-Grundton pro Tonart (C=0, C#=1, ...)
+const KEY_ROOT_MIDI = {
+  'C-Dur':0,'G-Dur':7,'D-Dur':2,'A-Dur':9,'E-Dur':4,'H-Dur':11,
+  'Fis-Dur':6,'F-Dur':5,'B-Dur':10,'Es-Dur':3,'As-Dur':8,'Des-Dur':1,
+  'a-Moll':9,'e-Moll':4,'h-Moll':11,'fis-Moll':6,
+  'd-Moll':2,'g-Moll':7,'c-Moll':0,'f-Moll':5
+};
+
+// Gibt den nächstgelegenen Tonnamen in der Ziel-Tonart für eine MIDI-Nummer zurück.
+// Bevorzugt Töne der Ziel-Tonart, sonst nächster Stammton + Vorzeichen.
+function midiToNoteInKey(midi, targetKey, clef) {
+  const { inKey } = getKeyAwarePitchRange(targetKey, clef ?? 'treble');
+  // MIDI → Oktave + Chroma
+  const octave = Math.floor(midi / 12) - 1;
+  const chroma = midi % 12;
+
+  // Alle Töne der Zieltonart in allen Oktaven gegen MIDI prüfen
+  // inKey enthält z.B. ['C2','D2',...,'C7'] mit Vorzeichen
+  for (const p of inKey) {
+    if (noteToMidi(p, null) === midi) return { p, a: null };
+  }
+  // Nicht in Tonart → nächsten Stammton + lokales Vorzeichen
+  const NOTE_LETTERS_UP = ['C','D','E','F','G','A','B'];
+  const MIDI_OF_LETTER  = [0,2,4,5,7,9,11]; // Halbton-Position pro Buchstabe in Oktave 0
+  // Finde Stammton mit geringstem Vorzeichen-Abstand
+  let bestP = null, bestA = null, bestDist = 99;
+  NOTE_LETTERS_UP.forEach((l, li) => {
+    const baseMidi = (octave + 1) * 12 + MIDI_OF_LETTER[li];
+    const diff     = midi - baseMidi;
+    if (Math.abs(diff) < Math.abs(bestDist)) {
+      bestDist = diff;
+      bestP    = l + octave;
+      bestA    = diff === 0 ? null : diff === 1 ? '#' : diff === -1 ? 'b' : null;
+    }
+  });
+  return { p: bestP ?? ('C' + octave), a: bestA };
+}
+
+// Transponiert alle Noten eines Tracks von oldKey nach newKey.
+function transposeTrackToKey(track, oldKey, newKey) {
+  const semitoneShift = (KEY_ROOT_MIDI[newKey] ?? 0) - (KEY_ROOT_MIDI[oldKey] ?? 0);
+  if (semitoneShift === 0) return;
+  // Kürzester Weg (z.B. G→D = +7 oder -5 → wähle ±6 als Grenze)
+  let shift = semitoneShift;
+  if (shift > 6)  shift -= 12;
+  if (shift < -6) shift += 12;
+
+  track.data.forEach(step => {
+    step.notes.forEach(n => {
+      const midi    = noteToMidi(n.p, n.a);
+      const newMidi = midi + shift;
+      const { p, a } = midiToNoteInKey(newMidi, newKey, track.clef);
+      n.p = p;
+      n.a = a;
+    });
+  });
+}
+
+// Tonart-Wechsel mit Transponierung + Bestätigung
+window.scoreChangeKey = function(tIdx, newKey, selectEl) {
+  const track  = scoreTracks[tIdx];
+  const oldKey = track.key ?? 'C-Dur';
+  if (oldKey === newKey) return;
+
+  const hasNotes = track.data.some(s => !s.rest && s.notes.length > 0);
+  if (hasNotes) {
+    if (confirm(`Tonart von ${oldKey} → ${newKey} wechseln?\n\nNoten werden automatisch transponiert.`)) {
+      transposeTrackToKey(track, oldKey, newKey);
+      track.key = newKey;
+    } else {
+      // Zurücksetzen des Dropdowns
+      if (selectEl) selectEl.value = oldKey;
+      return;
+    }
+  } else {
+    track.key = newKey;
+  }
+  scoreRender();
+};
+
 window.scoreChangePitch = function(tIdx, sIdx, nIdx, newP) {
   const track = window.scoreTracks[tIdx];
   const note  = track.data[sIdx].notes[nIdx];
@@ -7861,7 +7942,7 @@ function scoreRender() {
         <option value="treble" ${track.clef==='treble'?'selected':''}>𝄞 Violin</option>
         <option value="bass"   ${track.clef==='bass'?'selected':''} >𝄢 Bass</option>
       </select>
-      <select onchange="window.scoreTracks[${tIdx}].key=this.value;window.scoreRender()" style="max-width:90px">
+      <select onchange="window.scoreChangeKey(${tIdx},this.value,this)" style="max-width:90px">
         <optgroup label="── Dur ──">
           ${Object.keys(KEY_SIGS).filter(k=>k.includes('Dur')||k==='C-Dur').map(k=>`<option value="${k}" ${(track.key??'C-Dur')===k?'selected':''}>${k}</option>`).join('')}
         </optgroup>
@@ -8095,6 +8176,8 @@ function scoreRender() {
   // Piano-Highlight + Info nach jedem Render synchronisieren
   if (typeof updateScorePianoInfo === 'function') updateScorePianoInfo();
   if (typeof scorePianoHighlightNext === 'function') scorePianoHighlightNext();
+  // Score-Daten automatisch sichern
+  if (typeof scoreAutoSave === 'function') scoreAutoSave();
 }
 
 // ── Editor-Subpanel ───────────────────────────────────────────
@@ -8425,11 +8508,32 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs) {
 }
 
 // ── Export / Import ───────────────────────────────────────────
+const SCORE_AUTOSAVE_KEY = 'ensemble_score_autosave';
+
+function scoreAutoSave() {
+  try {
+    localStorage.setItem(SCORE_AUTOSAVE_KEY, JSON.stringify(scoreTracks));
+  } catch(e) {}
+}
+
+function scoreAutoRestore() {
+  try {
+    const raw = localStorage.getItem(SCORE_AUTOSAVE_KEY);
+    if (!raw) return;
+    const loaded = JSON.parse(raw);
+    if (Array.isArray(loaded) && loaded.length) {
+      scoreTracks = loaded;
+      scoreRender();
+    }
+  } catch(e) {}
+}
+
 window.scoreExportJSON = function() {
   const blob = new Blob([JSON.stringify(scoreTracks, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'noten.json'; a.click();
+  a.download = 'noten_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click(); URL.revokeObjectURL(a.href);
 };
 window.scoreImportJSON = function() {
   document.getElementById('scoreImportInput').click();
@@ -8441,10 +8545,14 @@ document.getElementById('scoreImportInput')?.addEventListener('change', function
     try {
       scoreTracks = JSON.parse(e.target.result);
       scoreRender();
+      scoreAutoSave();
     } catch(err) { alert('Ungültige JSON-Datei'); }
   };
   r.readAsText(this.files[0]);
 });
+
+// Beim Start Score aus localStorage laden
+setTimeout(scoreAutoRestore, 100);
 
 // ── Score-Piano ──────────────────────────────────────────────
 let scorePianoOct = 4;
