@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v110</title>
+<title>Ensemble v112</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1308,7 +1308,8 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble_v110</h1>
+    <h1>Ensemble</h1>
+    <h3>v112</h3>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -7763,6 +7764,31 @@ function transposeTrackToKey(track, oldKey, newKey) {
 }
 
 // Tonart-Wechsel mit Transponierung + Bestätigung
+// ── Oktavierung ───────────────────────────────────────────────
+window.scoreDuplicateTrack = function(tIdx) {
+  const track = scoreTracks[tIdx];
+  if (!track) return;
+  const clone = JSON.parse(JSON.stringify(track)); // Deep-Copy
+  scoreTracks.splice(tIdx + 1, 0, clone);          // direkt dahinter einfügen
+  scoreRender();
+};
+
+window.scoreOctaveShift = function(tIdx, direction) {
+  const track = scoreTracks[tIdx];
+  if (!track) return;
+  track.data.forEach(step => {
+    if (step.rest) return;
+    step.notes.forEach(n => {
+      const midi    = noteToMidi(n.p, n.a);
+      const newMidi = midi + direction * 12;
+      if (newMidi < 0 || newMidi > 127) return; // Grenzen einhalten
+      const { p, a } = midiToNoteInKey(newMidi, track.key ?? 'C-Dur', track.clef);
+      n.p = p; n.a = a;
+    });
+  });
+  scoreRender();
+};
+
 window.scoreChangeKey = function(tIdx, newKey, selectEl) {
   const track  = scoreTracks[tIdx];
   const oldKey = track.key ?? 'C-Dur';
@@ -7967,6 +7993,9 @@ function scoreRender() {
       <button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreAddStep(${tIdx})">+ Step</button>
       <button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreStartPlay(${tIdx},0)" title="Nur diesen Track von Anfang">▶</button>
       <button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreStartPlayTrackCursor(${tIdx})" title="Nur diesen Track ab Cursor">▶✦</button>
+      <button class="score-btn" style="padding:3px 8px;font-size:.75rem" onclick="window.scoreOctaveShift(${tIdx},1)"       title="Alle Noten eine Oktave höher">8↑</button>
+      <button class="score-btn" style="padding:3px 8px;font-size:.75rem" onclick="window.scoreOctaveShift(${tIdx},-1)"      title="Alle Noten eine Oktave tiefer">8↓</button>
+      <button class="score-btn" style="padding:3px 8px;font-size:.75rem" onclick="window.scoreDuplicateTrack(${tIdx})"      title="Track duplizieren">⧉</button>
       ${tIdx>0?`<button class="score-btn danger" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreTracks.splice(${tIdx},1);window.scoreRender()">✕</button>`:''}`;
 
     // Notensystem-Zeile
