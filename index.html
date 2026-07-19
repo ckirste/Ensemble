@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v113</title>
+<title>Ensemble v115</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1201,7 +1201,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .score-header{display:flex;gap:6px;align-items:center;flex-wrap:wrap;
   padding:8px 10px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--panel)}
 .score-body{display:flex;flex-direction:row;align-items:stretch;flex:1;min-height:0;width:100%;overflow:hidden}
-.score-toolbar{flex-shrink:0;width:60px;z-index:999;
+.score-toolbar{flex-shrink:0;width:110px;z-index:999;
   display:flex;flex-direction:column;align-items:center;gap:5px;
   padding:6px 3px;overflow-y:auto;overflow-x:hidden;
   background:#111827;border-right:1px solid var(--border)}
@@ -1235,6 +1235,29 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);
   background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;background-size:100% 1px}
 .score-timeline{display:flex;position:relative;height:100%;z-index:50}
+
+/* ── Druckvorschau: A4 querformat, im Browser auf Bildschirmbreite skaliert ── */
+.score-print-page {
+  background:#fff; color:#000; margin:0 auto 20px; position:relative;
+  width:100%; max-width:900px; aspect-ratio:297/210;
+  box-shadow:0 4px 24px rgba(0,0,0,.5); padding:18px 22px; box-sizing:border-box;
+  display:flex; flex-direction:column; gap:14px; overflow:hidden;
+}
+.score-print-track-title { font-size:.7rem; font-weight:bold; color:#333; }
+.score-print-line { position:relative; height:110px; border-bottom:1px solid #ddd; display:flex; align-items:stretch; }
+.score-print-line .score-timeline { overflow:visible; flex:1; }
+.score-print-line .score-step { cursor:default !important; }
+.score-print-line .score-step-selbox { display:none !important; }
+.score-print-clefkey { width:70px; flex-shrink:0; position:relative; }
+.score-print-barline { width:2px; background:#000; flex-shrink:0; align-self:stretch; margin:0 2px; }
+.score-print-track-ctrl { display:flex; align-items:center; gap:4px; font-size:.6rem; color:var(--dim); }
+@media print {
+  body * { visibility:hidden; }
+  #scorePrintOverlay, #scorePrintOverlay * { visibility:visible; }
+  #scorePrintOverlay { position:absolute; inset:0; background:#fff !important; padding:0; overflow:visible; }
+  #scorePrintOverlay > div:first-child { display:none; }
+  .score-print-page { box-shadow:none; page-break-after:always; max-width:none; width:297mm; height:210mm; aspect-ratio:unset; }
+}
 .score-step{flex-shrink:0;height:100%;position:relative;border-right:1px solid rgba(0,0,0,.06);cursor:pointer;background:rgba(0,0,0,.01);transition:background .1s}
 .score-step:hover{background:rgba(0,100,255,.05)}
 .score-step.selected{background:rgba(0,100,255,.12);outline:2px solid #0066ff}
@@ -1309,7 +1332,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
     <h1>Ensemble</h1>
-    <h3>v113</h3>
+    <h3>v115</h3>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -1862,6 +1885,8 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
       <div class="score-sel-toolbar" id="scoreSelToolbar" style="display:none">
         <span id="scoreSelCount">0 markiert</span>
         <button class="score-btn" id="scoreTieBtn" onclick="scoreToggleTie()" title="Haltebogen zur nächsten Note" style="display:none">⌒ Haltebogen</button>
+        <button class="score-btn" id="scoreRangeBtn" onclick="scoreSelFillRange()" title="Alle Steps zwischen den 2 markierten Steps mit auswählen" style="display:none">↔ Bereich füllen</button>
+        <button class="score-btn" id="scoreBeamBtn" onclick="scoreSelToggleBeam()" title="Balken zwischen den markierten 8tel/16tel/32tel-Noten verbinden" style="display:none">🎵 Balken verbinden</button>
         <button class="score-btn" onclick="scoreSelCopyPaste()" title="Markierte Steps nach Cursor einfügen">📋 Kopieren+Einfügen</button>
         <button class="score-btn" onclick="scoreSelDelete()"    title="Markierte Steps löschen">🗑 Löschen</button>
         <button class="score-btn score-sel-clear" onclick="scoreSelClearAll()" title="Auswahl aufheben">✕ Auswahl</button>
@@ -1869,6 +1894,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
       <button class="score-btn" onclick="scoreExportJSON()">⬇ JSON</button>
       <button class="score-btn" onclick="scoreImportJSON()">⬆ JSON laden</button>
       <input type="file" id="scoreImportInput" accept=".json" style="display:none">
+      <button class="score-btn" onclick="scoreOpenPrintPreview()" title="Druckvorschau: A4-Querformat mit einstellbaren Takten pro Zeile">🖨 Druckvorschau</button>
     </div>
 
     <!-- score-body: toolbar links | content rechts -->
@@ -1878,7 +1904,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
         <div class="score-noteval-row" id="scoreNoteValBtns"></div>
         <label><input type="checkbox" id="scoreToolRest"> Pause</label>
         <label><input type="checkbox" id="scoreToolDot"> Punkt</label>
-        <span style="font-size:.5rem;color:var(--dim)">Ton</span>
+        <span style="font-size:.5rem;color:var(--dim)">Tonart</span>
         <select id="scoreToolKey">
           <optgroup label="Dur">
             <option value="C-Dur">C</option><option value="G-Dur">G</option>
@@ -1895,6 +1921,11 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
             <option value="c-Moll">c</option><option value="f-Moll">f</option>
           </optgroup>
         </select>
+        <span style="font-size:.5rem;color:var(--dim)">Tonhöhe (Selektion)</span>
+        <select id="scoreSelPitch"><option value="">—</option></select>
+        <span style="font-size:.5rem;color:var(--dim)">Vorzeichen</span>
+        <span id="scoreSelAccBtns" style="display:none;gap:2px"></span>
+        <button class="score-btn" id="scoreSelAddChordBtn" onclick="scoreSelAddChordNote()" title="Akkordton zu allen markierten Steps hinzufügen" style="display:none">+ Akkordton</button>
       </div>
       <div class="score-content-wrap">
         <div id="scoreTracksContainer"></div>
@@ -1913,6 +1944,20 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
       </div>
     </div><!-- score-body -->
   </div><!-- score-panel -->
+
+  <!-- ══ Druckvorschau-Overlay ══ -->
+  <div id="scorePrintOverlay" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.85);overflow-y:auto;padding:16px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:#0d1220;border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:14px;position:sticky;top:0;z-index:10">
+      <button class="score-btn" onclick="scoreClosePrintPreview()">✕ Schließen</button>
+      <button class="score-btn" onclick="window.print()">🖨 Drucken</button>
+      <span style="font-size:.6rem;color:var(--dim)">Takte/Zeile (global)</span>
+      <button class="score-btn" style="width:26px;padding:2px 0" onclick="scorePrintSetGlobalBars(-1)">−</button>
+      <span id="scorePrintGlobalBarsDisp" style="min-width:16px;text-align:center;font-family:'Share Tech Mono',monospace"></span>
+      <button class="score-btn" style="width:26px;padding:2px 0" onclick="scorePrintSetGlobalBars(1)">+</button>
+      <div id="scorePrintTrackCtrls" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"></div>
+    </div>
+    <div id="scorePrintPages"></div>
+  </div>
 
 
   <!-- ══ Live Jam Panel — Ensemble Edition ══ -->
@@ -7734,12 +7779,22 @@ fill="#000000" stroke="none">
 // cx/cy/Hals bleiben gleich damit PITCH_MAP-Kalibrierung stimmt
 const noteIconsStaff = {
   '1n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="15" cy="40" rx="8" ry="4" fill="none" stroke="black" stroke-width="2"/></svg>`,
-  '2n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="7" ry="4" fill="none" stroke="black" stroke-width="1.8"/><path d="M17 40 L17 5" stroke="black" stroke-width="2"/></svg>`,
-  '4n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
-  '8n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 28" fill="none" stroke="black" stroke-width="3"/></svg>`,
-  '16n':`<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 22" fill="none" stroke="black" stroke-width="3"/><path d="M16 14 Q 27 24 27 31" fill="none" stroke="black" stroke-width="3"/></svg>`,
-  '32n':`<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 18" fill="none" stroke="black" stroke-width="3"/><path d="M16 10 Q 27 20 27 23" fill="none" stroke="black" stroke-width="3"/><path d="M16 15 Q 27 25 27 28" fill="none" stroke="black" stroke-width="3"/></svg>`,
+  '2n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="7" ry="4" fill="none" stroke="black" stroke-width="1.8"/><path class="note-stem" d="M17 40 L17 5" stroke="black" stroke-width="2"/></svg>`,
+  '4n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
+  '8n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 28" fill="none" stroke="black" stroke-width="3"/></svg>`,
+  '16n':`<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 22" fill="none" stroke="black" stroke-width="3"/><path d="M16 14 Q 27 24 27 31" fill="none" stroke="black" stroke-width="3"/></svg>`,
+  '32n':`<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 18" fill="none" stroke="black" stroke-width="3"/><path d="M16 10 Q 27 20 27 23" fill="none" stroke="black" stroke-width="3"/><path d="M16 15 Q 27 25 27 28" fill="none" stroke="black" stroke-width="3"/></svg>`,
 };
+// Fahnenlose Varianten für Akkord-Töne, die nicht die oberste Note sind
+// (Notenkopf + Hals identisch zur Viertel-Note, nur ohne Fahnen-Kringel)
+const FLAGLESS_ICON = {
+  '8n':  `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
+  '16n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
+  '32n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
+};
+// Nur Notenkopf ohne Hals — für balkierte Noten, deren Stiel dynamisch
+// von scoreDrawBeams() gezeichnet wird (Länge hängt vom Balkenverlauf ab)
+const NOTEHEAD_ONLY = `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse class="note-head" cx="10" cy="40" rx="6" ry="4" fill="black"/></svg>`;
 const restIconsStaff = {
   '1n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><rect x="5" y="30" width="20" height="6" fill="black"/></svg>`,
   '2n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><rect x="5" y="24" width="20" height="6" fill="black"/></svg>`,
@@ -7827,7 +7882,169 @@ function scoreSelUpdateToolbar() {
       tieBtn.style.display = 'none';
     }
   }
+
+  // Bereich-füllen-Button nur wenn genau 2 Steps im selben Track markiert sind
+  const rangeBtn = document.getElementById('scoreRangeBtn');
+  if (rangeBtn) {
+    if (n === 2) {
+      const [a, b] = [...scoreSelection].map(k => k.split('_').map(Number));
+      rangeBtn.style.display = (a[0] === b[0]) ? '' : 'none';
+    } else {
+      rangeBtn.style.display = 'none';
+    }
+  }
+
+  // Balken-Button nur bei zusammenhängender Auswahl von ≥2 beamfähigen Noten im selben Track
+  const beamBtn = document.getElementById('scoreBeamBtn');
+  if (beamBtn) {
+    const group = scoreBeamableSelection();
+    if (group) {
+      const allSameBeam = group.every(s => s.beamId && s.beamId === group[0].beamId);
+      beamBtn.textContent = allSameBeam ? '🎵 Balken lösen' : '🎵 Balken verbinden';
+      beamBtn.style.display = '';
+    } else {
+      beamBtn.style.display = 'none';
+    }
+  }
+
+  // Notenwert-Buttons für die Selektion: bei ≥1 markiertem Step erscheinen
+  // Buttons, mit denen der Notenwert aller markierten Steps gleichzeitig geändert wird.
+  const lenWrap = document.getElementById('scoreSelLenBtns');
+  if (lenWrap) {
+    if (n >= 1) {
+      lenWrap.style.display = 'inline-flex';
+      lenWrap.innerHTML = '';
+      const vals = ['1n','2n','4n','8n','16n','32n'];
+      const labels = {'1n':'Ganze','2n':'Halbe','4n':'Viertel','8n':'Achtel','16n':'16tel','32n':'32tel'};
+      vals.forEach(v => {
+        const b = document.createElement('button');
+        b.className = 'score-nv-btn';
+        b.title = `Alle markierten Steps auf ${labels[v]} setzen`;
+        b.innerHTML = noteIcons[v];
+        b.addEventListener('click', () => scoreSelSetLen(v));
+        lenWrap.appendChild(b);
+      });
+    } else {
+      lenWrap.style.display = 'none';
+      lenWrap.innerHTML = '';
+    }
+  }
+  // Tonhöhen-/Vorzeichen-Dropdown + Akkordton-Button für die Selektion:
+  // wirkt auf ALLE markierten Steps gleichzeitig (nur wenn selber Track, wegen Tonart-Bezug)
+  const pitchSel = document.getElementById('scoreSelPitch');
+  const accWrap  = document.getElementById('scoreSelAccBtns');
+  const chordBtn = document.getElementById('scoreSelAddChordBtn');
+  if (pitchSel && accWrap && chordBtn) {
+    const keys = n > 0 ? [...scoreSelection].map(k => k.split('_').map(Number)) : [];
+    const sameTrack = n > 0 && keys.every(([t]) => t === keys[0][0]);
+    if (sameTrack) {
+      const ti = keys[0][0];
+      const track = scoreTracks[ti];
+      const { inKey } = getKeyAwarePitchRange(track.key ?? 'C-Dur', track.clef ?? 'treble');
+      pitchSel.innerHTML = '<option value="">— nicht ändern —</option>' +
+        inKey.slice().reverse().map(p => `<option value="${p}">${p}</option>`).join('');
+      pitchSel.style.display = '';
+      accWrap.style.display  = 'inline-flex';
+      chordBtn.style.display = '';
+      pitchSel.onchange = () => { if (pitchSel.value) { scoreSelSetPitch(pitchSel.value); pitchSel.value=''; } };
+      // Buttons statt Dropdown: feuern IMMER bei Klick, auch wenn "—" schon der
+      // aktuell angezeigte Stand ist (ein <select> würde bei gleichem Wert kein
+      // onchange auslösen und ein bestehendes Vorzeichen ließe sich so nie entfernen).
+      accWrap.innerHTML = '';
+      [['—',''], ['#','#'], ['b','b'], ['♮','n']].forEach(([label, val]) => {
+        const b = document.createElement('button');
+        b.className = 'score-btn';
+        b.style.padding = '2px 8px';
+        b.textContent = label;
+        b.title = val ? `Vorzeichen ${label} setzen` : 'Vorzeichen entfernen';
+        b.onclick = () => scoreSelSetAcc(val);
+        accWrap.appendChild(b);
+      });
+    } else {
+      pitchSel.style.display = accWrap.style.display = chordBtn.style.display = 'none';
+    }
+  }
 }
+
+// Setzt die Tonhöhe (Buchstabe) aller markierten Noten — Vorzeichen bleibt wie es war,
+// außer die Zieltonhöhe hat selbst ein eingebautes Vorzeichen (z.B. F#4 aus der Tonart)
+window.scoreSelSetPitch = function(p) {
+  scoreSelection.forEach(key => {
+    const [ti, si] = key.split('_').map(Number);
+    const s = scoreTracks[ti]?.data[si];
+    if (!s || s.rest) return;
+    s.notes.forEach(nte => { nte.p = p; });
+  });
+  scoreRender();
+};
+// Setzt das lokale Vorzeichen aller markierten Noten (leer = kein Vorzeichen)
+window.scoreSelSetAcc = function(a) {
+  scoreSelection.forEach(key => {
+    const [ti, si] = key.split('_').map(Number);
+    const s = scoreTracks[ti]?.data[si];
+    if (!s || s.rest) return;
+    s.notes.forEach(nte => { nte.a = a || null; });
+  });
+  scoreRender();
+};
+// Fügt allen markierten Steps einen zusätzlichen Akkord-Ton hinzu
+window.scoreSelAddChordNote = function() {
+  scoreSelection.forEach(key => {
+    const [ti, si] = key.split('_').map(Number);
+    const s = scoreTracks[ti]?.data[si];
+    if (s && !s.rest) s.notes.push({p:'E4', a:null});
+  });
+  scoreRender();
+};
+window.scoreSelSetLen = function(len) {
+  scoreSelection.forEach(key => {
+    const [ti, si] = key.split('_').map(Number);
+    const s = scoreTracks[ti]?.data[si];
+    if (s) s.len = len;
+  });
+  scoreRender();
+};
+
+// Prüft, ob die aktuelle Selektion balkenfähig ist: ≥2 Steps, selber Track,
+// lückenlos aufeinanderfolgend, keine Pausen, alle Notenwerte 8tel/16tel/32tel.
+// Gibt bei Erfolg die Step-Objekte in Reihenfolge zurück, sonst null.
+const BEAM_LEVELS = { '8n':1, '16n':2, '32n':3 };
+function scoreBeamableSelection() {
+  if (scoreSelection.size < 2) return null;
+  const keys = [...scoreSelection].map(k => k.split('_').map(Number));
+  const ti = keys[0][0];
+  if (!keys.every(([t]) => t === ti)) return null;
+  const sIdxs = keys.map(([, s]) => s).sort((a,b) => a-b);
+  for (let i = 1; i < sIdxs.length; i++) if (sIdxs[i] !== sIdxs[i-1] + 1) return null;
+  const track = scoreTracks[ti];
+  if (!track) return null;
+  const steps = sIdxs.map(si => track.data[si]);
+  if (steps.some(s => !s || s.rest || !BEAM_LEVELS[s.len])) return null;
+  return steps;
+}
+
+// Balken für die aktuelle Auswahl setzen oder (falls schon vorhanden) lösen.
+window.scoreSelToggleBeam = function() {
+  const group = scoreBeamableSelection();
+  if (!group) return;
+  const allSameBeam = group.every(s => s.beamId && s.beamId === group[0].beamId);
+  const newId = allSameBeam ? null : ('beam_' + Date.now() + '_' + Math.random().toString(36).slice(2,7));
+  group.forEach(s => { s.beamId = newId; });
+  scoreRender();
+};
+
+// Füllt die Selektion zwischen den 2 markierten Steps eines Tracks auf
+// (alle Steps dazwischen werden ebenfalls markiert, inklusive der beiden Ränder).
+window.scoreSelFillRange = function() {
+  if (scoreSelection.size !== 2) return;
+  const [a, b] = [...scoreSelection].map(k => k.split('_').map(Number));
+  const [ti, siA] = a, [tiB, siB] = b;
+  if (ti !== tiB) return; // nur innerhalb desselben Tracks
+  const lo = Math.min(siA, siB), hi = Math.max(siA, siB);
+  for (let si = lo; si <= hi; si++) scoreSelAdd(ti, si);
+  scoreSelUpdateToolbar();
+  scoreRender();
+};
 
 window.getKeyAwarePitchRange = getKeyAwarePitchRange;
 
@@ -7857,6 +8074,9 @@ function midiToNoteInKey(midi, targetKey, clef) {
   // Nicht in Tonart → nächsten Stammton + lokales Vorzeichen
   const NOTE_LETTERS_UP = ['C','D','E','F','G','A','B'];
   const MIDI_OF_LETTER  = [0,2,4,5,7,9,11]; // Halbton-Position pro Buchstabe in Oktave 0
+  // Welche Buchstaben sind durch die Tonart-Vorzeichen betroffen? (z.B. G-Dur → {F})
+  const sig = KEY_SIGS[targetKey] || [];
+  const affectedLetters = new Set(sig.map(s => s.p[0]));
   // Finde Stammton mit geringstem Vorzeichen-Abstand
   let bestP = null, bestA = null, bestDist = 99;
   NOTE_LETTERS_UP.forEach((l, li) => {
@@ -7866,6 +8086,10 @@ function midiToNoteInKey(midi, targetKey, clef) {
       bestDist = diff;
       bestP    = l + octave;
       bestA    = diff === 0 ? null : diff === 1 ? '#' : diff === -1 ? 'b' : null;
+      // Stammton entspricht dem Naturton, aber die Tonart alteriert diesen Buchstaben
+      // eigentlich (z.B. F in G-Dur, wo F# durch die Vorzeichnung Standard ist)
+      // → explizites Auflösungszeichen nötig, damit es nicht als F# erscheint
+      if (bestA === null && affectedLetters.has(l)) bestA = 'n';
     }
   });
   return { p: bestP ?? ('C' + octave), a: bestA };
@@ -8048,6 +8272,12 @@ function scoreRenderToolbar() {
   });
 }
 window.scoreSetLen = function(v) {
+  // Wenn gerade Steps markiert sind: Notenwert für die ganze Selektion setzen,
+  // statt nur den Standardwert für die nächste Noten-Eingabe zu ändern.
+  if (scoreSelection.size > 0) {
+    scoreSelSetLen(v);
+    return;
+  }
   scoreTool.len = v;
   try { localStorage.setItem('ensemble_scoretool', JSON.stringify(scoreTool)); } catch(e) {}
   scoreRenderToolbar();
@@ -8056,10 +8286,28 @@ document.getElementById('scoreToolRest')?.addEventListener('change', function() 
   scoreTool.rest = this.checked;
   try { localStorage.setItem('ensemble_scoretool', JSON.stringify(scoreTool)); } catch(e) {}
   scoreRenderToolbar();
+  // Wie bei der Notenwert-Palette: bei aktiver Selektion auf alle markierten Steps anwenden
+  if (scoreSelection.size > 0) {
+    scoreSelection.forEach(key => {
+      const [ti, si] = key.split('_').map(Number);
+      const s = scoreTracks[ti]?.data[si];
+      if (s) s.rest = scoreTool.rest;
+    });
+    scoreRender();
+  }
 });
 document.getElementById('scoreToolDot')?.addEventListener('change', function() {
   scoreTool.dot = this.checked;
   try { localStorage.setItem('ensemble_scoretool', JSON.stringify(scoreTool)); } catch(e) {}
+  // Wie bei der Notenwert-Palette: bei aktiver Selektion auf alle markierten Steps anwenden
+  if (scoreSelection.size > 0) {
+    scoreSelection.forEach(key => {
+      const [ti, si] = key.split('_').map(Number);
+      const s = scoreTracks[ti]?.data[si];
+      if (s) s.dot = scoreTool.dot;
+    });
+    scoreRender();
+  }
 });
 // scoreTool beim Start laden
 try {
@@ -8190,6 +8438,7 @@ function scoreRender() {
     track.data.forEach((s, sIdx) => {
       const step = document.createElement('div');
       step.className = 'score-step';
+      step.dataset.sidx = sIdx; // für Druckvorschau: Step per sIdx wiederfinden
       const baseW = (s.len==='32n' ? 30 : DUR_MAP[s.len] * STEP_W);
       step.style.width = (baseW * (s.dot ? 1.5 : 1)) + 'px';
 
@@ -8240,8 +8489,15 @@ function scoreRender() {
           d.className = 'score-dot'; d.style.top = '78px'; step.appendChild(d);
         }
       } else {
+        // Bei Akkorden (mehrere Noten im selben Step) bekommt nur die oberste Note
+        // (höchste Tonhöhe = größter y-Wert) bei 8tel/16tel/32tel eine Fahne.
+        // Die übrigen Akkord-Töne bekommen Notenkopf + Hals, aber ohne Fahnen-Kringel.
+        const topY = s.notes.reduce((max, n) => Math.max(max, pMap[n.p] ?? 70), -Infinity);
+        let topAssigned = false;
         s.notes.forEach(n => {
           const y = pMap[n.p] ?? 70;
+          const isTop = !topAssigned && y === topY;
+          if (isTop) topAssigned = true;
           // Vorzeichen
           if (n.a) {
             const ac = document.createElement('div');
@@ -8250,11 +8506,18 @@ function scoreRender() {
             ac.firstChild.style.top = `${n.a === '#' ? 153-y : 150-y}px`;
             step.appendChild(ac.firstChild);
           }
-          // Note
+          // Note — balkierte Top-Note: nur Kopf, Stiel wird dynamisch von
+          // scoreDrawBeams() passend zum Balkenverlauf gezeichnet.
+          // Sonst wie bisher: Fahne unterdrücken bei Nicht-Top oder Balken.
+          const isBeamedTop = isTop && s.beamId && BEAM_LEVELS[s.len];
+          const suppressFlag = !isTop || !!s.beamId;
           const nw = document.createElement('div');
-          nw.innerHTML = noteIconsStaff[s.len];
+          nw.innerHTML = isBeamedTop
+            ? NOTEHEAD_ONLY
+            : (suppressFlag && FLAGLESS_ICON[s.len]) ? FLAGLESS_ICON[s.len] : noteIconsStaff[s.len];
           nw.firstChild.style.bottom = undefined;
           nw.firstChild.style.top = `${122 - y}px`;
+          if (isTop) nw.firstChild.classList.add('score-beam-anchor'); // Balken-Ansatzpunkt
           step.appendChild(nw.firstChild);
           // Punkt
           if (s.dot) {
@@ -8353,7 +8616,114 @@ function scoreRender() {
   if (typeof scoreAutoSave === 'function') scoreAutoSave();
   // Notenwert-Buttons immer aktuell halten
   scoreRenderToolbar();
+  // Balken zwischen selektierten 8tel/16tel/32tel-Noten zeichnen (Layout muss stehen)
+  setTimeout(() => { if (typeof scoreDrawBeams === 'function') scoreDrawBeams(); }, 0);
 }
+
+// ── Balken ────────────────────────────────────────────────────
+// Zeichnet Balken (Beams) + dynamische Stiele für jede beamId-Gruppe.
+// Wie im echten Notensatz: Stiele bleiben immer vertikal, ihre LÄNGE
+// passt sich der (leicht geneigten) Balkenlinie an. Die Balkenlinie
+// selbst folgt näherungsweise dem Notenverlauf (Steigung aus erster/
+// letzter Note), wird aber ggf. hochgeschoben, damit kein Stiel kürzer
+// als STEM_MIN wird (z.B. bei einer einzelnen sehr hohen Note mittendrin).
+const STEM_LEN = 45, STEM_MIN = 24, BEAM_GAP = 6;
+function scoreDrawBeams() {
+  scoreTracks.forEach((track, tIdx) => {
+    const units = document.querySelectorAll('.score-track-unit');
+    const unit  = units[tIdx];
+    if (!unit) return;
+    const timeline = unit.querySelector('.score-timeline');
+    const steps    = unit.querySelectorAll('.score-step');
+    if (!timeline || !steps.length) return;
+
+    // Gruppen sammeln (Reihenfolge = sIdx)
+    const groups = {};
+    track.data.forEach((s, sIdx) => {
+      if (!s.beamId) return;
+      (groups[s.beamId] = groups[s.beamId] || []).push(sIdx);
+    });
+
+    const TR = timeline.getBoundingClientRect();
+    Object.values(groups).forEach(sIdxs => {
+      if (sIdxs.length < 2) return;
+      // Notenkopf-Position je Step (rechter Rand/vertikale Mitte = Stiel-Ansatz)
+      const pts = sIdxs.map(sIdx => {
+        const anchor = steps[sIdx]?.querySelector('.score-beam-anchor');
+        const head   = anchor?.querySelector('.note-head');
+        if (!head) return null;
+        const R = head.getBoundingClientRect();
+        return {
+          sIdx,
+          headX: R.left + R.width - TR.left + timeline.scrollLeft,
+          headY: R.top  + R.height/2 - TR.top + timeline.scrollTop,
+          level: BEAM_LEVELS[track.data[sIdx].len] || 1
+        };
+      }).filter(Boolean);
+      if (pts.length < 2) return;
+
+      // Balken-Grundlinie aus erster/letzter Note (Standard-Stiellänge)
+      const first = pts[0], last = pts[pts.length - 1];
+      const y0 = first.headY - STEM_LEN, yN = last.headY - STEM_LEN;
+      const slope = (yN - y0) / ((last.headX - first.headX) || 1);
+      let beamYs = pts.map(p => y0 + slope * (p.headX - first.headX));
+
+      // Mindest-Stiellänge sicherstellen — sonst ganzen Balken hochschieben
+      const minStem = Math.min(...pts.map((p,i) => p.headY - beamYs[i]));
+      if (minStem < STEM_MIN) {
+        const shift = STEM_MIN - minStem;
+        beamYs = beamYs.map(y => y - shift);
+      }
+
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const minX = Math.min(...pts.map(p=>p.headX));
+      const maxX = Math.max(...pts.map(p=>p.headX));
+      const minY = Math.min(...beamYs) - 2;
+      const maxY = Math.max(...pts.map(p=>p.headY));
+      const maxLevel = Math.max(...pts.map(p=>p.level));
+      const svg = document.createElementNS(svgNS,'svg');
+      svg.setAttribute('style', `position:absolute;left:${minX}px;top:${minY}px;pointer-events:none;overflow:visible`);
+      svg.setAttribute('width', Math.max(1, maxX - minX));
+      svg.setAttribute('height', Math.max(1, maxY - minY));
+      svg.classList.add('score-beam-svg');
+
+      const line = (x1,y1,x2,y2,w) => {
+        const l = document.createElementNS(svgNS,'line');
+        l.setAttribute('x1', x1-minX); l.setAttribute('y1', y1-minY);
+        l.setAttribute('x2', x2-minX); l.setAttribute('y2', y2-minY);
+        l.setAttribute('stroke','black'); l.setAttribute('stroke-width', w ?? 5);
+        l.setAttribute('stroke-linecap','butt');
+        svg.appendChild(l);
+      };
+
+      // Stiele: vertikal, von Notenkopf bis zur (geneigten) Balkenlinie
+      pts.forEach((p,i) => line(p.headX, p.headY, p.headX, beamYs[i], 2.2));
+
+      // Level 1: durchgehend über die ganze Gruppe
+      line(first.headX, beamYs[0], last.headX, beamYs[beamYs.length-1]);
+
+      // Level 2 und 3: pro Nachbarpaar voll, sonst Hook zur balken-bedürftigen Seite
+      for (let lvl = 2; lvl <= 3; lvl++) {
+        const yOff = (lvl - 1) * BEAM_GAP;
+        for (let i = 0; i < pts.length - 1; i++) {
+          const a = pts[i], b = pts[i+1];
+          const aHas = a.level >= lvl, bHas = b.level >= lvl;
+          const ay = beamYs[i] + yOff, by = beamYs[i+1] + yOff;
+          if (aHas && bHas) {
+            line(a.headX, ay, b.headX, by);
+          } else if (aHas || bHas) {
+            const stubLen = Math.max(8, (b.headX - a.headX) * 0.35) * (aHas ? 1 : -1);
+            const fromX = aHas ? a.headX : b.headX, fromY = aHas ? ay : by;
+            line(fromX, fromY, fromX + stubLen, fromY);
+          }
+        }
+      }
+
+      timeline.appendChild(svg);
+    });
+  });
+}
+window.scoreDrawBeams = scoreDrawBeams;
 
 // ── Editor-Subpanel ───────────────────────────────────────────
 function scoreToggleEditor(tIdx, sIdx) {
@@ -8528,8 +8898,13 @@ function scoreKbNoteInput(noteName) {
   const track = scoreTracks[tIdx];
   if (!track) return false;
 
-  // Note parsen: 'C#4' → p:'C4', a:'#'
-  const {p, a} = parseKbNote(noteName);
+  // Note von der Klaviatur kommt immer in Kreuz-Schreibweise (z.B. 'F#4').
+  // MIDI berechnen und dann tonart-bewusst neu einordnen:
+  // z.B. G-Dur + gedrücktes F#4 → bleibt F#4 ohne Einzel-Vorzeichen (Tonart deckt es ab)
+  //      G-Dur + gedrücktes F4  → wird F4 mit Auflösungszeichen (hebt Tonart-Kreuz auf)
+  const { p: rawP, a: rawA } = parseKbNote(noteName);
+  const midi = noteToMidi(rawP, rawA);
+  const { p, a } = midiToNoteInKey(midi, track.key ?? 'C-Dur', track.clef ?? 'treble');
 
   // Neuen Step an Cursor-Position einfügen
   const newStep = {
@@ -8623,11 +8998,18 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs) {
     const sIdx = scoreTrackPos[ti];
     const s    = track.data[sIdx];
 
-    // Cursor-Anzeige nur für Track 0 (oder Einzel-Track)
+    // Cursor-Anzeige: bei Einzel-Track-Wiedergabe nur der; sonst alle spielenden Tracks
     if (ti === 0 || scorePlayTrackFilter !== null) {
       scorePlayPos = { tIdx: ti, sIdx };
       scoreRender();
     }
+    // Aktuell klingende Note in Sicht scrollen — für jeden spielenden Track einzeln,
+    // damit beim Abspielen mehrerer/aller Tracks alle gleichzeitig mitscrollen
+    setTimeout(() => {
+      const units = document.querySelectorAll('.score-track-unit');
+      const steps = units[ti]?.querySelectorAll('.score-step');
+      steps?.[sIdx]?.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+    }, 0);
 
     // Note spielen
     const dur       = s ? DUR_MAP[s.len] * (s.dot ? 1.5 : 1) : 1;
@@ -8743,6 +9125,135 @@ document.getElementById('scoreImportInput')?.addEventListener('change', function
   r.readAsText(this.files[0]);
 });
 
+// ── Druckvorschau ─────────────────────────────────────────────
+// scorePrintSettings.global = Standard-Takte/Zeile für alle Tracks ohne eigene Einstellung
+// scorePrintSettings.perTrack[tIdx] = Takte/Zeile NUR für diesen Track (überschreibt global)
+const SCORE_PRINT_KEY = 'ensemble_print_settings';
+let scorePrintSettings = { global: 4, perTrack: {} };
+try {
+  const saved = JSON.parse(localStorage.getItem(SCORE_PRINT_KEY) || 'null');
+  if (saved && typeof saved.global === 'number') scorePrintSettings = saved;
+} catch(e) {}
+function scorePrintSave() {
+  try { localStorage.setItem(SCORE_PRINT_KEY, JSON.stringify(scorePrintSettings)); } catch(e) {}
+}
+function scorePrintBarsForTrack(tIdx) {
+  const v = scorePrintSettings.perTrack[tIdx];
+  return (typeof v === 'number' && v > 0) ? v : scorePrintSettings.global;
+}
+
+// Zerlegt einen Track in Takte (Arrays von sIdx), anhand von timeSigNum als Beat-Grenze
+function scoreMeasuresForTrack(track) {
+  const beatsPerBar = track.timeSigNum || 4;
+  const measures = []; let cur = []; let acc = 0;
+  track.data.forEach((s, sIdx) => {
+    cur.push(sIdx);
+    acc += (DUR_MAP[s.len] || 1) * (s.dot ? 1.5 : 1);
+    if (acc >= beatsPerBar - 1e-6) { measures.push(cur); cur = []; acc = 0; }
+  });
+  if (cur.length) measures.push(cur);
+  return measures;
+}
+// Gruppiert die Takte eines Tracks in Zeilen, je nach globaler/track-eigener Einstellung
+function scoreLinesForTrack(tIdx, track) {
+  const measures = scoreMeasuresForTrack(track);
+  const barsPerLine = scorePrintBarsForTrack(tIdx);
+  const lines = [];
+  for (let i = 0; i < measures.length; i += barsPerLine) {
+    lines.push(measures.slice(i, i + barsPerLine).flat());
+  }
+  return lines;
+}
+
+window.scorePrintSetGlobalBars = function(delta) {
+  scorePrintSettings.global = Math.max(1, scorePrintSettings.global + delta);
+  scorePrintSave();
+  scoreRenderPrintPreview();
+};
+window.scorePrintSetTrackBars = function(tIdx, val) {
+  if (val === '' || val === null) delete scorePrintSettings.perTrack[tIdx];
+  else scorePrintSettings.perTrack[tIdx] = Math.max(1, parseInt(val, 10) || 1);
+  scorePrintSave();
+  scoreRenderPrintPreview();
+};
+
+window.scoreOpenPrintPreview = function() {
+  document.getElementById('scorePrintOverlay').style.display = 'block';
+  scoreRenderPrintPreview();
+};
+window.scoreClosePrintPreview = function() {
+  document.getElementById('scorePrintOverlay').style.display = 'none';
+};
+
+function scoreRenderPrintPreview() {
+  document.getElementById('scorePrintGlobalBarsDisp').textContent = scorePrintSettings.global;
+
+  // Pro-Track-Steuerung (Override)
+  const ctrlWrap = document.getElementById('scorePrintTrackCtrls');
+  ctrlWrap.innerHTML = '';
+  scoreTracks.forEach((track, tIdx) => {
+    const box = document.createElement('div');
+    box.className = 'score-print-track-ctrl';
+    const override = scorePrintSettings.perTrack[tIdx];
+    box.innerHTML = `
+      <span>Track ${tIdx+1}:</span>
+      <input type="number" min="1" style="width:36px" placeholder="global"
+        value="${override ?? ''}"
+        onchange="scorePrintSetTrackBars(${tIdx}, this.value)">`;
+    ctrlWrap.appendChild(box);
+  });
+
+  // Seiten aufbauen: pro Track eine eigene Abfolge von Zeilen, in A4-Seiten gepackt
+  // (max. 5 Zeilen/Seite als grober Richtwert für Querformat-Höhe)
+  const LINES_PER_PAGE = 5;
+  const pagesWrap = document.getElementById('scorePrintPages');
+  pagesWrap.innerHTML = '';
+  let page = null, lineCountOnPage = 0;
+  const newPage = () => {
+    page = document.createElement('div');
+    page.className = 'score-print-page';
+    pagesWrap.appendChild(page);
+    lineCountOnPage = 0;
+  };
+  newPage();
+
+  scoreTracks.forEach((track, tIdx) => {
+    const lines = scoreLinesForTrack(tIdx, track);
+    const title = document.createElement('div');
+    title.className = 'score-print-track-title';
+    title.textContent = `♪ Track ${tIdx+1}`;
+    if (lineCountOnPage + 1 > LINES_PER_PAGE) newPage();
+    page.appendChild(title);
+    lineCountOnPage += 0.5; // Titel zählt halb
+
+    lines.forEach((sIdxs, lineIdx) => {
+      if (lineCountOnPage >= LINES_PER_PAGE) newPage();
+      const lineDiv = document.createElement('div');
+      lineDiv.className = 'score-print-line';
+
+      // Schlüssel/Tonart am Zeilenanfang (Taktangabe nur in der allerersten Zeile)
+      const ck = document.createElement('div');
+      ck.className = 'score-print-clefkey';
+      ck.innerHTML = (track.clef==='treble' ? svgClefT : svgClefB) || '';
+      lineDiv.appendChild(ck);
+
+      // Original-Step-Elemente aus der (bereits gerenderten) Live-Timeline klonen —
+      // dadurch bleiben Noten, Vorzeichen, Balken exakt wie im Editor
+      const liveUnits = document.querySelectorAll('.score-track-unit');
+      const liveTimeline = liveUnits[tIdx]?.querySelector('.score-timeline');
+      const tl = document.createElement('div');
+      tl.className = 'score-timeline';
+      sIdxs.forEach(si => {
+        const src = liveTimeline?.querySelector(`.score-step[data-sidx="${si}"]`);
+        if (src) tl.appendChild(src.cloneNode(true));
+      });
+      lineDiv.appendChild(tl);
+      page.appendChild(lineDiv);
+      lineCountOnPage++;
+    });
+  });
+}
+
 // Beim Start Score aus localStorage laden
 setTimeout(scoreAutoRestore, 100);
 
@@ -8794,9 +9305,12 @@ function buildScorePiano() {
     const note = k.dataset.note;
     k.addEventListener('mousedown', e => {
       e.preventDefault();
-      if (scoreKbInput && scoreKbNoteInput(note)) return;
       k.classList.add('active');
       if (typeof playMidi === 'function') playMidi(midi, 90, null, 'screen');
+      if (scoreKbInput && scoreKbNoteInput(note)) {
+        setTimeout(() => { if (typeof stopMidi === 'function') stopMidi(midi); }, 220);
+        return;
+      }
     });
     k.addEventListener('mouseup', () => {
       k.classList.remove('active');
@@ -8808,11 +9322,14 @@ function buildScorePiano() {
     });
     k.addEventListener('touchstart', e => {
       e.preventDefault();
-      if (scoreKbInput && scoreKbNoteInput(note)) return;
       k.classList.add('active');
       const t=e.touches[0],r=k.getBoundingClientRect();
       const vel = ((t.clientY-r.top)/Math.max(1,r.height)) < 0.5 ? 80 : 110;
       if (typeof playMidi === 'function') playMidi(midi, vel, null, 'screen');
+      if (scoreKbInput && scoreKbNoteInput(note)) {
+        setTimeout(() => { if (typeof stopMidi === 'function') stopMidi(midi); }, 220);
+        return;
+      }
     }, {passive:false});
     k.addEventListener('touchend', e => {
       e.preventDefault();
