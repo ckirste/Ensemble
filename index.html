@@ -1241,16 +1241,28 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   background:#fff; color:#000; margin:0 auto 20px; position:relative;
   width:100%; max-width:900px; aspect-ratio:297/210;
   box-shadow:0 4px 24px rgba(0,0,0,.5); padding:18px 22px; box-sizing:border-box;
-  display:flex; flex-direction:column; gap:14px; overflow:hidden;
+  overflow:hidden;
+}
+.score-print-page-inner {
+  width:max-content; display:flex; flex-direction:column; gap:14px;
+  transform-origin:top left;
 }
 .score-print-track-title { font-size:.7rem; font-weight:bold; color:#333; }
-.score-print-line { position:relative; height:110px; border-bottom:1px solid #ddd; display:flex; align-items:stretch; }
+.score-print-system { display:flex; flex-direction:row; align-items:stretch; position:relative; }
+.score-print-bracket-gutter { width:34px; flex-shrink:0; position:relative; }
+.score-print-lines-stack { display:flex; flex-direction:column; flex:1; }
+.score-print-line { position:relative; height:180px; border-bottom:1px solid #ddd; display:flex; align-items:stretch;
+  background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);
+  background-repeat:repeat-x; background-position:0 70px,0 80px,0 90px,0 100px,0 110px; background-size:100% 1px; background-color:#fff;
+}
+.score-print-viewport { position:relative; height:100%; overflow:hidden; flex-shrink:0; }
 .score-print-line .score-timeline { overflow:visible; flex:1; }
 .score-print-line .score-step { cursor:default !important; }
 .score-print-line .score-step-selbox { display:none !important; }
 .score-print-clefkey { width:70px; flex-shrink:0; position:relative; }
-.score-print-barline { width:2px; background:#000; flex-shrink:0; align-self:stretch; margin:0 2px; }
+.score-print-barline { width:2px; background:#000; flex-shrink:0; margin:0; position:absolute; top:70px; height:40px; }
 .score-print-track-ctrl { display:flex; align-items:center; gap:4px; font-size:.6rem; color:var(--dim); }
+.score-print-bracket-svg { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
 @media print {
   body * { visibility:hidden; }
   #scorePrintOverlay, #scorePrintOverlay * { visibility:visible; }
@@ -1954,10 +1966,12 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
       <button class="score-btn" style="width:26px;padding:2px 0" onclick="scorePrintSetGlobalBars(-1)">−</button>
       <span id="scorePrintGlobalBarsDisp" style="min-width:16px;text-align:center;font-family:'Share Tech Mono',monospace"></span>
       <button class="score-btn" style="width:26px;padding:2px 0" onclick="scorePrintSetGlobalBars(1)">+</button>
-      <div id="scorePrintTrackCtrls" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"></div>
+      <span style="font-size:.55rem;color:var(--dim);max-width:220px">Alle Tracks bilden ein gemeinsames System (wie Klavier-/Orchesterpartitur) — Takte/Zeile gilt deshalb für alle zusammen.</span>
+      <div id="scorePrintGroupsWrap" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;width:100%;border-top:1px solid var(--border);padding-top:8px;margin-top:4px"></div>
     </div>
     <div id="scorePrintPages"></div>
   </div>
+
 
 
   <!-- ══ Live Jam Panel — Ensemble Edition ══ -->
@@ -9128,11 +9142,17 @@ document.getElementById('scoreImportInput')?.addEventListener('change', function
 // ── Druckvorschau ─────────────────────────────────────────────
 // scorePrintSettings.global = Standard-Takte/Zeile für alle Tracks ohne eigene Einstellung
 // scorePrintSettings.perTrack[tIdx] = Takte/Zeile NUR für diesen Track (überschreibt global)
+// scorePrintSettings.groups = [{trackIdxs:[0,1], type:'square'|'curly'}, ...]
+// Klammern gruppieren Tracks visuell (eckig = Orchester, geschweift = Tasteninstrument).
+// Die dünne durchgehende System-Linie ganz links wird IMMER gezeichnet, unabhängig davon.
 const SCORE_PRINT_KEY = 'ensemble_print_settings';
-let scorePrintSettings = { global: 4, perTrack: {} };
+let scorePrintSettings = { global: 4, perTrack: {}, groups: [] };
 try {
   const saved = JSON.parse(localStorage.getItem(SCORE_PRINT_KEY) || 'null');
-  if (saved && typeof saved.global === 'number') scorePrintSettings = saved;
+  if (saved && typeof saved.global === 'number') {
+    scorePrintSettings = saved;
+    if (!Array.isArray(scorePrintSettings.groups)) scorePrintSettings.groups = [];
+  }
 } catch(e) {}
 function scorePrintSave() {
   try { localStorage.setItem(SCORE_PRINT_KEY, JSON.stringify(scorePrintSettings)); } catch(e) {}
@@ -9140,6 +9160,70 @@ function scorePrintSave() {
 function scorePrintBarsForTrack(tIdx) {
   const v = scorePrintSettings.perTrack[tIdx];
   return (typeof v === 'number' && v > 0) ? v : scorePrintSettings.global;
+}
+
+// ── Klammer-Gruppen (eckig=Orchester, geschweift=Tasteninstrument) ──
+window.scorePrintAddGroup = function() {
+  scorePrintSettings.groups.push({ type:'square', trackIdxs:[] });
+  scorePrintSave();
+  scoreRenderPrintGroupsUI();
+  scoreRenderPrintPages();
+};
+window.scorePrintRemoveGroup = function(gi) {
+  scorePrintSettings.groups.splice(gi, 1);
+  scorePrintSave();
+  scoreRenderPrintGroupsUI();
+  scoreRenderPrintPages();
+};
+window.scorePrintSetGroupType = function(gi, type) {
+  scorePrintSettings.groups[gi].type = type;
+  scorePrintSave();
+  scoreRenderPrintPages();
+};
+window.scorePrintToggleGroupTrack = function(gi, tIdx, checked) {
+  const g = scorePrintSettings.groups[gi];
+  if (checked) { if (!g.trackIdxs.includes(tIdx)) g.trackIdxs.push(tIdx); }
+  else g.trackIdxs = g.trackIdxs.filter(i => i !== tIdx);
+  g.trackIdxs.sort((a,b)=>a-b);
+  scorePrintSave();
+  scoreRenderPrintPages();
+};
+function scoreRenderPrintGroupsUI() {
+  const wrap = document.getElementById('scorePrintGroupsWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const addBtn = document.createElement('button');
+  addBtn.className = 'score-btn';
+  addBtn.textContent = '+ Klammer-Gruppe';
+  addBtn.onclick = scorePrintAddGroup;
+  wrap.appendChild(addBtn);
+
+  scorePrintSettings.groups.forEach((g, gi) => {
+    const box = document.createElement('div');
+    box.style.cssText = 'display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:.6rem;color:var(--dim)';
+    const typeSel = document.createElement('select');
+    typeSel.innerHTML = `<option value="square" ${g.type==='square'?'selected':''}>⎡ eckig (Orchester)</option>
+                          <option value="curly" ${g.type==='curly'?'selected':''}>{ geschweift (Tasteninstrument)</option>`;
+    typeSel.onchange = () => scorePrintSetGroupType(gi, typeSel.value);
+    box.appendChild(typeSel);
+    scoreTracks.forEach((t, tIdx) => {
+      const lbl = document.createElement('label');
+      lbl.style.cssText = 'display:flex;align-items:center;gap:2px';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = g.trackIdxs.includes(tIdx);
+      cb.onchange = () => scorePrintToggleGroupTrack(gi, tIdx, cb.checked);
+      lbl.appendChild(cb);
+      lbl.append(`T${tIdx+1}`);
+      box.appendChild(lbl);
+    });
+    const rm = document.createElement('button');
+    rm.className = 'score-btn'; rm.textContent = '✕';
+    rm.style.padding = '2px 6px';
+    rm.onclick = () => scorePrintRemoveGroup(gi);
+    box.appendChild(rm);
+    wrap.appendChild(box);
+  });
 }
 
 // Zerlegt einen Track in Takte (Arrays von sIdx), anhand von timeSigNum als Beat-Grenze
@@ -9178,7 +9262,13 @@ window.scorePrintSetTrackBars = function(tIdx, val) {
 };
 
 window.scoreOpenPrintPreview = function() {
-  document.getElementById('scorePrintOverlay').style.display = 'block';
+  const ov = document.getElementById('scorePrintOverlay');
+  // An document.body hängen: sonst kann position:fixed durch einen transformierten
+  // Elternrahmen (z.B. Panel-Animationen) ausgehebelt werden und deckt nicht mehr
+  // den ganzen Viewport ab — genau das führte zum "unten abgeschnitten"-Bug.
+  if (ov.parentElement !== document.body) document.body.appendChild(ov);
+  ov.style.display = 'block';
+  scoreRenderPrintGroupsUI();
   scoreRenderPrintPreview();
 };
 window.scoreClosePrintPreview = function() {
@@ -9187,71 +9277,179 @@ window.scoreClosePrintPreview = function() {
 
 function scoreRenderPrintPreview() {
   document.getElementById('scorePrintGlobalBarsDisp').textContent = scorePrintSettings.global;
+  scoreRenderPrintPages();
+}
 
-  // Pro-Track-Steuerung (Override)
-  const ctrlWrap = document.getElementById('scorePrintTrackCtrls');
-  ctrlWrap.innerHTML = '';
-  scoreTracks.forEach((track, tIdx) => {
-    const box = document.createElement('div');
-    box.className = 'score-print-track-ctrl';
-    const override = scorePrintSettings.perTrack[tIdx];
-    box.innerHTML = `
-      <span>Track ${tIdx+1}:</span>
-      <input type="number" min="1" style="width:36px" placeholder="global"
-        value="${override ?? ''}"
-        onchange="scorePrintSetTrackBars(${tIdx}, this.value)">`;
-    ctrlWrap.appendChild(box);
-  });
+function scoreRenderPrintPages() {
+  // Alle Tracks gehören zu EINEM System (Klavier-/Orchesterpartitur-Prinzip) —
+  // pro Zeile werden also alle Tracks übereinander mit denselben Takten gerendert,
+  // nicht nacheinander als getrennte Stimmen. "Takte/Zeile" gilt deshalb global
+  // für das ganze System (ein pro-Track-Wert würde die Ausrichtung zerstören).
+  const barsPerLine = scorePrintSettings.global;
+  const measuresByTrack = scoreTracks.map(t => scoreMeasuresForTrack(t));
+  const maxMeasures = Math.max(0, ...measuresByTrack.map(m => m.length));
 
-  // Seiten aufbauen: pro Track eine eigene Abfolge von Zeilen, in A4-Seiten gepackt
-  // (max. 5 Zeilen/Seite als grober Richtwert für Querformat-Höhe)
-  const LINES_PER_PAGE = 5;
+  // Systeme/Seite: grober Richtwert je nach Anzahl Tracks (mehr Tracks = weniger passt hin)
+  const SYSTEMS_PER_PAGE = scoreTracks.length <= 1 ? 5 : scoreTracks.length === 2 ? 3 : 2;
   const pagesWrap = document.getElementById('scorePrintPages');
   pagesWrap.innerHTML = '';
-  let page = null, lineCountOnPage = 0;
+  let page = null, pageInner = null, systemsOnPage = 0;
   const newPage = () => {
     page = document.createElement('div');
     page.className = 'score-print-page';
+    pageInner = document.createElement('div');
+    pageInner.className = 'score-print-page-inner';
+    page.appendChild(pageInner);
     pagesWrap.appendChild(page);
-    lineCountOnPage = 0;
+    systemsOnPage = 0;
   };
   newPage();
 
-  scoreTracks.forEach((track, tIdx) => {
-    const lines = scoreLinesForTrack(tIdx, track);
-    const title = document.createElement('div');
-    title.className = 'score-print-track-title';
-    title.textContent = `♪ Track ${tIdx+1}`;
-    if (lineCountOnPage + 1 > LINES_PER_PAGE) newPage();
-    page.appendChild(title);
-    lineCountOnPage += 0.5; // Titel zählt halb
+  const liveUnits = document.querySelectorAll('.score-track-unit');
 
-    lines.forEach((sIdxs, lineIdx) => {
-      if (lineCountOnPage >= LINES_PER_PAGE) newPage();
+  for (let m = 0; m < maxMeasures; m += barsPerLine) {
+    if (systemsOnPage >= SYSTEMS_PER_PAGE) newPage();
+    const systemDiv = document.createElement('div');
+    systemDiv.className = 'score-print-system';
+
+    const gutter = document.createElement('div');
+    gutter.className = 'score-print-bracket-gutter';
+    const linesStack = document.createElement('div');
+    linesStack.className = 'score-print-lines-stack';
+
+    // Reihenfolge im Stapel = Reihenfolge im rowIdx→trackIdx-Mapping (für Klammern unten)
+    const rowTrackIdxs = [];
+
+    scoreTracks.forEach((track, tIdx) => {
+      const measures = measuresByTrack[tIdx].slice(m, m + barsPerLine);
+      if (!measures.length) return; // dieser Track hat an der Stelle keine Takte mehr
+
       const lineDiv = document.createElement('div');
       lineDiv.className = 'score-print-line';
+      lineDiv.dataset.trackIdx = tIdx;
+      rowTrackIdxs.push(tIdx);
 
-      // Schlüssel/Tonart am Zeilenanfang (Taktangabe nur in der allerersten Zeile)
-      const ck = document.createElement('div');
-      ck.className = 'score-print-clefkey';
-      ck.innerHTML = (track.clef==='treble' ? svgClefT : svgClefB) || '';
-      lineDiv.appendChild(ck);
+      // Schlüssel + Vorzeichen aus der Live-Timeline klonen — am Anfang jeder Zeile
+      const liveRow = liveUnits[tIdx]?.querySelector('.score-track-row');
+      const clefClone = liveRow?.querySelector('.score-clef-area')?.cloneNode(true);
+      const keyClone  = liveRow?.querySelector('.score-key-sig')?.cloneNode(true);
+      if (clefClone) { clefClone.style.position = 'static'; lineDiv.appendChild(clefClone); }
+      if (keyClone)  { keyClone.style.position  = 'static'; lineDiv.appendChild(keyClone); }
 
-      // Original-Step-Elemente aus der (bereits gerenderten) Live-Timeline klonen —
-      // dadurch bleiben Noten, Vorzeichen, Balken exakt wie im Editor
-      const liveUnits = document.querySelectorAll('.score-track-unit');
-      const liveTimeline = liveUnits[tIdx]?.querySelector('.score-timeline');
-      const tl = document.createElement('div');
-      tl.className = 'score-timeline';
-      sIdxs.forEach(si => {
-        const src = liveTimeline?.querySelector(`.score-step[data-sidx="${si}"]`);
-        if (src) tl.appendChild(src.cloneNode(true));
-      });
-      lineDiv.appendChild(tl);
-      page.appendChild(lineDiv);
-      lineCountOnPage++;
+      const liveTimeline = liveRow?.querySelector('.score-timeline');
+      const allSIdxs = measures.flat();
+      const firstSi = allSIdxs[0], lastSi = allSIdxs[allSIdxs.length - 1];
+      const firstEl = liveTimeline?.querySelector(`.score-step[data-sidx="${firstSi}"]`);
+      const lastEl  = liveTimeline?.querySelector(`.score-step[data-sidx="${lastSi}"]`);
+
+      // Fenster-Technik statt Einzel-Step-Klonen: die komplette Original-Timeline
+      // (samt absolut positionierter Balken-SVGs, die an Step-Koordinaten hängen)
+      // wird 1:1 geklont, dann per Verschiebung + fester Sichtfensterbreite auf
+      // den gewünschten Taktbereich zugeschnitten. Einzelnes Step-Klonen würde
+      // die Balken-SVGs (Kinder der Timeline, nicht der Steps) verwaisen lassen.
+      const viewport = document.createElement('div');
+      viewport.className = 'score-print-viewport';
+      if (liveTimeline && firstEl && lastEl) {
+        const startX = firstEl.offsetLeft;
+        const endX   = lastEl.offsetLeft + lastEl.offsetWidth;
+        viewport.style.width = Math.max(1, endX - startX) + 'px';
+        const fullClone = liveTimeline.cloneNode(true);
+        fullClone.style.position = 'relative';
+        fullClone.style.left = (-startX) + 'px';
+        viewport.appendChild(fullClone);
+
+        // Taktstriche als eigenes Overlay im Sichtfenster einfügen (an den
+        // Takt-Enden, relativ zur Fenster-Verschiebung positioniert)
+        measures.forEach(sIdxs => {
+          const lastInBar = liveTimeline.querySelector(`.score-step[data-sidx="${sIdxs[sIdxs.length-1]}"]`);
+          if (lastInBar) {
+            const barX = (lastInBar.offsetLeft + lastInBar.offsetWidth) - startX;
+            const bar = document.createElement('div');
+            bar.className = 'score-print-barline';
+            bar.style.left = barX + 'px';
+            viewport.appendChild(bar);
+          }
+        });
+      }
+      lineDiv.appendChild(viewport);
+      linesStack.appendChild(lineDiv);
     });
-  });
+
+    // Klammer-Gutter füllen — SYNCHRON, per fester Arithmetik (jede Zeile ist
+    // exakt 180px hoch, Notensystem immer bei 70px–110px ab Zeilenanfang).
+    // Keine getBoundingClientRect-Messung, kein setTimeout nötig — das behebt
+    // zugleich jedes denkbare Timing-Problem (Layout muss nicht "fertig" sein,
+    // da wir nichts vom tatsächlichen Rendering ablesen, sondern nur aus den
+    // festen CSS-Werten rechnen, die wir selbst gesetzt haben).
+    const ROW_H = 180, STAFF_TOP = 70, STAFF_BOTTOM = 110;
+    if (rowTrackIdxs.length) {
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const totalH = rowTrackIdxs.length * ROW_H;
+      const svg = document.createElementNS(svgNS, 'svg');
+      svg.classList.add('score-print-bracket-svg');
+      svg.setAttribute('viewBox', `0 0 34 ${totalH}`);
+      svg.setAttribute('preserveAspectRatio', 'none');
+
+      const topOfRow    = ri => ri * ROW_H + STAFF_TOP;
+      const bottomOfRow  = ri => ri * ROW_H + STAFF_BOTTOM;
+
+      // Durchgehende dünne Linie — verbindet IMMER alle Tracks des Systems
+      const front = document.createElementNS(svgNS, 'line');
+      front.setAttribute('x1', 30); front.setAttribute('x2', 30);
+      front.setAttribute('y1', topOfRow(0)); front.setAttribute('y2', bottomOfRow(rowTrackIdxs.length - 1));
+      front.setAttribute('stroke', '#000'); front.setAttribute('stroke-width', '1.5');
+      svg.appendChild(front);
+
+      // Klammern je definierter Gruppe — rowIdx = Position von trackIdx in rowTrackIdxs
+      (scorePrintSettings.groups || []).forEach(g => {
+        const rowIdxs = (g.trackIdxs || [])
+          .map(ti => rowTrackIdxs.indexOf(ti))
+          .filter(ri => ri !== -1)
+          .sort((a,b)=>a-b);
+        if (rowIdxs.length < 2) return;
+        const top = topOfRow(rowIdxs[0]), bottom = bottomOfRow(rowIdxs[rowIdxs.length-1]);
+        if (g.type === 'square') {
+          // Eckige Klammer: senkrechte Linie + kurze Querstriche oben/unten
+          const p = document.createElementNS(svgNS,'path');
+          p.setAttribute('d', `M12,${top} L4,${top} L4,${bottom} L12,${bottom}`);
+          p.setAttribute('stroke','#000'); p.setAttribute('stroke-width','2.2'); p.setAttribute('fill','none');
+          svg.appendChild(p);
+        } else {
+          // Geschweifte Klammer: zwei symmetrische Bezierkurven, treffen sich in der Mitte
+          const mid = (top + bottom) / 2;
+          const p = document.createElementNS(svgNS,'path');
+          p.setAttribute('d',
+            `M14,${top} C2,${top+(mid-top)*0.35} 10,${mid-10} 0,${mid} ` +
+            `C10,${mid+10} 2,${bottom-(bottom-mid)*0.35} 14,${bottom}`);
+          p.setAttribute('stroke','#000'); p.setAttribute('stroke-width','1.8'); p.setAttribute('fill','none');
+          svg.appendChild(p);
+        }
+      });
+
+      gutter.appendChild(svg);
+    }
+
+    systemDiv.appendChild(gutter);
+    systemDiv.appendChild(linesStack);
+    pageInner.appendChild(systemDiv);
+    systemsOnPage++;
+  }
+
+  // Nach dem Aufbau: jede Seite so skalieren, dass ihr kompletter (natürlich
+  // breiterer/höherer) Inhalt exakt auf die A4-Fläche passt — nichts wird
+  // abgeschnitten, stattdessen wird der ganze Inhalt gleichmäßig verkleinert.
+  setTimeout(() => {
+    document.querySelectorAll('.score-print-page').forEach(p => {
+      const inner = p.querySelector('.score-print-page-inner');
+      if (!inner) return;
+      inner.style.transform = 'none';
+      const availW = p.clientWidth  - 40; // abzgl. Innenabstand (padding 18/22px beidseitig)
+      const availH = p.clientHeight - 36;
+      const needW  = inner.scrollWidth, needH = inner.scrollHeight;
+      const scale  = Math.min(availW / needW, availH / needH, 1);
+      inner.style.transform = `scale(${scale})`;
+    });
+  }, 0);
 }
 
 // Beim Start Score aus localStorage laden
