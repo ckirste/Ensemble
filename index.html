@@ -1236,10 +1236,10 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;background-size:100% 1px}
 .score-timeline{display:flex;position:relative;height:100%;z-index:50}
 
-/* ── Druckvorschau: A4 querformat, im Browser auf Bildschirmbreite skaliert ── */
+/* ── Druckvorschau: Seitenformat per CSS-Variablen (wählbar), im Browser auf Bildschirmbreite skaliert ── */
 .score-print-page {
   background:#fff; color:#000; margin:0 auto 20px; position:relative;
-  width:100%; max-width:900px; aspect-ratio:297/210;
+  width:100%; max-width:900px; aspect-ratio:var(--pg-ar, 297/210);
   box-shadow:0 4px 24px rgba(0,0,0,.5); padding:18px 22px; box-sizing:border-box;
   overflow:hidden;
 }
@@ -1264,11 +1264,32 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .score-print-track-ctrl { display:flex; align-items:center; gap:4px; font-size:.6rem; color:var(--dim); }
 .score-print-bracket-svg { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
 @media print {
-  body * { visibility:hidden; }
-  #scorePrintOverlay, #scorePrintOverlay * { visibility:visible; }
-  #scorePrintOverlay { position:absolute; inset:0; background:#fff !important; padding:0; overflow:visible; }
-  #scorePrintOverlay > div:first-child { display:none; }
-  .score-print-page { box-shadow:none; page-break-after:always; max-width:none; width:297mm; height:210mm; aspect-ratio:unset; }
+  /* display:none statt visibility:hidden: visibility reserviert weiterhin den
+     Platz im Seitenfluss (nur unsichtbar, nicht entfernt) — das erzeugte
+     Geisterplatz/verschobene Extraseiten. display:none entfernt den Platz komplett. */
+  body > *:not(#scorePrintOverlay) { display:none !important; }
+  #scorePrintOverlay {
+    display:block !important; position:static !important; inset:auto;
+    background:#fff !important; padding:0 !important; overflow:visible !important;
+    overflow-y:visible !important; z-index:auto !important;
+  }
+  #scorePrintOverlay > div:first-child { display:none !important; }
+  .score-print-page {
+    box-shadow:none; page-break-after:always; max-width:none;
+    width:var(--pg-w, 297mm); height:var(--pg-h, 210mm); aspect-ratio:unset;
+    /* etwas mehr Sicherheitsabstand unten: manche Android-PDF-Renderer
+       schneiden trotz @page margin:0 einen kleinen Rand am Blattende ab */
+    padding-bottom:26px;
+  }
+  .score-print-page:last-child { page-break-after:auto; } /* keine leere Extraseite am Ende */
+  @page { size:var(--pg-size, A4 landscape); margin:0; }
+  /* Browser lassen Hintergründe beim Drucken standardmäßig weg — die Notenlinien
+     sind aber reine CSS-background-image-Verläufe. Ohne diese Erzwingung bleiben
+     sie im Ausdruck/PDF komplett unsichtbar. */
+  .score-print-line, .score-print-page {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
 }
 .score-step{flex-shrink:0;height:100%;position:relative;border-right:1px solid rgba(0,0,0,.06);cursor:pointer;background:rgba(0,0,0,.01);transition:background .1s}
 .score-step:hover{background:rgba(0,100,255,.05)}
@@ -1819,13 +1840,12 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 </div><!-- /tboneFullArea -->
 </div><!-- /tboneBody -->
 </div><!-- /tbonePanel -->
-    <div class="tbone-mega-blow" id="tbone-megaBlow">
-    <div class="tbone-mega-blow-inner">💨 BLASEN</div>
-    </div>
 </div><!-- /tboneWrap -->
 
   <!-- Mega blow area — fills landscape gap, invisible on portrait -->
-  
+  <div class="tbone-mega-blow" id="tbone-megaBlow">
+    <div class="tbone-mega-blow-inner">💨 BLASEN</div>
+  </div>
 
   <!-- Drum Pads -->
   <div class="drum-panel" id="drumPanel">
@@ -1908,6 +1928,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
       <button class="score-btn" onclick="scoreImportJSON()">⬆ JSON laden</button>
       <input type="file" id="scoreImportInput" accept=".json" style="display:none">
       <button class="score-btn" onclick="scoreOpenPrintPreview()" title="Druckvorschau: A4-Querformat mit einstellbaren Takten pro Zeile">🖨 Druckvorschau</button>
+      <button class="score-btn" onclick="scoreQuickPrint()" title="Baut die Druckvorschau im Hintergrund auf und druckt sofort — ohne manuell in die Vorschau wechseln zu müssen">🖨⚡ Direkt drucken</button>
     </div>
 
     <!-- score-body: toolbar links | content rechts -->
@@ -1962,7 +1983,16 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   <div id="scorePrintOverlay" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.85);overflow-y:auto;padding:16px">
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:#0d1220;border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:14px;position:sticky;top:0;z-index:10">
       <button class="score-btn" onclick="scoreClosePrintPreview()">✕ Schließen</button>
-      <button class="score-btn" onclick="window.print()">🖨 Drucken</button>
+      <button class="score-btn" onclick="scorePrintNow()">🖨 Drucken</button>
+      <span style="font-size:.55rem;color:var(--dim);max-width:200px">Falls der Button nicht sauber druckt: über das Browser-Menü (Teilen/Drucken) direkt auf dieser Vorschau drucken — funktioniert zuverlässig.</span>
+      <button class="score-btn" onclick="scoreExportPagesAsImages()" title="Umgeht die fehleranfällige Android-Druckpipeline: jede Seite wird als Bild gespeichert, das sich zuverlässig über die normale Foto-/Galerie-App zu PDF drucken lässt">🖼 Als Bild speichern</button>
+      <span style="font-size:.6rem;color:var(--dim)">Seitenformat</span>
+      <select id="scorePrintFormatSel" onchange="scorePrintSetFormat(this.value)">
+        <option value="a4-landscape">A4 Querformat</option>
+        <option value="a4-portrait">A4 Hochformat</option>
+        <option value="letter-landscape">Letter Querformat</option>
+        <option value="letter-portrait">Letter Hochformat</option>
+      </select>
       <span style="font-size:.6rem;color:var(--dim)">Takte/Zeile (global)</span>
       <button class="score-btn" style="width:26px;padding:2px 0" onclick="scorePrintSetGlobalBars(-1)">−</button>
       <span id="scorePrintGlobalBarsDisp" style="min-width:16px;text-align:center;font-family:'Share Tech Mono',monospace"></span>
@@ -7472,12 +7502,19 @@ function getLedgerLines(y, clef) {
   return lines;
 }
 
-// MIDI-Nummer pro Notenname
+// MIDI-Nummer pro Notenname — deckt den KOMPLETTEN Bereich ab, den Dropdown/
+// Notensystem erlauben (C1–C7), nicht nur C2–B5. Fehlte dieser Bereich, gab
+// noteToMidi() für Noten außerhalb davon lautlos den falschen Fallback-Wert
+// 60 (C4) zurück — Ursache für unzuverlässige Oktavverschiebung an den Rändern
+// des gültigen Tonhöhenbereichs.
 const NOTE_MIDI = {
+  'C1':24,'D1':26,'E1':28,'F1':29,'G1':31,'A1':33,'B1':35,
   'C2':36,'D2':38,'E2':40,'F2':41,'G2':43,'A2':45,'B2':47,
   'C3':48,'D3':50,'E3':52,'F3':53,'G3':55,'A3':57,'B3':59,
   'C4':60,'D4':62,'E4':64,'F4':65,'G4':67,'A4':69,'B4':71,
   'C5':72,'D5':74,'E5':76,'F5':77,'G5':79,'A5':81,'B5':83,
+  'C6':84,'D6':86,'E6':88,'F6':89,'G6':91,'A6':93,'B6':95,
+  'C7':96,'D7':98,'E7':100,'F7':101,'G7':103,'A7':105,'B7':107,
 };
 const ACC_OFFSET = { '#':1, 'b':-1, 'n':0, null:0 };
 
@@ -7623,9 +7660,9 @@ const STEP_W    = 120; // px pro Viertelnote
 // ── SVGs ─────────────────────────────────────────────────────
 // Exakt wie Original Editor.html — class="score-acc" setzt Größe+Position
 const svgAcc = {
-  '#':`<svg class="score-acc" viewBox="0 0 12 30"><path d="M3 12 L10 10 M3 20 L10 18 M5 6 L5 24 M8 6 L8 24" stroke="black" stroke-width="1.8" fill="none"/></svg>`,
-  'b':`<svg class="score-acc" viewBox="0 0 12 30"><path d="M4 6 L4 22 Q 10 22 10 18 Q 10 14 4 16" stroke="black" stroke-width="1.8" fill="none"/></svg>`,
-  'n': `<svg class="score-acc" viewBox="0 0 12 30"><path d="M4 10 L4 24 M8 12 L8 22 M4 14 L8 14 M4 22 L8 22" stroke="black" stroke-width="1.8" fill="none"/></svg>`,
+  '#':`<svg class="score-acc" width="14" height="32" viewBox="0 0 12 30"><path d="M3 12 L10 10 M3 20 L10 18 M5 6 L5 24 M8 6 L8 24" stroke="black" stroke-width="1.8" fill="none"/></svg>`,
+  'b':`<svg class="score-acc" width="14" height="32" viewBox="0 0 12 30"><path d="M4 6 L4 22 Q 10 22 10 18 Q 10 14 4 16" stroke="black" stroke-width="1.8" fill="none"/></svg>`,
+  'n': `<svg class="score-acc" width="14" height="32" viewBox="0 0 12 30"><path d="M4 10 L4 24 M8 12 L8 22 M4 14 L8 14 M4 22 L8 22" stroke="black" stroke-width="1.8" fill="none"/></svg>`,
 };
 // Violinschlüssel — detaillierter Pfad (Wikipedia-Vorlage)
 /*const svgClefT = `<svg viewBox="0 0 80 230" height="90" width="34">
@@ -7793,30 +7830,30 @@ fill="#000000" stroke="none">
 // Notenkopf: ry=4 → 4.8px gerendert → passt in 10px Linienabstand mit Luft
 // cx/cy/Hals bleiben gleich damit PITCH_MAP-Kalibrierung stimmt
 const noteIconsStaff = {
-  '1n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="15" cy="40" rx="8" ry="4" fill="none" stroke="black" stroke-width="2"/></svg>`,
-  '2n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="7" ry="4" fill="none" stroke="black" stroke-width="1.8"/><path class="note-stem" d="M17 40 L17 5" stroke="black" stroke-width="2"/></svg>`,
-  '4n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
-  '8n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 28" fill="none" stroke="black" stroke-width="3"/></svg>`,
-  '16n':`<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 22" fill="none" stroke="black" stroke-width="3"/><path d="M16 14 Q 27 24 27 31" fill="none" stroke="black" stroke-width="3"/></svg>`,
-  '32n':`<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 18" fill="none" stroke="black" stroke-width="3"/><path d="M16 10 Q 27 20 27 23" fill="none" stroke="black" stroke-width="3"/><path d="M16 15 Q 27 25 27 28" fill="none" stroke="black" stroke-width="3"/></svg>`,
+  '1n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="15" cy="40" rx="8" ry="4.2" fill="black"/><ellipse cx="15" cy="40" rx="4.2" ry="2" fill="white"/></svg>`,
+  '2n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="7" ry="4.2" fill="black"/><ellipse cx="10" cy="40" rx="3.6" ry="1.9" fill="white"/><path class="note-stem" d="M17 40 L17 5" stroke="black" stroke-width="2"/></svg>`,
+  '4n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
+  '8n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 28" fill="none" stroke="black" stroke-width="3"/></svg>`,
+  '16n':`<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 22" fill="none" stroke="black" stroke-width="3"/><path d="M16 14 Q 27 24 27 31" fill="none" stroke="black" stroke-width="3"/></svg>`,
+  '32n':`<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 18" fill="none" stroke="black" stroke-width="3"/><path d="M16 10 Q 27 20 27 23" fill="none" stroke="black" stroke-width="3"/><path d="M16 15 Q 27 25 27 28" fill="none" stroke="black" stroke-width="3"/></svg>`,
 };
 // Fahnenlose Varianten für Akkord-Töne, die nicht die oberste Note sind
 // (Notenkopf + Hals identisch zur Viertel-Note, nur ohne Fahnen-Kringel)
 const FLAGLESS_ICON = {
-  '8n':  `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
-  '16n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
-  '32n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
+  '8n':  `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
+  '16n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
+  '32n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
 };
 // Nur Notenkopf ohne Hals — für balkierte Noten, deren Stiel dynamisch
 // von scoreDrawBeams() gezeichnet wird (Länge hängt vom Balkenverlauf ab)
-const NOTEHEAD_ONLY = `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><ellipse class="note-head" cx="10" cy="40" rx="6" ry="4" fill="black"/></svg>`;
+const NOTEHEAD_ONLY = `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse class="note-head" cx="10" cy="40" rx="6" ry="4" fill="black"/></svg>`;
 const restIconsStaff = {
-  '1n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><rect x="5" y="30" width="20" height="6" fill="black"/></svg>`,
-  '2n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><rect x="5" y="24" width="20" height="6" fill="black"/></svg>`,
-  '4n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><path d="M10 15 L20 25 L10 30 L15 40 Q 10 45 5 40" stroke="black" stroke-width="2.5" fill="none"/></svg>`,
-  '8n': `<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="20" r="3" fill="black"/><path d="M10 20 Q 20 20 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
-  '16n':`<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="20" r="3" fill="black"/><circle cx="10" cy="30" r="3" fill="black"/><path d="M10 20 Q 20 20 20 40 M10 30 Q 20 30 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
-  '32n':`<svg viewBox="0 0 30 50" style="height:60px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="15" r="2" fill="black"/><circle cx="10" cy="25" r="2" fill="black"/><circle cx="10" cy="35" r="2" fill="black"/><path d="M10 15 Q 20 15 20 40 M10 25 Q 20 25 20 40 M10 35 Q 20 35 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
+  '1n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><rect x="5" y="30" width="20" height="6" fill="black"/></svg>`,
+  '2n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><rect x="5" y="24" width="20" height="6" fill="black"/></svg>`,
+  '4n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><path d="M10 15 L20 25 L10 30 L15 40 Q 10 45 5 40" stroke="black" stroke-width="2.5" fill="none"/></svg>`,
+  '8n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="20" r="3" fill="black"/><path d="M10 20 Q 20 20 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
+  '16n':`<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="20" r="3" fill="black"/><circle cx="10" cy="30" r="3" fill="black"/><path d="M10 20 Q 20 20 20 40 M10 30 Q 20 30 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
+  '32n':`<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="15" r="2" fill="black"/><circle cx="10" cy="25" r="2" fill="black"/><circle cx="10" cy="35" r="2" fill="black"/><path d="M10 15 Q 20 15 20 40 M10 25 Q 20 25 20 40 M10 35 Q 20 35 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
 };
 // Toolbar-Icons (klein, für Notenwert-Buttons) — dunkle Farbe auf dunklem Hintergrund
 const noteIcons = {
@@ -7854,6 +7891,7 @@ let scoreActive      = null;
 let scoreCursor      = null;
 let scoreTool        = { len:'4n', rest:false, dot:false };
 let scorePlayTimer   = null;
+let scorePlayStartTime = 0; // absoluter Zeit-Nullpunkt der aktuellen Wiedergabe (performance.now())
 let scorePlayPos     = null;
 let scorePlayTrackFilter = null;
 let scoreTrackTimers = [];
@@ -8143,12 +8181,20 @@ window.scoreDuplicateTrack = function(tIdx) {
 window.scoreOctaveShift = function(tIdx, direction) {
   const track = scoreTracks[tIdx];
   if (!track) return;
+  // Grenze am tatsächlich darstellbaren Bereich des Schlüssels ausrichten
+  // (nicht an der generischen MIDI-Grenze 0-127) — sonst konnten Noten durch
+  // mehrfaches Verschieben außerhalb des von PITCH_RANGE_T/B abgedeckten
+  // Bereichs (C2-C7 Violin- bzw. C1-C6 Bassschlüssel) landen und wurden dann
+  // nicht mehr korrekt dargestellt ("Button funktioniert nicht zuverlässig").
+  const range   = track.clef === 'bass' ? PITCH_RANGE_B : PITCH_RANGE_T;
+  const minMidi = noteToMidi(range[0], null);
+  const maxMidi = noteToMidi(range[range.length - 1], null);
   track.data.forEach(step => {
     if (step.rest) return;
     step.notes.forEach(n => {
       const midi    = noteToMidi(n.p, n.a);
       const newMidi = midi + direction * 12;
-      if (newMidi < 0 || newMidi > 127) return; // Grenzen einhalten
+      if (newMidi < minMidi || newMidi > maxMidi) return; // außerhalb des darstellbaren Bereichs
       const { p, a } = midiToNoteInKey(newMidi, track.key ?? 'C-Dur', track.clef);
       n.p = p; n.a = a;
     });
@@ -8982,11 +9028,17 @@ function scoreStartPlay(trackFilter, startSIdx) {
     ? [{ track: scoreTracks[trackFilter], ti: trackFilter }]
     : scoreTracks.map((track, ti) => ({ track, ti }));
 
+  // Gemeinsamer absoluter Zeit-Nullpunkt für ALLE Tracks — jeder Track
+  // schedult seinen nächsten Step nicht mehr per Verkettung von setTimeout-
+  // Delays (die sich über viele Steps aufaddieren können, siehe unten), sondern
+  // relativ zu diesem EINEN gemeinsamen Startzeitpunkt.
+  scorePlayStartTime = performance.now();
+
   // Jeden Track unabhängig starten
   tracksToPlay.forEach(({ track, ti }) => {
     scoreTrackPos[ti]   = startSIdx ?? 0;
     scoreTrackTimers[ti] = null;
-    scheduleTrackStep(ti, track, msPerBeat, 0);
+    scheduleTrackStep(ti, track, msPerBeat, 0, 0);
   });
 }
 
@@ -9007,7 +9059,17 @@ window.scoreTogglePlay = function() {
   scoreStartPlay(null, 0);
 };
 
-function scheduleTrackStep(ti, track, msPerBeat, delayMs) {
+// elapsedMs = kumulierte SOLL-Zeit seit Wiedergabestart (nicht die tatsächlich
+// verstrichene Zeit). Der tatsächliche setTimeout-Delay wird bei JEDEM Step neu
+// aus der Differenz zwischen SOLL-Zeitpunkt und aktueller Ist-Zeit berechnet —
+// dadurch kann sich kleine Rundungs-Ungenauigkeit von setTimeout NICHT über
+// viele Steps aufaddieren (was bisher v.a. bei mehreren gleichzeitig spielenden
+// Tracks und bei langen Noten/Pausen — halbe/ganze — zu hörbarem Timing-Drift
+// zwischen den Tracks führte, da jeder Step-Delay einfach an den vorherigen
+// verketteten setTimeout-Aufruf angehängt wurde, ohne Korrektur).
+function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
+  const targetTime  = scorePlayStartTime + elapsedMs;
+  const actualDelay = Math.max(0, targetTime - performance.now());
   scoreTrackTimers[ti] = setTimeout(() => {
     if (scorePlayTimer === null) return; // gestoppt
     const sIdx = scoreTrackPos[ti];
@@ -9086,14 +9148,14 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs) {
     scoreTrackPos[ti] = nextSIdx;
 
     if (nextSIdx < track.data.length) {
-      scheduleTrackStep(ti, track, msPerBeat, thisDurMs);
+      scheduleTrackStep(ti, track, msPerBeat, thisDurMs, elapsedMs + thisDurMs);
     } else {
       scoreTrackTimers[ti] = null;
       // Alle Tracks fertig? → Stop
       const allDone = scoreTrackTimers.every(t => t === null);
       if (allDone) setTimeout(() => scoreStopPlay(), thisDurMs);
     }
-  }, delayMs);
+  }, actualDelay);
 }
 
 // ── Export / Import ───────────────────────────────────────────
@@ -9147,16 +9209,42 @@ document.getElementById('scoreImportInput')?.addEventListener('change', function
 // Klammern gruppieren Tracks visuell (eckig = Orchester, geschweift = Tasteninstrument).
 // Die dünne durchgehende System-Linie ganz links wird IMMER gezeichnet, unabhängig davon.
 const SCORE_PRINT_KEY = 'ensemble_print_settings';
-let scorePrintSettings = { global: 4, perTrack: {}, groups: [] };
+let scorePrintSettings = { global: 4, perTrack: {}, groups: [], pageFormat: 'a4-landscape' };
 try {
   const saved = JSON.parse(localStorage.getItem(SCORE_PRINT_KEY) || 'null');
   if (saved && typeof saved.global === 'number') {
     scorePrintSettings = saved;
     if (!Array.isArray(scorePrintSettings.groups)) scorePrintSettings.groups = [];
+    if (!scorePrintSettings.pageFormat) scorePrintSettings.pageFormat = 'a4-landscape';
   }
 } catch(e) {}
 function scorePrintSave() {
   try { localStorage.setItem(SCORE_PRINT_KEY, JSON.stringify(scorePrintSettings)); } catch(e) {}
+}
+// Verfügbare Seitenformate: {mm-Breite, mm-Höhe, @page size-Schlüsselwort}
+const SCORE_PAGE_FORMATS = {
+  'a4-landscape':     { w: 297, h: 210, cssSize: 'A4 landscape' },
+  'a4-portrait':      { w: 210, h: 297, cssSize: 'A4 portrait'  },
+  'letter-landscape': { w: 279, h: 216, cssSize: 'letter landscape' },
+  'letter-portrait':  { w: 216, h: 279, cssSize: 'letter portrait'  },
+};
+window.scorePrintSetFormat = function(fmt) {
+  scorePrintSettings.pageFormat = fmt;
+  scorePrintSave();
+  scoreRenderPrintPages();
+};
+// Setzt die CSS-Variablen (Seitenverhältnis für Bildschirm, mm-Maße + @page für Druck)
+// auf jeder gerade existierenden Seite — muss nach jedem Neuaufbau erneut laufen.
+function scoreApplyPageFormat() {
+  const fmt = SCORE_PAGE_FORMATS[scorePrintSettings.pageFormat] || SCORE_PAGE_FORMATS['a4-landscape'];
+  document.querySelectorAll('.score-print-page').forEach(p => {
+    p.style.setProperty('--pg-ar', `${fmt.w}/${fmt.h}`);
+    p.style.setProperty('--pg-w', `${fmt.w}mm`);
+    p.style.setProperty('--pg-h', `${fmt.h}mm`);
+  });
+  // @page size gilt global fürs Dokument — auf :root setzen, da @page selbst außerhalb
+  // eines Selektor-Scopes liegt und nur eine globale CSS-Variable lesen kann
+  document.documentElement.style.setProperty('--pg-size', fmt.cssSize);
 }
 function scorePrintBarsForTrack(tIdx) {
   const v = scorePrintSettings.perTrack[tIdx];
@@ -9275,9 +9363,25 @@ window.scoreOpenPrintPreview = function() {
 window.scoreClosePrintPreview = function() {
   document.getElementById('scorePrintOverlay').style.display = 'none';
 };
+// Direktdruck ohne manuellen Umweg über die Vorschau: baut die Druckseiten
+// im Hintergrund auf (Overlay bleibt optisch geschlossen — die @media
+// print-Regel erzwingt seine Sichtbarkeit beim tatsächlichen Drucken ohnehin
+// per !important, unabhängig vom Bildschirm-Anzeigezustand) und löst danach
+// direkt window.print() aus.
+window.scoreQuickPrint = async function() {
+  const ov = document.getElementById('scorePrintOverlay');
+  if (ov.parentElement !== document.body) document.body.appendChild(ov);
+  scoreRenderPrintPages();
+  // Kurze Verzögerung, damit Layout/Bilder der neu aufgebauten Seiten fertig sind
+  await new Promise(r => setTimeout(r, 80));
+  scoreRecalcPrintScale();
+  window.print();
+};
 
 function scoreRenderPrintPreview() {
   document.getElementById('scorePrintGlobalBarsDisp').textContent = scorePrintSettings.global;
+  const fmtSel = document.getElementById('scorePrintFormatSel');
+  if (fmtSel) fmtSel.value = scorePrintSettings.pageFormat || 'a4-landscape';
   scoreRenderPrintPages();
 }
 
@@ -9290,11 +9394,20 @@ function scoreRenderPrintPages() {
   const measuresByTrack = scoreTracks.map(t => scoreMeasuresForTrack(t));
   const maxMeasures = Math.max(0, ...measuresByTrack.map(m => m.length));
 
-  // Systeme/Seite: grober Richtwert je nach Anzahl Tracks (mehr Tracks = weniger passt hin)
-  const SYSTEMS_PER_PAGE = scoreTracks.length <= 1 ? 5 : scoreTracks.length === 2 ? 3 : 2;
+  // Seiten werden anhand der TATSÄCHLICHEN Höhe gepackt, nicht anhand einer
+  // groben Schätzung "X Systeme passen pro Seite" — die Schätzung war falsch,
+  // sobald ein System mehr/weniger Zeilen hatte als angenommen, und der Rest
+  // wurde dann einfach abgeschnitten statt auf die nächste Seite umzubrechen.
+  // ROW_H (Zeilenhöhe) ist eine bekannte Konstante (siehe scoreDrawBeams-Bereich
+  // weiter unten), Seitenhöhe wird aus dem gewählten Format + Innenabstand
+  // analytisch berechnet — beides zusammen ergibt einen exakten Höhen-Budget.
+  const fmtForPaging = SCORE_PAGE_FORMATS[scorePrintSettings.pageFormat] || SCORE_PAGE_FORMATS['a4-landscape'];
+  const PAGE_ROW_H = 180;
+  const TITLE_H = 20; // Platz für Zeilenabstand zwischen Systemen (gap:14px + etwas Puffer)
+  const availPageH = fmtForPaging.h * PX_PER_MM - 36 - 26; // abzgl. Innenabstand + Sicherheitsabstand unten
   const pagesWrap = document.getElementById('scorePrintPages');
   pagesWrap.innerHTML = '';
-  let page = null, pageInner = null, systemsOnPage = 0;
+  let page = null, pageInner = null, heightOnPage = 0;
   const newPage = () => {
     page = document.createElement('div');
     page.className = 'score-print-page';
@@ -9302,14 +9415,23 @@ function scoreRenderPrintPages() {
     pageInner.className = 'score-print-page-inner';
     page.appendChild(pageInner);
     pagesWrap.appendChild(page);
-    systemsOnPage = 0;
+    heightOnPage = 0;
   };
   newPage();
 
   const liveUnits = document.querySelectorAll('.score-track-unit');
+  // Feste Ziel-Zeilenbreite für die Justierung — gleich für ALLE Zeilen, damit
+  // jede Zeile (egal wie viele Takte sie enthält) das Notensystem gleichmäßig
+  // bis zum rechten Rand ausfüllt. Seitenbreite minus Innenabstand minus
+  // Platz für Schlüssel+Vorzeichen (grober, aber ausreichender Festwert).
+  const lineTargetW = Math.max(200, fmtForPaging.w * PX_PER_MM - 40 - 120);
 
   for (let m = 0; m < maxMeasures; m += barsPerLine) {
-    if (systemsOnPage >= SYSTEMS_PER_PAGE) newPage();
+    // Höhe DIESES Systems: eine Zeile pro Track, die tatsächlich an dieser
+    // Stelle noch Takte hat (manche Tracks können früher enden als andere)
+    const tracksInThisSystem = scoreTracks.filter((t, tIdx) => measuresByTrack[tIdx].slice(m, m + barsPerLine).length > 0).length;
+    const systemH = tracksInThisSystem * PAGE_ROW_H + TITLE_H;
+    if (heightOnPage > 0 && heightOnPage + systemH > availPageH) newPage();
     const systemDiv = document.createElement('div');
     systemDiv.className = 'score-print-system';
 
@@ -9353,18 +9475,32 @@ function scoreRenderPrintPages() {
       if (liveTimeline && firstEl && lastEl) {
         const startX = firstEl.offsetLeft;
         const endX   = lastEl.offsetLeft + lastEl.offsetWidth;
-        viewport.style.width = Math.max(1, endX - startX) + 'px';
+        const naturalW = Math.max(1, endX - startX);
+        // Justierung (wie in echten Notensatzprogrammen): jede Zeile wird
+        // proportional gestreckt/gestaucht, damit sie die volle verfügbare
+        // Zeilenbreite ausfüllt — egal ob 2 oder 8 Takte hineinpassen. Ohne
+        // das würden wenige Takte pro Zeile nur einen kleinen Teil der Breite
+        // einnehmen statt die Zeile sinnvoll auszunutzen.
+        const scaleXFactor = Math.min(3, Math.max(0.5, lineTargetW / naturalW));
+        viewport.style.width = lineTargetW + 'px';
         const fullClone = liveTimeline.cloneNode(true);
         fullClone.style.position = 'relative';
-        fullClone.style.left = (-startX) + 'px';
+        fullClone.style.left = (-startX * scaleXFactor) + 'px';
+        fullClone.style.transform = `scaleX(${scaleXFactor})`;
+        fullClone.style.transformOrigin = 'left top';
+        // Auswahl-/Cursor-/Wiedergabe-Hervorhebungen aus dem Editor gehören nicht
+        // ins gedruckte Notenblatt — Klassen und Inline-Hervorhebungsfarben entfernen
+        fullClone.querySelectorAll('.selected, .sel-marked').forEach(el => {
+          el.classList.remove('selected', 'sel-marked');
+        });
         viewport.appendChild(fullClone);
 
         // Taktstriche als eigenes Overlay im Sichtfenster einfügen (an den
-        // Takt-Enden, relativ zur Fenster-Verschiebung positioniert)
+        // Takt-Enden, relativ zur Fenster-Verschiebung UND Justierung positioniert)
         measures.forEach(sIdxs => {
           const lastInBar = liveTimeline.querySelector(`.score-step[data-sidx="${sIdxs[sIdxs.length-1]}"]`);
           if (lastInBar) {
-            const barX = (lastInBar.offsetLeft + lastInBar.offsetWidth) - startX;
+            const barX = ((lastInBar.offsetLeft + lastInBar.offsetWidth) - startX) * scaleXFactor;
             const bar = document.createElement('div');
             bar.className = 'score-print-barline';
             bar.style.left = barX + 'px';
@@ -9433,25 +9569,270 @@ function scoreRenderPrintPages() {
     systemDiv.appendChild(gutter);
     systemDiv.appendChild(linesStack);
     pageInner.appendChild(systemDiv);
-    systemsOnPage++;
+    heightOnPage += systemH;
   }
 
-  // Nach dem Aufbau: jede Seite so skalieren, dass ihr kompletter (natürlich
-  // breiterer/höherer) Inhalt exakt auf die A4-Fläche passt — nichts wird
-  // abgeschnitten, stattdessen wird der ganze Inhalt gleichmäßig verkleinert.
-  setTimeout(() => {
-    document.querySelectorAll('.score-print-page').forEach(p => {
-      const inner = p.querySelector('.score-print-page-inner');
-      if (!inner) return;
-      inner.style.transform = 'none';
-      const availW = p.clientWidth  - 40; // abzgl. Innenabstand (padding 18/22px beidseitig)
-      const availH = p.clientHeight - 36;
-      const needW  = inner.scrollWidth, needH = inner.scrollHeight;
-      const scale  = Math.min(availW / needW, availH / needH, 1);
-      inner.style.transform = `scale(${scale})`;
-    });
-  }, 0);
+  // Seitenformat (Bildschirm-Seitenverhältnis + mm-Maße für den Druck) anwenden,
+  // dann skalieren — beides muss NACH dem Anwenden des Formats passieren, sonst
+  // rechnet die Skalierung noch mit den alten Seitenmaßen.
+  scoreApplyPageFormat();
+  setTimeout(scoreRecalcPrintScale, 0);
 }
+
+// Skaliert den Inhalt jeder Seite so, dass er exakt auf die aktuelle Seitenfläche
+// passt — nichts wird abgeschnitten, der ganze Inhalt wird gleichmäßig verkleinert.
+// Eigene Funktion, weil sie zusätzlich bei beforeprint erneut laufen muss: beim
+// Drucken wechselt die Seite von Bildschirm-Pixelmaßen auf echte mm-Maße, und der
+// beim Öffnen der Vorschau berechnete Skalierungsfaktor passt dann nicht mehr —
+// das war die Ursache dafür, dass der PDF-Druck anders aussah als die Vorschau.
+// CSS-Spec-Konstante, NICHT geräteabhängig: 1 Inch = 96 CSS-px = 25.4mm.
+// Das ist per Spezifikation fix, unabhängig von der physischen Bildschirm-/
+// Druck-Auflösung — daher lässt sich die verfügbare Seitenfläche daraus
+// analytisch berechnen, ohne den Browser zur Laufzeit danach zu fragen.
+const PX_PER_MM = 96 / 25.4;
+function scoreRecalcPrintScale() {
+  const fmt = SCORE_PAGE_FORMATS[scorePrintSettings.pageFormat] || SCORE_PAGE_FORMATS['a4-landscape'];
+  document.querySelectorAll('.score-print-page').forEach(p => {
+    const inner = p.querySelector('.score-print-page-inner');
+    if (!inner) return;
+    inner.style.transform = 'none';
+    // WICHTIG: availW/availH NICHT über p.clientWidth/clientHeight ermitteln.
+    // Android Chromes Druck-/PDF-Pipeline liefert clientWidth/clientHeight
+    // während der Druck-Umschaltung nachweislich unzuverlässige Werte (das
+    // war die eigentliche Ursache für den beobachteten Faktor ~0,5, nicht
+    // ein Timing-Problem mit beforeprint). Stattdessen wird die Seitengröße
+    // rein rechnerisch aus den mm-Vorgaben abgeleitet — geräteunabhängig.
+    const isPrinting = window.matchMedia && window.matchMedia('print').matches;
+    let availW, availH;
+    if (isPrinting) {
+      availW = fmt.w * PX_PER_MM - 40; // abzgl. Innenabstand (padding 18/22px beidseitig)
+      availH = fmt.h * PX_PER_MM - 36;
+    } else {
+      availW = p.clientWidth  - 40; // Bildschirm-Vorschau: gemessene Größe ist hier unproblematisch
+      availH = p.clientHeight - 36;
+    }
+    const needW  = inner.scrollWidth, needH = inner.scrollHeight;
+    if (!needW || !needH) return;
+    // Seite bleibt IMMER vollständiges A4/Letter-Format — Inhalt wird nur bei
+    // Bedarf verkleinert (falls er nicht passt), aber NIE künstlich vergrößert,
+    // damit wenig Inhalt nicht unnatürlich aufgebläht wird. Deckel fest bei 1.
+    const scale = Math.min(availW / needW, availH / needH, 1);
+    inner.style.transform = `scale(${scale})`;
+  });
+}
+window.addEventListener('beforeprint', scoreRecalcPrintScale);
+window.addEventListener('afterprint', scoreRecalcPrintScale); // Vorschau danach wieder auf Bildschirmmaß zurück
+// Zusätzlich matchMedia('print') als robusteren Mechanismus: beforeprint/afterprint
+// feuern in manchen mobilen Browsern (z.B. "Drucken" → "Als PDF sichern" über das
+// Teilen-Menü) nicht zuverlässig — das führte dazu, dass die Skalierung auf dem
+// alten, für die kleinere Bildschirm-Vorschau berechneten Wert stehen blieb und
+// das PDF dadurch deutlich kleiner/anders skaliert wirkte als die Vorschau.
+if (window.matchMedia) {
+  const scorePrintMQ = window.matchMedia('print');
+  const scorePrintMQHandler = () => setTimeout(scoreRecalcPrintScale, 0);
+  if (scorePrintMQ.addEventListener) scorePrintMQ.addEventListener('change', scorePrintMQHandler);
+  else if (scorePrintMQ.addListener) scorePrintMQ.addListener(scorePrintMQHandler); // ältere Browser
+}
+// DURCHBRUCH: User hat bestätigt, dass Drucken über den NATIVEN Browser-/
+// Android-Mechanismus (Teilen-Menü → Drucker, direkt auf der sichtbaren
+// Druckvorschau angewendet) korrekt funktioniert — inklusive Notenköpfen,
+// Schlüssel, Vorzeichen, Klammern, alles kam richtig im PDF an! Das bedeutet:
+// der native Druckweg funktioniert grundsätzlich einwandfrei, nur unser
+// EIGENER JS-Umweg über ein unsichtbares iframe/neues Fenster war das Problem
+// (vermutlich weil @media print dort nicht zuverlässig/rechtzeitig griff).
+// Lösung: einfach direktes window.print() auf der sichtbar geöffneten
+// Druckvorschau selbst — exakt das, was beim erfolgreichen manuellen Test
+// passiert ist, nur per Button-Klick statt über das Browser-Menü ausgelöst.
+window.scorePrintNow = function() {
+  scoreRecalcPrintScale();
+  window.print();
+};
+
+// ── Bild-Export als robuste Alternative zum Drucken ─────────────────────────
+// window.print() (Hauptfenster, neues Fenster, iframe — alles ausprobiert)
+// erwies sich auf Android Chrome als grundsätzlich unzuverlässig für diese
+// Seite (leere PDFs). Diese Funktion umgeht die Browser-Druckpipeline
+// komplett: jede Seite wird per html2canvas in ein PNG-Bild gerastert und
+// heruntergeladen. Der Nutzer kann diese Bilder dann über die normale
+// Foto-/Galerie-App drucken — das ist auf Android für Bild→PDF sehr
+// zuverlässig, da dabei keine der fehleranfälligen CSS/@media-print-Pfade
+// durchlaufen werden, die uns bisher Probleme gemacht haben.
+function scoreLoadHtml2Canvas() {
+  return new Promise((resolve, reject) => {
+    if (window.html2canvas) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('html2canvas konnte nicht geladen werden — Internetverbindung prüfen.'));
+    document.head.appendChild(s);
+  });
+}
+// Rastert einen SVG-String einmalig in ein PNG-Data-URL (über eine kleine
+// Offscreen-Canvas via <img>). Ergebnisse werden gecacht, da dieselben Icons
+// (Notenköpfe, Fahnen, Vorzeichen) immer wieder verwendet werden.
+const scoreIconPngCache = new Map();
+function scoreSvgToPngDataURL(svgOuterHTML, w, h) {
+  if (scoreIconPngCache.has(svgOuterHTML)) return scoreIconPngCache.get(svgOuterHTML);
+  // Unsere SVG-Vorlagen wurden bisher immer per innerHTML in eine bestehende
+  // HTML-Seite eingefügt (Namespace wird da automatisch vom Browser ergänzt).
+  // Als EIGENSTÄNDIGES Blob-Bild geladen ist das explizite xmlns-Attribut aber
+  // zwingend nötig — fehlt es, gilt das SVG als ungültiges XML-Dokument und
+  // die Bild-Ladung schlägt lautlos (ohne erkennbaren Fehler) fehl.
+  let svgFixed = svgOuterHTML;
+  if (!/xmlns=/.test(svgFixed)) {
+    svgFixed = svgFixed.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  const p = new Promise((resolve) => {
+    const scaleF = 3; // für Druckqualität etwas höher aufgelöst rastern
+    const blob = new Blob([svgFixed], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = w * scaleF; canvas.height = h * scaleF;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      // Statt lautlos wegzulassen: auffälligen roten Platzhalter zeichnen, damit
+      // ein evtl. weiterhin fehlschlagendes Icon im nächsten Test SICHTBAR ist,
+      // statt einfach zu fehlen (macht die Fehlersuche beim nächsten Mal einfacher).
+      const canvas = document.createElement('canvas');
+      canvas.width = w * scaleF; canvas.height = h * scaleF;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#f00';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.src = url;
+  });
+  scoreIconPngCache.set(svgOuterHTML, p);
+  return p;
+}
+// Ersetzt vorübergehend alle Noten-/Vorzeichen-SVGs innerhalb eines Elements
+// durch <img>-Tags mit vorgerasterten PNGs — html2canvas verarbeitet <img>
+// nachweislich zuverlässig, im Gegensatz zu unseren verschachtelten, absolut
+// positionierten Inline-SVGs (die kamen bisher nicht im Export an). Gibt eine
+// Restore-Funktion zurück, die die Original-SVGs nach dem Rastern zurücksetzt.
+async function scoreSwapSvgsForImages(root) {
+  const svgs = [...root.querySelectorAll('svg')];
+  const restores = [];
+  // Zähl-Diagnose: wie viele SVGs gefunden/erfolgreich getauscht, nach Typ
+  const stats = { total: svgs.length, ok: 0, failed: 0, failedClasses: [], sampleDataURL: null };
+  await Promise.all(svgs.map(async svg => {
+    // WICHTIG: offsetWidth/Height statt getBoundingClientRect() verwenden.
+    // getBoundingClientRect() liefert die bereits durch den transform:scale()
+    // der Elternseite beeinflusste SICHTBARE Größe — da das ausgetauschte <img>
+    // an derselben Stelle im DOM sitzt, würde dieselbe Skalierung ein zweites
+    // Mal darauf angewendet (doppelte Verkleinerung). offsetWidth/Height liefert
+    // die lokale, unskalierte Layout-Größe, wird dann nur EINMAL vom Eltern-
+    // transform mitskaliert — genau wie beim Original-SVG zuvor.
+    const w = svg.offsetWidth  || parseFloat(svg.style.width)  || 30;
+    const h = svg.offsetHeight || parseFloat(svg.style.height) || 60;
+    const dataURL = await scoreSvgToPngDataURL(svg.outerHTML, w, h);
+    if (!dataURL) {
+      stats.failed++;
+      stats.failedClasses.push(svg.getAttribute('class') || '(ohne Klasse)');
+      return;
+    }
+    stats.ok++;
+    // Ersten Notenkopf-ähnlichen Treffer (viewBox 0 0 30 50, also Note/Fahne,
+    // nicht Vorzeichen/Schlüssel) für visuelle Direktkontrolle merken —
+    // sowohl das erzeugte PNG als auch das ROHE SVG-Markup selbst, um zu
+    // isolieren ob der Fehler im SVG-Rendering an sich liegt oder in unserem
+    // eigenen Offscreen-Canvas-Umwandlungsschritt (scoreSvgToPngDataURL).
+    if (!stats.sampleDataURL && svg.outerHTML.includes('viewBox="0 0 30 50"')) {
+      stats.sampleDataURL = dataURL;
+      stats.sampleRawSvg = svg.outerHTML;
+    }
+    const img = document.createElement('img');
+    img.src = dataURL;
+    img.style.cssText = svg.style.cssText || svg.getAttribute('style') || '';
+    img.style.width = w + 'px';
+    img.style.height = h + 'px';
+    img.className = svg.getAttribute('class') || '';
+    svg.replaceWith(img);
+    // WICHTIG: explizit auf vollständiges Dekodieren jedes Bildes warten, bevor
+    // die Funktion zurückkehrt. `img.src = dataURL` setzt die Quelle zwar sofort,
+    // das eigentliche Dekodieren/Malfertig-Sein braucht aber (v.a. bei VIELEN
+    // gleichzeitig eingefügten Bildern) noch einen Moment — lief html2canvas
+    // vorher schon los, bevor alle Bilder fertig waren, blieben manche leer.
+    // Genau das erklärt "funktionierte bei weniger Inhalt besser".
+    try { await img.decode(); } catch (e) { /* Bild trotzdem einfügen, nicht abbrechen */ }
+    restores.push(() => img.replaceWith(svg));
+  }));
+  const restoreFn = () => restores.forEach(fn => fn());
+  restoreFn.stats = stats;
+  return restoreFn;
+}
+window.scoreExportPagesAsImages = async function() {
+  const btn = document.querySelector('[onclick="scoreExportPagesAsImages()"]');
+  const origLabel = btn?.textContent;
+  try {
+    if (btn) btn.textContent = '⏳ Lädt…';
+    await scoreLoadHtml2Canvas();
+    const pages = [...document.querySelectorAll('.score-print-page')];
+    for (let i = 0; i < pages.length; i++) {
+      if (btn) btn.textContent = `⏳ Seite ${i+1}/${pages.length}…`;
+      // SVGs (Notenköpfe, Fahnen, Vorzeichen) vorübergehend durch vorgerasterte
+      // PNG-<img>-Tags ersetzen — siehe scoreSwapSvgsForImages weiter oben.
+      const restore = await scoreSwapSvgsForImages(pages[i]);
+      // TEMPORÄRE DEBUG-ANZEIGE: zeigt wie viele SVGs gefunden/erfolgreich
+      // getauscht wurden, direkt sichtbar auf der Seite — damit sich das
+      // Kopf/Vorzeichen-Problem am nächsten Bild ohne weiteres Raten
+      // diagnostizieren lässt. Wird entfernt, sobald der Bug gefunden ist.
+      const dbg = document.createElement('div');
+      dbg.style.cssText = 'position:absolute;bottom:2px;left:2px;font-size:10px;font-family:monospace;color:#c00;background:#fff;padding:2px;z-index:9999;white-space:pre;';
+      dbg.textContent = `svgs:${restore.stats.total} ok:${restore.stats.ok} failed:${restore.stats.failed} [${restore.stats.failedClasses.join(',')}]`;
+      pages[i].appendChild(dbg);
+      // Zusätzlich: eine Beispiel-Noten-PNG groß und isoliert sichtbar auf die
+      // Seite zeichnen, um direkt zu sehen was die Rasterung tatsächlich
+      // erzeugt (statt nur zu wissen "kein Fehler aufgetreten")
+      if (restore.stats.sampleDataURL) {
+        const sample = document.createElement('img');
+        sample.src = restore.stats.sampleDataURL;
+        sample.style.cssText = 'position:absolute;top:2px;right:2px;width:120px;height:200px;border:2px solid red;background:#ff0;z-index:9999;';
+        pages[i].appendChild(sample);
+        restore.sampleEl = sample;
+        try { await sample.decode(); } catch(e) {}
+      }
+      if (restore.stats.sampleRawSvg) {
+        // Zweite Vergleichs-Kachel: das ROHE SVG-Markup direkt als Bildquelle
+        // (data:image/svg+xml, OHNE unseren eigenen Canvas-Umwandlungsschritt)
+        // — rendert das hier korrekt, liegt der Fehler in scoreSvgToPngDataURL;
+        // bleibt auch DAS leer, liegt es am SVG-Markup selbst.
+        const sample2 = document.createElement('img');
+        sample2.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(restore.stats.sampleRawSvg);
+        sample2.style.cssText = 'position:absolute;top:206px;right:2px;width:120px;height:200px;border:2px solid blue;background:#0ff;z-index:9999;';
+        pages[i].appendChild(sample2);
+        restore.sampleEl2 = sample2;
+        try { await sample2.decode(); } catch(e) {}
+      }
+      // scale:2 für ordentliche Druckqualität; backgroundColor explizit weiß,
+      // da die Seite sonst mit transparentem Hintergrund gerastert würde
+      const canvas = await window.html2canvas(pages[i], { scale: 2, backgroundColor: '#ffffff' });
+      restore(); // Original-SVGs zurück, damit die Live-Ansicht unverändert bleibt
+      dbg.remove();
+      restore.sampleEl?.remove();
+      restore.sampleEl2?.remove();
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = `Notenblatt_Seite_${i+1}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      await new Promise(r => setTimeout(r, 300)); // Downloads nicht überlappen lassen
+    }
+    if (btn) btn.textContent = '✅ Gespeichert!';
+    setTimeout(() => { if (btn) btn.textContent = origLabel; }, 2000);
+  } catch (err) {
+    alert('Bild-Export fehlgeschlagen: ' + err.message);
+    if (btn) btn.textContent = origLabel;
+  }
+};
 
 // Beim Start Score aus localStorage laden
 setTimeout(scoreAutoRestore, 100);
@@ -11804,6 +12185,19 @@ function tboneSizeMegaBlow() {
   const full   = document.getElementById('tboneFullArea');
   if (!mega || !header || !full) return;
 
+  // Wenn das Posaunen-Panel eingeklappt ist, darf der Blasebereich NICHT die
+  // 'landscape-active'-Klasse bekommen — deren CSS-Regel erzwingt
+  // display:flex!important und würde den Panel-Toggle-Zustand überschreiben
+  // (der Blasebereich blieb dadurch bisher im Querformat sichtbar, obwohl
+  // das Panel eingeklappt war).
+  const panel = document.getElementById('tbonePanel');
+  const panelClosed = panel && panel.style.display === 'none';
+  if (panelClosed) {
+    mega.classList.remove('landscape-active');
+    mega.style.height = '';
+    return;
+  }
+
   const isLandscape = window.innerWidth > window.innerHeight;
   if (!isLandscape) {
     mega.classList.remove('landscape-active');
@@ -13268,7 +13662,7 @@ function panelToggleSave(states) {
 // label        : Text im Streifen
 // storageKey   : localStorage-Key
 // defaultOpen  : ob Panel beim ersten Besuch sichtbar ist
-function addPanelToggle(panelId, label, storageKey, defaultOpen = true) {
+function addPanelToggle(panelId, label, storageKey, defaultOpen = true, extraIds = []) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
 
@@ -13280,14 +13674,25 @@ function addPanelToggle(panelId, label, storageKey, defaultOpen = true) {
   btn.innerHTML = `<span>${label}</span><span class="ptb-arrow">▾</span>`;
   btn.title = open ? 'Panel einklappen' : 'Panel aufklappen';
 
+  // Zusätzliche Elemente (per ID), die NICHT im DOM innerhalb des Panels
+  // liegen, aber trotzdem mit ein-/ausklappen sollen — z.B. der Posaunen-
+  // Blasebereich, der als eigenständiges Geschwister-Element außerhalb des
+  // tbonePanel-Divs positioniert ist.
+  const extraEls = extraIds.map(id => document.getElementById(id)).filter(Boolean);
+
   function apply(isOpen) {
     open = isOpen;
     panel.style.display = open ? '' : 'none';
+    extraEls.forEach(el => { el.style.display = open ? '' : 'none'; });
     btn.classList.toggle('closed', !open);
     btn.title = open ? 'Panel einklappen' : 'Panel aufklappen';
     const s = panelToggleLoad();
     s[storageKey] = open;
     panelToggleSave(s);
+    // Posaunen-Blasebereich hat eine eigene Landscape-Höhenberechnung, die
+    // sonst erst beim nächsten Resize-Event greift — sofort neu anstoßen,
+    // damit er unmittelbar mit ein-/ausklappt statt verzögert.
+    if (typeof tboneSizeMegaBlow === 'function') tboneSizeMegaBlow();
   }
 
   apply(open);
@@ -13307,6 +13712,7 @@ function addPanelToggle(panelId, label, storageKey, defaultOpen = true) {
   addPanelToggle('ancLayer',     '🎵 Preset-Layer',       'layer',   true);
   addPanelToggle('ancFX',        '🎛 Effekte & EQ',       'fx',      true);
   addPanelToggle('drawbarPanel', '🎹 Zugriegel',          'drawbar', false);
+  addPanelToggle('tbonePanel',   '🎺 Posaune',            'tbone',   true, ['tbone-megaBlow']);
   addPanelToggle('viz',          '📊 Visualizer',         'viz',     false);
   addPanelToggle('qzPanel',      '🎸 Quintenzirkel',      'qz',      false);
   addPanelToggle('chordPanel',   '🎼 Akkorde',            'chord',   true);
