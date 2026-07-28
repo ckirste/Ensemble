@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v115_1</title>
+<title>Ensemble v115</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1259,6 +1259,11 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .score-print-line .score-timeline { overflow:visible; flex:1; }
 .score-print-line .score-step { cursor:default !important; }
 .score-print-line .score-step-selbox { display:none !important; }
+.score-print-line .score-step-idx { display:none !important; }
+.score-print-line .score-step-barnum {
+  display:block !important; position:absolute; top:2px; right:2px; left:auto;
+  font-size:9px; font-family:'Share Tech Mono',monospace; color:#666;
+}
 .score-print-clefkey { width:70px; flex-shrink:0; position:relative; }
 .score-print-barline { width:2px; background:#000; flex-shrink:0; margin:0; position:absolute; top:70px; height:40px; }
 .score-print-track-ctrl { display:flex; align-items:center; gap:4px; font-size:.6rem; color:var(--dim); }
@@ -1311,6 +1316,12 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   content: '✓'; position: absolute; top: -1px; left: 1px;
   font-size: 9px; color: #fff; line-height: 12px;
 }
+.score-step-idx {
+  position: absolute; top: 2px; left: 2px; font-size: 7px;
+  font-family: 'Share Tech Mono', monospace; color: var(--dim);
+  pointer-events: none; white-space: nowrap; z-index: 10; line-height: 1;
+}
+.score-step-barnum { display: none; } /* im Editor ausgeblendet, da score-step-idx dasselbe abdeckt */
 .score-sel-toolbar {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   padding: 4px 8px; background: rgba(155,127,232,.12);
@@ -8496,6 +8507,20 @@ function scoreRender() {
     timeline.className = 'score-timeline';
     let totalX = 0, durSum = 0;
 
+    // Takt/Note-Index je Step vorab berechnen — hilft bei Mehrspur-Wiedergabe
+    // die Übersicht zu behalten ("wo bin ich gerade in Takt X"). Taktzählung
+    // startet bei 1, Notenzählung innerhalb des Takts ebenfalls bei 1.
+    const beatsPerBar = track.timeSigNum || 4;
+    const stepIdxInfo = []; // stepIdxInfo[sIdx] = {measure, noteInBar}
+    { let measure = 1, noteInBar = 1, acc = 0;
+      track.data.forEach((s, sIdx) => {
+        stepIdxInfo[sIdx] = { measure, noteInBar };
+        acc += (DUR_MAP[s.len] || 1) * (s.dot ? 1.5 : 1);
+        noteInBar++;
+        if (acc >= beatsPerBar - 1e-6) { measure++; noteInBar = 1; acc = 0; }
+      });
+    }
+
     track.data.forEach((s, sIdx) => {
       const step = document.createElement('div');
       step.className = 'score-step';
@@ -8523,6 +8548,24 @@ function scoreRender() {
         scoreRender();
       });
       step.appendChild(selbox);
+
+      // Takt/Note-Index-Label (z.B. "3/5") — im Editor immer sichtbar,
+      // hilft bei Mehrspur-Wiedergabe die Übersicht zu behalten.
+      const idxInfo = stepIdxInfo[sIdx];
+      const idxLbl = document.createElement('div');
+      idxLbl.className = 'score-step-idx';
+      idxLbl.textContent = `${idxInfo.measure}/${idxInfo.noteInBar}`;
+      step.appendChild(idxLbl);
+
+      // Reine Taktnummer — nur am ersten Step eines Takts gefüllt, nur im
+      // Druck sichtbar (wie in echter Notation üblich: nur Taktnummer, keine
+      // Notennummer). Im Editor per CSS ausgeblendet (score-step-idx deckt das ab).
+      if (idxInfo.noteInBar === 1) {
+        const barNumLbl = document.createElement('div');
+        barNumLbl.className = 'score-step-barnum';
+        barNumLbl.textContent = idxInfo.measure;
+        step.appendChild(barNumLbl);
+      }
 
       step.addEventListener('click', e => {
         if (e.shiftKey) {
