@@ -3299,10 +3299,30 @@ function getActiveLayers() { return layers.filter(l => !l.muted); }
 
 function addLayer(sfIdx = 0, presetIdx = 0, midiCh = null) {
   const id = nextLayerId++;
-  layers.push({ id, sfIdx, presetIdx, vol: 0.8, muted: false, transpose: 0, keyLo: 0, keyHi: 127, melody: false, melodyNote: null, bass: false, bassNote: null, midiCh, midiDeviceId: null, velMode: 'free', sources: ['screen','keys','midi','player','remote'], delayWet: 0, delayTime: 37 });
+  layers.push({
+    id, sfIdx, presetIdx,
+    vol: 0.8, muted: false,
+    transpose: 0,
+    keyLo: 0, keyHi: 127,
+    melody: false, melodyNote: null,
+    bass: false, bassNote: null,
+    midiCh, midiDeviceId: null,
+    velMode: 'free', velOverride: 0,
+    sources: ['screen','keys','midi','player','remote'],
+    saturation: 0,
+    buzzEnabled: false, buzzThreshold: 127, buzzIntensity: 70,
+    compEnabled: false, compThreshold: -24, compRatio: 3,
+    envOverride: {},
+    delayWet: 0, delayTime: 37,
+  });
+  // Aktuellen globalen Hüllkurven-Stand auf den neuen Layer anwenden,
+  // damit er klanglich zu den bereits vorhandenen Layern passt.
+  ['fxAdsrAttack','fxAdsrSustain','fxAdsrRelease'].forEach(sid => {
+    document.getElementById(sid)?.dispatchEvent(new Event('input'));
+  });
   renderLayers();
 }
-
+  
 function removeLayer(id) {
   // Alle Voices dieses Layers via SpessaSynth stoppen
   [...engine.voices.keys()]
@@ -4055,19 +4075,52 @@ function renderLayers() {
     copyBtn.style.cssText = 'background:#07070f;border:1px solid var(--border);width:36px;height:36px;border-radius:7px;cursor:pointer;font-size:1rem;transition:all .12s;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--dim)';
     copyBtn.addEventListener('mouseenter', () => copyBtn.style.color = 'var(--accent)');
     copyBtn.addEventListener('mouseleave', () => copyBtn.style.color = 'var(--dim)');
+
     copyBtn.addEventListener('click', () => {
-      const id = nextLayerId++;
-      const clone = Object.assign({}, layer, {
-        id,
-        melodyNote: null,
-        bassNote: null,
-        _expanded: false,
-      });
-      const idx = layers.indexOf(layer);
-      layers.splice(idx + 1, 0, clone);
-      renderLayers();
-      engine.ensureAndGetStartT().then(() => engine.prewarmPreset(clone.sfIdx, clone.presetIdx));
-    });
+  const id = nextLayerId++;
+
+  // Deep-ish Copy: verschachtelte Objekte/Arrays (envOverride, sources)
+  // müssen eigene Referenzen bekommen, damit Original und Kopie sich
+  // nicht gegenseitig überschreiben.
+  const clone = Object.assign({}, layer, {
+    id,
+    // Laufzeit-Zustände zurücksetzen — die Kopie ist eine neue Stimme
+    melodyNote: null,
+    bassNote:   null,
+    _expanded:  false,
+    // Frische Referenzen für alles, was sonst geteilt würde
+    envOverride: layer.envOverride ? { ...layer.envOverride } : {},
+    sources:     layer.sources     ? [...layer.sources]     : ['screen','keys','midi','player'],
+  });
+
+  // Sicherheitsnetz: Falls die Quell-Layer aus einem alten Save-State kommt
+  // und eines der Felder noch gar nicht hat, hier mit Defaults auffüllen —
+  // damit die Kopie identisch zu einem per addLayer() angelegten Layer ist.
+  if (clone.saturation    == null) clone.saturation    = 0;
+  if (clone.buzzEnabled   == null) clone.buzzEnabled   = false;
+  if (clone.buzzThreshold == null) clone.buzzThreshold = 127;
+  if (clone.buzzIntensity == null) clone.buzzIntensity = 70;
+  if (clone.compEnabled   == null) clone.compEnabled   = false;
+  if (clone.compThreshold == null) clone.compThreshold = -24;
+  if (clone.compRatio     == null) clone.compRatio     = 3;
+  if (clone.velMode       == null) clone.velMode       = 'free';
+  if (clone.velOverride   == null) clone.velOverride   = 0;
+  if (clone.delayWet      == null) clone.delayWet      = 0;
+  if (clone.delayTime     == null) clone.delayTime     = 37;
+
+  const idx = layers.indexOf(layer);
+  layers.splice(idx + 1, 0, clone);
+  renderLayers();
+
+  // Aktuellen globalen Hüllkurven-Stand auf den neuen Layer anwenden,
+  // analog zu addLayer(). Der dispatchEvent triggert applyGlobalAdsr(),
+  // das envOverride auf ALLEN Layern synchronisiert — inkl. der Kopie.
+  ['fxAdsrAttack','fxAdsrSustain','fxAdsrRelease'].forEach(sid => {
+    document.getElementById(sid)?.dispatchEvent(new Event('input'));
+  });
+
+  engine.ensureAndGetStartT().then(() => engine.prewarmPreset(clone.sfIdx, clone.presetIdx));
+});
     compact.appendChild(copyBtn);
     compact.appendChild(expandBtn);
 
@@ -5026,7 +5079,13 @@ function fxSave() {
     const sliders = document.querySelectorAll('#fxSliders input[type=range]');
     const vals = {};
     FX_DEFS.forEach((def, i) => { vals[def.id] = parseFloat(sliders[i].value); });
-    localStorage.setItem(FX_KEY, JSON.stringify({ sliders: vals, filterType }));
+    // ADSR-Slider explizit mit sichern — liegen NICHT in #fxSliders
+    const adsr = {
+      attack:  parseFloat(document.getElementById('fxAdsrAttack')?.value  ?? 0),
+      sustain: parseFloat(document.getElementById('fxAdsrSustain')?.value ?? 1000),
+      release: parseFloat(document.getElementById('fxAdsrRelease')?.value ?? 0),
+    };
+    localStorage.setItem(FX_KEY, JSON.stringify({ sliders: vals, filterType, adsr }));
   } catch(e) {}
 }
 
@@ -5035,34 +5094,49 @@ function fxLoad() {
     const raw = localStorage.getItem(FX_KEY);
     if (!raw) return;
     const d = JSON.parse(raw);
-    // Slider-Werte setzen und Audio anwenden
+
+    // ── FX-Slider ────────────────────────────────────────────
     if (d.sliders) {
       const sliders = document.querySelectorAll('#fxSliders input[type=range]');
       FX_DEFS.forEach((def, i) => {
         const v = d.sliders[def.id];
         if (v === undefined) return;
         sliders[i].value = v;
-        // Gradient-Fill aktualisieren
         const pct = ((v - def.min) / (def.max - def.min) * 100).toFixed(1) + '%';
         sliders[i].style.setProperty('--val', pct);
-        // Label aktualisieren
         const valEl = sliders[i].closest('.fx-item')?.querySelector('.fx-value');
         if (valEl) valEl.textContent = def.fmt(v);
         applyFx(def.id, v);
       });
     }
-    // Filter-Typ wiederherstellen
+
+    // ── Filter-Typ ───────────────────────────────────────────
     if (d.filterType && d.filterType !== filterType) {
       filterType = d.filterType;
       const btns = document.querySelectorAll('#fxToggles button[data-filter]');
       btns.forEach(b => b.classList.toggle('active', b.dataset.filter === filterType));
-      // Frequenz-Slider erneut anwenden mit dem gespeicherten FilterType
-      const freqDef = FX_DEFS.find(d => d.id === 'filterFreq');
+      const freqDef = FX_DEFS.find(dd => dd.id === 'filterFreq');
       const freqSlider = document.querySelector('#fxSliders input[data-fx-id="filterFreq"]');
       if (freqDef && freqSlider) applyFx('filterFreq', parseFloat(freqSlider.value));
     }
+
+    // ── ADSR-Slider ──────────────────────────────────────────
+    // setTimeout(0): initGlobalAdsr()-IIFE läuft erst NACH fxLoad(),
+    // also ihre input-Listener erst danach registriert sind.
+    if (d.adsr) {
+      setTimeout(() => {
+        const aEl = document.getElementById('fxAdsrAttack');
+        const sEl = document.getElementById('fxAdsrSustain');
+        const rEl = document.getElementById('fxAdsrRelease');
+        if (aEl) aEl.value = d.adsr.attack  ?? 0;
+        if (sEl) sEl.value = d.adsr.sustain ?? 1000;
+        if (rEl) rEl.value = d.adsr.release ?? 0;
+        // input-Event feuern → updateLabels() + applyGlobalAdsr()
+        [aEl, sEl, rEl].forEach(el => el?.dispatchEvent(new Event('input')));
+      }, 0);
+    }
   } catch(e) {}
-}
+  }
 
 function applyFx(id, sliderVal) {
   if (!engine.ctx) return;
@@ -5696,16 +5770,23 @@ setTimeout(() => { if(typeof buildCinematicBtns==='function') buildCinematicBtns
     document.getElementById('fxAdsrReleaseVal').textContent = r > 0     ? fmtSec(r)              : 'SF2';
   }
   ['fxAdsrAttack','fxAdsrSustain','fxAdsrRelease'].forEach(id =>
-    document.getElementById(id)?.addEventListener('input', () => { updateLabels(); applyGlobalAdsr(); }));
-  document.getElementById('fxAdsrResetBtn')?.addEventListener('click', () => {
-    document.getElementById('fxAdsrAttack').value  = 0;
-    document.getElementById('fxAdsrSustain').value = 1000;
-    document.getElementById('fxAdsrRelease').value = 0;
-    updateLabels(); layers.forEach(l => { l.envOverride = {}; });
-  });
+  document.getElementById(id)?.addEventListener('input', () => {
+    updateLabels();
+    applyGlobalAdsr();
+    fxSave();                          // ← NEU: localStorage aktualisieren
+    if (typeof autoSaveSession === 'function') autoSaveSession(); // ← NEU: Session aktualisieren
+  })
+);
+document.getElementById('fxAdsrResetBtn')?.addEventListener('click', () => {
+  document.getElementById('fxAdsrAttack').value  = 0;
+  document.getElementById('fxAdsrSustain').value = 1000;
+  document.getElementById('fxAdsrRelease').value = 0;
   updateLabels();
+  layers.forEach(l => { l.envOverride = {}; });
+  fxSave();
+  if (typeof autoSaveSession === 'function') autoSaveSession();
+});
 })();
-
 
 // Show cached SF2s on startup
 renderCachedSF2s();
@@ -11811,7 +11892,12 @@ function sessionCollectFx() {
   const sliders = document.querySelectorAll('#fxSliders input[type=range]');
   const vals = {};
   FX_DEFS.forEach((def, i) => { vals[def.id] = parseFloat(sliders[i].value); });
-  return { sliders: vals, filterType };
+  const adsr = {
+    attack:  parseFloat(document.getElementById('fxAdsrAttack')?.value  ?? 0),
+    sustain: parseFloat(document.getElementById('fxAdsrSustain')?.value ?? 1000),
+    release: parseFloat(document.getElementById('fxAdsrRelease')?.value ?? 0),
+  };
+  return { sliders: vals, filterType, adsr };
 }
 
 // ── Auto-Save / Auto-Restore ──────────────────────────────────
@@ -11830,20 +11916,32 @@ function autoSaveSession() {
       master: { vol: masterVol, transpose: globalTranspose },
       fx: fxState,
       layers: layers.map(l => ({
-        sfIdx:       l.sfIdx,
-        presetIdx:   l.presetIdx,
-        presetName:  engine.soundfonts[l.sfIdx]?.presets[l.presetIdx]?.name ?? '',
-        vol:         l.vol,
-        muted:       l.muted,
-        transpose:   l.transpose ?? 0,
-        keyLo:       l.keyLo,
-        keyHi:       l.keyHi,
-        melody:      l.melody ?? false,
-        bass:        l.bass   ?? false,
-        midiCh:      l.midiCh      ?? null,
-        midiDeviceId:l.midiDeviceId ?? null,
-        velMode:     l.velMode     ?? 'free',
-        sources:     l.sources     ?? ['screen','keys','midi','player'],
+        sfIdx:         l.sfIdx,
+        presetIdx:     l.presetIdx,
+        presetName:    engine.soundfonts[l.sfIdx]?.presets[l.presetIdx]?.name ?? '',
+        vol:           l.vol,
+        muted:         l.muted,
+        transpose:     l.transpose ?? 0,
+        keyLo:         l.keyLo,
+        keyHi:         l.keyHi,
+        melody:        l.melody ?? false,
+        bass:          l.bass   ?? false,
+        midiCh:        l.midiCh       ?? null,
+        midiDeviceId:  l.midiDeviceId ?? null,
+        velMode:       l.velMode      ?? 'free',
+        velOverride:   l.velOverride  ?? 0,
+        sources:       l.sources      ?? ['screen','keys','midi','player'],
+        label:         l.label        ?? null,
+        saturation:    l.saturation   ?? 0,
+        buzzEnabled:   l.buzzEnabled  ?? false,
+        buzzThreshold: l.buzzThreshold ?? 127,
+        buzzIntensity: l.buzzIntensity ?? 70,
+        compEnabled:   l.compEnabled  ?? false,
+        compThreshold: l.compThreshold ?? -24,
+        compRatio:     l.compRatio    ?? 3,
+        envOverride:   l.envOverride  ? {...l.envOverride} : {},
+        delayWet:      l.delayWet     ?? 0,
+        delayTime:     l.delayTime    ?? 37,
       })),
     };
     localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(data));
@@ -11915,7 +12013,7 @@ function sessionSave() {
       delayTime:     l.delayTime    ?? 37,
     })),
   };
-
+const a = document.createElement('a');
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   a.href = URL.createObjectURL(blob);
   a.download = 'session_' + new Date().toISOString().slice(0,10) + '.json';
@@ -12122,7 +12220,16 @@ function applySessionLayers(d) {
       engine.setLayerDelay(l.id, l.delayWet / 100, (50 + l.delayTime / 100 * 950) / 1000);
     }
   });
-
+//neu
+if (d.fx?.adsr) {
+    const aEl = document.getElementById('fxAdsrAttack');
+    const sEl = document.getElementById('fxAdsrSustain');
+    const rEl = document.getElementById('fxAdsrRelease');
+    if (aEl) aEl.value = d.fx.adsr.attack  ?? 0;
+    if (sEl) sEl.value = d.fx.adsr.sustain ?? 1000;
+    if (rEl) rEl.value = d.fx.adsr.release ?? 0;
+    [aEl, sEl, rEl].forEach(el => el?.dispatchEvent(new Event('input')));
+}
   // Visible confirmation showing which presets were actually loaded
   const info = layers.map(l => {
     const sf = engine.soundfonts[l.sfIdx];
