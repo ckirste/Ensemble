@@ -5926,6 +5926,14 @@ function melodySwitch(layer, newMidi, vel, startT) {
 }
 
 async function playMidi(midi, vel=100, ch=null, source='keys', inputId=null) {
+  // ── MIDI-Velocity-Boost ───────────────────────────────────────
+  // SpessaSynth verarbeitet Velocity linear (SF2-spezifikationsgetreu),
+  // FluidSynth verwendet eine eingebaute Kompressionskurve, die sanfte
+  // Anschläge lauter erscheinen lässt. Dieser Boost gleicht die MIDI-
+  // Eingabe an das FluidSynth-Gefühl an, ohne Touch/Tastatur anzufassen.
+  if (source === 'midi') {
+    vel = Math.min(127, Math.round(vel * 1.25 + 10));
+  }
   if (typeof rec !== 'undefined' && rec.state === 'armed') {
     // Looper-Modus: Aufnahme startet erst beim ersten Ton
     rec.startT = performance.now();
