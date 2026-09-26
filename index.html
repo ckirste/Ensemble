@@ -358,7 +358,8 @@ body.light-mode button {
 }
 body.light-mode button:hover { border-color: var(--accent) !important; color: var(--accent) !important; }
 body.light-mode .score-body { background: #fff !important; }
-body.light-mode .score-toolbar { background: #f0f2f5 !important; }
+body.light-mode 
+.score-toolbar { background: #f0f2f5 !important; }
 body.light-mode .sf-loader-header,
 body.light-mode .score-header { background: #f0f2f5 !important; }
 body.light-mode .panel-toggle-btn {
@@ -1196,45 +1197,578 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .fx-adsr-reset:hover{border-color:var(--accent2);color:var(--accent2)}
 
 /* ══ Noten-Editor Panel ══════════════════════════════════════ */
+/* Vorzeichen (♯/♭/♮) links vom Notenkopf positionieren */
+/* Global: Alle Noten-SVGs linksbündig im Step ausrichten (überschreibt left:18px) */
+.score-step svg,.score-voice-step svg {
+    left: 6px !important;
+    }
+.score-step .score-acc,
+.score-voice-step .score-acc {
+    left: 1px !important;   /* Abstand nach links, damit es nicht den Kopf überlappt */
+/* Haltebogen an den neuen Notenkopf anpassen */
+.score-step .score-tie-svg,
+.score-voice-step .score-tie-svg {
+  left: 20px !important;
+  }
+                                      }
+
 .score-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;
-  padding:0;margin-bottom:12px;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column}
-.score-header{display:flex;gap:6px;align-items:center;flex-wrap:wrap;
-  padding:8px 10px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--panel)}
+  padding:0;margin-bottom:12px;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column;height: 100vh;               /* oder flex:1 im Container */
+  max-height: 100vh;
+  overflow: hidden;
+}
+/* Vollbildmodus: Panel darf höher werden als der Viewport */
+/* ── Vollbildmodus: korrektes Layout ── */
+.score-panel.score-fullscreen .score-header {
+  padding-top: 40px;    /* Platz für den fixierten Toggle-Button */
+  flex-wrap: wrap;      /* Buttons umbrechen lassen, damit nichts abgeschnitten wird */
+  min-height: auto;     /* keine künstliche Mindesthöhe */
+  max-height: none;     /* keine Höhenbegrenzung */
+  overflow: visible;    /* nichts verstecken */
+  }
+
+.score-header{display:flex;gap:2px;align-items:center;flex-wrap:wrap;
+  padding:0px 0px 0px 0px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--panel)}
 .score-body{display:flex;flex-direction:row;align-items:stretch;flex:1;min-height:0;width:100%;overflow:hidden}
-.score-toolbar{flex-shrink:0;width:110px;z-index:999;
-  display:flex;flex-direction:column;align-items:center;gap:5px;
-  padding:6px 3px;overflow-y:auto;overflow-x:hidden;
-  background:#111827;border-right:1px solid var(--border)}
-.score-toolbar::-webkit-scrollbar{width:0}
-.score-toolbar .score-noteval-row{flex-direction:column;background:transparent;border:none;padding:0;gap:3px}
-.score-toolbar .score-nv-btn{width:46px;height:52px;flex-shrink:0}
-.score-toolbar>span:first-child{font-size:.42rem;letter-spacing:.1em;color:var(--accent3);text-transform:uppercase;text-align:center}
-.score-toolbar label{flex-direction:column;font-size:.52rem;cursor:pointer;display:flex;align-items:center;gap:1px}
-.score-toolbar select{background:#0a0e18;border:1px solid var(--border);color:var(--textbright);font-size:.56rem;border-radius:4px;padding:2px;width:52px;cursor:pointer}
-.score-content-wrap{display:flex;flex-direction:column;flex:1;min-width:0;overflow:hidden}
-#scoreTracksContainer{overflow-x:auto;overflow-y:auto;height:350px/*flex:1*/;min-height:100px;width:100%;max-width: 100%;box-sizing:border-box}
+/*vielleich brauchen wir es nochmal
+.score-toolbar {
+  width: 80px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 2px;
+  background: #111827;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 350px;
+}
+
+.score-toolbar .score-ctrl-btn {
+  display: block;
+  width: 100%;
+  padding: 3px 0;
+  font-size: .80rem;
+  text-align: center;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.score-toolbar .score-ctrl-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.score-toolbar .score-ctrl-btn.danger:hover {
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+
+.score-toolbar .score-sel-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+
+.score-toolbar .score-noteval-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+}
+.score-toolbar .score-nv-btn {
+  width: 24px;
+  height: 28px;
+  padding: 0;
+  font-size: 0;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.score-toolbar .score-nv-btn.active {
+  border-color: var(--accent);
+}
+.score-toolbar .score-nv-btn svg {
+  width: 20px;
+  height: 24px;
+  display: block;
+  margin: auto;
+}
+
+.score-toolbar label {
+  font-size: .80rem;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+.score-toolbar label input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.score-toolbar select {
+  width: 100%;
+  font-size: .80rem;
+  background: white;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.score-toolbar .score-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+             }
+*/
+.score-notation-wrapper {
+  /* Skalierung deaktivieren, da das Blatt feste Breite hat */
+  transform: none !important;
+  width: 100% !important;
+  height: auto !important;
+  overflow: visible;
+  }
+/*
+.score-track-row {
+  width: 100%;*/
+  /*overflow-x: auto;*/
+  /* oder eine andere feste Höhe für das Notensystem, die zur Skalierung passt */
+           /*}*/
+
+/* Velocity-Sidebar */
+.vel-sidebar {
+  flex-shrink: 0;
+  width: 60px;
+  height: 350px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #0a0e18;
+  border-right: 1px solid var(--border);
+  padding: 8px 4px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  box-sizing: border-box;
+}
+
+.vel-label {
+  font-family: 'Orbitron', monospace;
+  font-size: .55rem;
+  letter-spacing: .12em;
+  color: var(--accent3);
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.vel-track {
+  width: 44px;
+  flex: 1;
+  min-height: 180px;
+  background: var(--border);
+  border-radius: 12px;
+  position: relative;
+  cursor: ns-resize;
+  border: 1px solid var(--dim);
+  touch-action: none;
+}
+
+.vel-thumb {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 34px;
+  height: 34px;
+  background: var(--accent3);
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--accent3);
+  transition: box-shadow .12s;
+  pointer-events: none;
+}
+
+.vel-thumb.active {
+  box-shadow: 0 0 20px var(--accent3), 0 0 8px var(--accent3);
+}
+
+.vel-value {
+  font-family: 'Orbitron', monospace;
+  font-size: .72rem;
+  color: var(--accent3);
+  text-align: center;
+  min-width: 36px;
+  line-height: 1;
+  flex-shrink: 0;
+  letter-spacing: .05em;
+}
+
+/* Aktiver Toggle-Button-Zustand */
+#velToggleBtn.active {
+  border-color: var(--accent3);
+  color: var(--accent3);
+  background: rgba(155,127,232,.1);
+  }
+.score-toolbar {
+  /*overflow-y: auto;
+  height:350px;*/
+  width: 100px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch; /* alle Kinder dehnen sich auf volle Breite */
+  gap: 0px;
+  padding: 0px 0px;
+  background: #111827;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 350px;
+}
+
+/* Alle direkten Kinder sollen blockartig sein */
+.score-toolbar > * {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.score-toolbar .score-noteval-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  }
+/* Buttons */
+.score-toolbar .score-ctrl-btn,
+.score-toolbar .score-btn {
+  display: block;
+  width: 100%;
+  padding: 3px 0;
+  font-size: .6rem;
+  text-align: center;
+  background: #0a0e18;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Notenwert-Buttons (SVG) – wir müssen sie als Block mit eigenem Platz darstellen */
+.score-toolbar .score-nv-btn {
+  display: block;
+  width: 100%;
+  padding: 2px 0;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+}
+.score-toolbar .score-nv-btn.active {
+  border-color: var(--accent);
+}
+/* SVG innerhalb der Buttons zentrieren */
+.score-toolbar .score-nv-btn svg {
+  display: block;
+  margin: 0 auto;
+  width: 24px;
+  height: auto;
+}
+
+/* Selects */
+.score-toolbar select {
+  display: flex;
+  width: 100%;
+  font-size: .55rem;
+  background: #0a0e18;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 2px 4px;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+.score-pp-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.score-pp-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: .75rem;
+  cursor: pointer;
+  padding: 0;
+                  }
+/* Labels für Pause/Punkt */
+.score-toolbar label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 1.0rem;
+  color: var(--text);
+  cursor: pointer;
+  width: 100%;
+  padding: 2px 0;
+}
+.score-toolbar label input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--accent);
+  transform: scale(1.5);
+  transform-origin: center;
+}
+
+/* Auswahl-Toolbar */
+.score-sel-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+.score-sel-toolbar .score-ctrl-btn {
+  font-size: .55rem;
+  padding: 3px 0;
+}
+
+/* Trennlinie */
+.score-toolbar .score-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+  width: 100%;
+}
+/*neu*/
+@media (orientation: landscape) {
+  .score-pp-row {
+    gap: 10px;
+    padding: 2px 0;
+  }
+  .score-pp-row label {
+    font-size: .85rem;
+  }
+  .score-pp-row input[type="checkbox"] {
+    transform: scale(1.3);
+    transform-origin: center;
+  }
+  }
+/* Die "Wert"-Überschrift etc. */
+.score-toolbar > span {
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-size: .5rem;
+  color: var(--dim);
+  padding: 2px 0;
+  }
+/*.score-content-wrap{
+  transform: scale(1.0);
+  transform-origin: top left;
+  width: calc(100% / 1.0);
+  height: auto;
+  display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;overflow:hidden}
+*/
+/*
+.score-content-wrap {
+  width: 794px;
+  max-width: 100%;
+  margin: 0 auto;
+  background: transparent !important;
+}*/
+.score-track-header > span:first-child {
+  font-size: 1.4rem !important;
+  font-weight: bold !important;
+  font-family: 'Orbitron', monospace !important;
+}
+#scorePaper {
+  width: 794px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: #ffffff;
+  box-shadow: 0 0 20px rgba(0,0,0,.15);
+  transform-origin: top left;
+}
+.score-content-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  background: #ffffff;
+  overflow: hidden;
+         }
+  .score-scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  justify-content: center;
+  padding: 0px;
+  box-sizing: border-box;
+  }
+  .score-paper-scale-wrap {
+  position: relative;
+  }
+  /*
+.score-track-row {
+  width: 100%;
+  display: block;
+
+  }*/
+#scoreTracksContainer {
+  width: 100%;
+  padding: 0px 20px;
+  box-sizing: border-box;
+  background: #ffffff;
+  overflow: visible;
+  }
 #scoreTracksContainer::-webkit-scrollbar{height:5px;width:5px}
 #scoreTracksContainer::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-.score-track-unit{margin-bottom:8px;background:#fff;border:1px solid #555;border-radius:6px;overflow:auto;display:block;width:80%;min-width:100%}
-.score-piano-wrap{flex-shrink:0;width:100%;border-top:1px solid #333;background:var(--panel)}
-.score-piano-header{display:flex;align-items:center;gap:6px;padding:3px 8px;background:#111827;border-bottom:1px solid var(--border);flex-wrap:nowrap;min-height:28px}
+.score-track-unit{margin-bottom:0px;background:#ffffff;border:1px solid white;border-radius:6px;overflow:auto;
+                  display:block;width:100%;min-width:100%}
+.score-piano-wrap {
+  flex-shrink: 0;
+  width: 100%;
+  border-top: 1px solid #333;
+  background: var(--panel);
+  }
+  .score-piano-header{display:flex;align-items:center;gap:6px;padding:3px 8px;background:#111827;border-bottom:1px solid var(--border);flex-wrap:nowrap;min-height:28px}
 .score-piano-lbl{font-size:.52rem;letter-spacing:.12em;color:var(--accent3);text-transform:uppercase;white-space:nowrap}
 .score-piano-oct{font-family:'Orbitron',monospace;font-size:.9rem;color:var(--accent3);min-width:20px;text-align:center}
 .score-piano-info{font-size:.58rem;color:var(--dim);flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/*//von hier
 .score-track-header{background:#1a1f2e;padding:6px 10px;display:flex;gap:8px;align-items:center;font-size:.68rem;color:var(--accent);flex-wrap:wrap}
 .score-track-header select{background:#0a0e18;border:1px solid var(--border);border-radius:5px;color:var(--textbright);font-size:.65rem;padding:2px 5px;cursor:pointer}
-.score-track-row{display:flex;position:relative;height:180px;align-items:stretch;
-  overflow-x:auto;overflow-y:hidden;width:100%;
+*/
+.score-track-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 2px;
+  padding: 0px 0px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+  max-height: none;/*4.6em;*/      /* ca. 2 Zeilen à 1.3em */
+  overflow: hidden;       /* versteckt, was nicht passt */
+  font-size: 1.75rem !important;      /* Basisgröße für alle Elemente im Header */
+  min-height: 40px;
+  color: black;
+}
+
+.score-track-header .score-btn {
+  padding: 1px 1px;
+  font-size: 1.0rem !important;
+  line-height: 2.2;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  color: black;/*var(--text);*/
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  min-height: 40px;
+}
+.score-track-header .score-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.score-track-header .score-btn.danger:hover {
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+.score-track-header .score-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.score-track-header select {
+  font-size: 1.00rem !important;
+  padding: 1px 2px;
+  max-width: 110px;/*70px;*/ /* je nach Bedarf anpassen */
+  background: #ffffff;
+  border: 1px solid var(--border);
+  color: black;/*var(--text);*/
+  border-radius: 3px;
+  min-height: 40px;
+}
+
+.score-track-header .score-ts-group {
+  display: inline-flex;
+  /*align-items: center;*/
+  gap: 2px;
+  font-size: .6rem;
+}
+.score-track-header .score-ts-group select {
+  max-width: 36px;
+}
+.score-ts-group > span:not([style*="color"]) {
+  font-size: 1.4rem !important;
+  /*font-family: 'Orbitron', monospace !important;*/
+  /*font-weight: bold !important;*/
+             }
+/* Editor-Inline: flexibel, aber mit kleiner Schrift */
+.score-editor-inline {
+  display: inline-flex;
+  flex-wrap:  nowrap;
+  gap: 3px;
+  /*align-items: center;*/
+  overflow-x: auto;
+}
+.score-editor-inline select {
+  max-width: 50px;
+  font-size: 1.55rem;
+  padding: 0 2px;
+}
+.score-editor-inline label {
+  font-size: 2.55rem !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.score-editor-inline .score-btn {
+  font-size: 1.55rem;
+  padding: 0 0px;
+  }
+/*gibt es 2x score-track-row?*/
+.score-track-row{display:flex;position:relative;height:180px;/*align-items:stretch;*/
+  /*overflow-x:auto;*/overflow-y:hidden;width:100%;/*Test1*/
   background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);
   background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;
-  background-size:100% 1px;background-color:#fff}
+  background-size:100% 1px;background-color:#fff}/*Test*/
 .score-clef-area{width:80px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid rgba(0,0,0,.2);position:sticky;left:0;z-index:100;background-color:#fff;gap:4px;
   background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);
   background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;background-size:100% 1px}
 .score-key-sig{display:flex;align-items:flex-end;padding:0 4px;height:100%;border-right:2px solid rgba(0,0,0,.25);background-color:#fff;z-index:90;
   background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);
   background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;background-size:100% 1px}
-.score-timeline{display:flex;position:relative;height:100%;z-index:50}
+.score-timeline{display:flex;position:relative;height:100%;z-index:50;min-width: max-content;
+
+               }
 
 /* ── Druckvorschau: Seitenformat per CSS-Variablen (wählbar), im Browser auf Bildschirmbreite skaliert ── */
 .score-print-page {
@@ -1307,20 +1841,36 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   pointer-events: none; z-index: 5;
 }
 .score-step-selbox {
-  position: absolute; top: 2px; right: 2px; width: 12px; height: 12px;
+  position: absolute; top: 2px; right: 2px; width: 15px; height: 15px;
   border: 1.5px solid var(--accent3); border-radius: 3px; background: transparent;
   cursor: pointer; z-index: 10; box-sizing: border-box;
 }
 .score-step-selbox.checked { background: var(--accent3); }
 .score-step-selbox.checked::after {
   content: '✓'; position: absolute; top: -1px; left: 1px;
-  font-size: 9px; color: #fff; line-height: 12px;
+  font-size: 10px; color: #fff; line-height: 12px;
 }
 .score-step-idx {
   position: absolute; top: 2px; left: 2px; font-size: 7px;
   font-family: 'Share Tech Mono', monospace; color: var(--dim);
   pointer-events: none; white-space: nowrap; z-index: 10; line-height: 1;
 }
+.score-step-vel {
+  position: absolute;
+  top: 16px;
+  left: 10%;
+  transform: translateX(-10%);
+  font-size: 14px;
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--accent3);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 10;
+  line-height: 1;
+  opacity: .7;
+  }
+  
+.score-voice-overlay ellipse, .score-voice-overlay path { fill:#2a5db0; stroke:#2a5db0; }
 .score-step-barnum { display: none; } /* im Editor ausgeblendet, da score-step-idx dasselbe abdeckt */
 .score-sel-toolbar {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
@@ -1332,7 +1882,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .score-sel-clear { color: var(--dim) !important; border-color: var(--border) !important; }
 .score-step.playhead{background:rgba(0,255,150,.15);outline:2px solid #00ff96}
 .score-bar-line{position:absolute;top:70px;width:2px;height:41px;background:#000;pointer-events:none;z-index:60}
-.score-ledger{position:absolute;left:12px;width:32px;height:1.5px;background:#000;pointer-events:none}
+.score-ledger{position:absolute;left:4px;width:30px;height:1.5px;background:#000;pointer-events:none}
 .score-dot{position:absolute;width:4px;height:4px;background:#000;border-radius:50%;left:40px}
 .score-acc{position:absolute;width:14px;height:32px;left:8px;pointer-events:none}
 .score-editor-panel{display:none;background:#1a1f2e;border-bottom:1px solid #333;flex-direction:column;overflow:hidden}
@@ -1357,6 +1907,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 <div class="container">
   <!-- Jump Navigation -->
   <nav class="jump-nav" id="jumpNav">
+    <button class="jnav-btn jnav-fullscreen" id="fsNavBtn" title="Vollbild ein/aus" onclick="window.toggleFullscreen()"><span class="jnav-icon" id="fsNavIcon">⛶</span><span class="jnav-lbl">Vollbild</span></button>
     <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('ancSF2');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🗂</span><span class="jnav-lbl">SF2</span></button>
     <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('midiPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🎹</span><span class="jnav-lbl">MIDI</span></button>
     <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('ancFX');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🎛</span><span class="jnav-lbl">FX</span></button>
@@ -1919,61 +2470,78 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   <!-- ══ Noten-Editor Panel ══ -->
   <div class="score-panel panel" id="scorePanel">
     <div class="score-header">
-      <span style="font-size:.6rem;letter-spacing:.14em;color:var(--accent);text-transform:uppercase">🎵 Noten-Editor</span>
+      <span style="display: none;font-size:.6rem;letter-spacing:.14em;color:var(--accent);text-transform:uppercase">🎵 Noten-Editor</span>
       <button class="score-btn" onclick="scoreAddTrack()">+ Track</button>
       <button class="score-btn" id="scoreKbInputBtn" onclick="scoreToggleKbInput()"
-        title="Klaviatur-Eingabe: Taste drücken = Note setzen + nächster Step">🎹 Klaviatur-Eingabe</button>
+        title="Klaviatur-Eingabe: Taste drücken = Note setzen + nächster Step">🎹 Eingabe</button>
+      <button class="score-btn" id="velToggleBtn" onclick="window.toggleVelSidebar()" title="Velocity-Slider ein/aus">🎚 VEL</button>
+      <button class="score-btn" id="velPaintBtn" onclick="window.toggleVelPaint()" title="Malen während Wiedergabe">✎ Malen: AUS</button>
       <button class="score-btn active" id="scorePlayBtn"       onclick="scoreStartPlay(null,0)"   title="Alle Tracks von Anfang">▶ Alle</button>
       <button class="score-btn"        id="scorePlayCursorBtn" onclick="scoreStartPlayCursor()"   title="Alle Tracks ab Cursor">▶ Ab ✦</button>
       <button class="score-btn"        id="scoreStopBtn"       onclick="scoreStopPlay()"          title="Stop" style="display:none">■ Stop</button>
-      <div class="score-sel-toolbar" id="scoreSelToolbar" style="display:none">
-        <span id="scoreSelCount">0 markiert</span>
-        <button class="score-btn" id="scoreTieBtn" onclick="scoreToggleTie()" title="Haltebogen zur nächsten Note" style="display:none">⌒ Haltebogen</button>
-        <button class="score-btn" id="scoreRangeBtn" onclick="scoreSelFillRange()" title="Alle Steps zwischen den 2 markierten Steps mit auswählen" style="display:none">↔ Bereich füllen</button>
-        <button class="score-btn" id="scoreBeamBtn" onclick="scoreSelToggleBeam()" title="Balken zwischen den markierten 8tel/16tel/32tel-Noten verbinden" style="display:none">🎵 Balken verbinden</button>
-        <button class="score-btn" onclick="scoreSelCopyPaste()" title="Markierte Steps nach Cursor einfügen">📋 Kopieren+Einfügen</button>
-        <button class="score-btn" onclick="scoreSelDelete()"    title="Markierte Steps löschen">🗑 Löschen</button>
-        <button class="score-btn score-sel-clear" onclick="scoreSelClearAll()" title="Auswahl aufheben">✕ Auswahl</button>
-      </div>
       <button class="score-btn" onclick="scoreExportJSON()">⬇ JSON</button>
       <button class="score-btn" onclick="scoreImportJSON()">⬆ JSON laden</button>
       <input type="file" id="scoreImportInput" accept=".json" style="display:none">
-      <button class="score-btn" onclick="scoreOpenPrintPreview()" title="Druckvorschau: A4-Querformat mit einstellbaren Takten pro Zeile">🖨 Druckvorschau</button>
-      <button class="score-btn" onclick="scoreQuickPrint()" title="Baut die Druckvorschau im Hintergrund auf und druckt sofort — ohne manuell in die Vorschau wechseln zu müssen">🖨⚡ Direkt drucken</button>
+      <button class="score-btn" onclick="scoreOpenPrintPreview()" title="Druckvorschau: A4-Querformat mit einstellbaren Takten pro Zeile">🖨 Vorschau</button>
+      <button class="score-btn" onclick="scoreQuickPrint()" title="Baut die Druckvorschau im Hintergrund auf und druckt sofort — ohne manuell in die Vorschau wechseln zu müssen">🖨⚡ Drucken</button>
     </div>
 
     <!-- score-body: toolbar links | content rechts -->
     <div class="score-body">
       <div class="score-toolbar" id="scoreToolbar">
-        <span>▶ Nächste Note</span>
-        <div class="score-noteval-row" id="scoreNoteValBtns"></div>
-        <label><input type="checkbox" id="scoreToolRest"> Pause</label>
-        <label><input type="checkbox" id="scoreToolDot"> Punkt</label>
-        <span style="font-size:.5rem;color:var(--dim)">Tonart</span>
-        <select id="scoreToolKey">
-          <optgroup label="Dur">
-            <option value="C-Dur">C</option><option value="G-Dur">G</option>
-            <option value="D-Dur">D</option><option value="A-Dur">A</option>
-            <option value="E-Dur">E</option><option value="H-Dur">H</option>
-            <option value="Fis-Dur">F#</option><option value="F-Dur">F</option>
-            <option value="B-Dur">B</option><option value="Es-Dur">Es</option>
-            <option value="As-Dur">As</option><option value="Des-Dur">Des</option>
-          </optgroup>
-          <optgroup label="Moll">
-            <option value="a-Moll">a</option><option value="e-Moll">e</option>
-            <option value="h-Moll">h</option><option value="fis-Moll">f#</option>
-            <option value="d-Moll">d</option><option value="g-Moll">g</option>
-            <option value="c-Moll">c</option><option value="f-Moll">f</option>
-          </optgroup>
-        </select>
-        <span style="font-size:.5rem;color:var(--dim)">Tonhöhe (Selektion)</span>
-        <select id="scoreSelPitch"><option value="">—</option></select>
-        <span style="font-size:.5rem;color:var(--dim)">Vorzeichen</span>
-        <span id="scoreSelAccBtns" style="display:none;gap:2px"></span>
-        <button class="score-btn" id="scoreSelAddChordBtn" onclick="scoreSelAddChordNote()" title="Akkordton zu allen markierten Steps hinzufügen" style="display:none">+ Akkordton</button>
+  
+
+  <!-- Auswahl-Toolbar (kontextabhängig) -->
+  <div class="score-sel-toolbar" id="scoreSelToolbar" style="display:none">
+    <span id="scoreSelCount" style="font-size:.5rem;color:var(--accent);text-align:center">0</span>
+    <button class="score-ctrl-btn" id="scoreTieBtn" onclick="scoreToggleTie()" style="display:none">⌒</button>
+    <button class="score-ctrl-btn" id="scoreRangeBtn" onclick="scoreSelFillRange()" style="display:none">↔</button>
+    <button class="score-ctrl-btn" id="scoreBeamBtn" onclick="scoreSelToggleBeam()" style="display:none">🎵</button>
+    <button class="score-ctrl-btn" onclick="scoreSelCopyPaste()">📋</button>
+    <button class="score-ctrl-btn" onclick="scoreSelDelete()">🗑</button>
+    <button class="score-ctrl-btn score-sel-clear" onclick="scoreSelClearAll()">✕</button>
+  </div>
+
+  <div class="score-sep"></div>
+
+  <!-- Notenwert-Buttons -->
+  <span style="display: none;font-size:.5rem;color:var(--dim);text-align:center">Wert</span>
+  <div class="score-noteval-row" id="scoreNoteValBtns"></div>
+
+    <!-- Pause, Punkt — nebeneinander in einer Zeile -->
+  <div class="score-pp-row">
+    <label><input type="checkbox" id="scoreToolRest"> P</label>
+    <label><input type="checkbox" id="scoreToolDot"> .</label>
+  </div>
+
+  <!-- Tonart -->
+  <span style="font-size:.5rem;color:var(--dim);text-align:center">Tonart</span>
+  <select id="scoreToolKey">…</select>
+
+  <!-- Tonhöhe (Selektion) -->
+  <span style="font-size:.5rem;color:var(--dim);text-align:center">Pitch</span>
+  <select id="scoreSelPitch"><option value="">—</option></select>
+
+  <!-- Vorzeichen -->
+  <span style="font-size:.5rem;color:var(--dim);text-align:center">Acc</span>
+  <span id="scoreSelAccBtns" style="display:none;gap:2px;flex-wrap:wrap;justify-content:center;"></span>
+  <button class="score-ctrl-btn" id="scoreSelAddChordBtn" onclick="scoreSelAddChordNote()" style="display:none">+ Akkord</button>
       </div>
-      <div class="score-content-wrap">
-        <div id="scoreTracksContainer"></div>
+            <div class="vel-sidebar" id="velSidebar" style="display:none">
+        <div class="vel-label">VEL</div>
+        <div class="vel-track" id="velTrack">
+          <div class="vel-thumb" id="velThumb"></div>
+        </div>
+        <div class="vel-value" id="velValue">90</div>
+            </div>
+            <div class="score-content-wrap">
+        <div class="score-scroll-area">
+          <div class="score-paper-scale-wrap">
+            <div id="scorePaper">
+              <div id="scoreTracksContainer"></div>
+            </div>
+          </div>
+        </div>
         <div class="score-piano-wrap" id="scorePianoWrap">
           <div class="score-piano-header">
             <span class="score-piano-lbl">🎹 Noten-Eingabe</span>
@@ -1986,9 +2554,9 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
             <div class="keyboard" id="scoreKb" style="position:relative;height:130px"></div>
           </div>
         </div>
-      </div>
-    </div><!-- score-body -->
-  </div><!-- score-panel -->
+            </div>
+    </div>
+  </div>
 
   <!-- ══ Druckvorschau-Overlay ══ -->
   <div id="scorePrintOverlay" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.85);overflow-y:auto;padding:16px">
@@ -2745,33 +3313,6 @@ class AudioEngine {
 
   // Setzt Bank + Program auf einem Channel — ohne Race Condition,
   // da jede Instanz nur eine SF2 kennt (kein priorityOrder nötig!).
-  
-  _setProgramOnChannel(sfIdx, ch, presetIdx) {
-  const sfObj = this.synths[sfIdx];
-  if (!sfObj) return;
-  const p = sfObj.presets[presetIdx];
-  if (!p) return;
-
-  // Reverb-Größe IMMER setzen (nicht gecached), da sie sich unabhängig
-  // vom Programm jederzeit über den FX-Slider ändern kann.
-  const cc91 = Math.round(Math.min(127, Math.max(0, this._reverbSize / 6.0 * 127)));
-
-  const cacheKey = `${p.bank}:${p.bankLSB ?? 0}:${p.program}`;
-  if (sfObj.chProgKey.get(ch) === cacheKey) {
-    // Programm unverändert, aber Reverb-Größe könnte sich geändert haben:
-    try { sfObj.synth.controllerChange(ch, 91, cc91); } catch(e) {}
-    return;
-  }
-  sfObj.chProgKey.set(ch, cacheKey);
-
-  try {
-    sfObj.synth.controllerChange(ch, 0,  p.bank    ?? 0);
-    sfObj.synth.controllerChange(ch, 32, p.bankLSB ?? 0);
-    sfObj.synth.programChange(ch, p.program);
-    sfObj.synth.controllerChange(ch, 91, cc91);
-  } catch(e) { console.warn('_setProgramOnChannel error:', e); }
-}
-  /*
   _setProgramOnChannel(sfIdx, ch, presetIdx) {
     const sfObj = this.synths[sfIdx];
     if (!sfObj) return;
@@ -2788,7 +3329,6 @@ class AudioEngine {
       sfObj.synth.programChange(ch, p.program);
     } catch(e) { console.warn('_setProgramOnChannel error:', e); }
   }
-  */
 
   ensureChannel(layerId, sfIdx, presetIdx) {
     return this._getChannel(layerId, sfIdx, presetIdx);
@@ -2837,15 +3377,6 @@ class AudioEngine {
           const v = Math.round(Math.min(127, Math.max(0, Math.log(envOverride.release / 0.02 + 1) / Math.log(601) * 127)));
           sfObj.synth.controllerChange(ch, 72, v);
         }
-		// ── SUSTAIN: es gibt kein Standard-CC, aber CC72 hat in SpessaSynth
-    // einen Sustain-Anteil. Die SF2-Sustain-Kurve wird am ehesten über
-    // die "Expression" (CC11) sinnvoll nachgebildet, wenn kein Sample
-    // exakt getroffen wird. Wir verwenden hier CC11 (Expression) als
-    // Sustain-Level-Regler — das entspricht der üblichen Praxis.
-    if (envOverride.sustain != null) {
-      const v = Math.round(Math.min(127, Math.max(0, envOverride.sustain * 127)));
-      sfObj.synth.controllerChange(ch, 11, v);
-    }
       } catch(e) {}
     }
 
@@ -3338,8 +3869,7 @@ function addLayer(sfIdx = 0, presetIdx = 0, midiCh = null) {
   const id = nextLayerId++;
   layers.push({
     id, sfIdx, presetIdx,
-    vol: 0.8, muted: false,
-    transpose: 0,
+    vol: 0.8, muted: false, transpose: 0,
     keyLo: 0, keyHi: 127,
     melody: false, melodyNote: null,
     bass: false, bassNote: null,
@@ -3352,14 +3882,11 @@ function addLayer(sfIdx = 0, presetIdx = 0, midiCh = null) {
     envOverride: {},
     delayWet: 0, delayTime: 37,
   });
-  // Aktuellen globalen Hüllkurven-Stand auf den neuen Layer anwenden,
-  // damit er klanglich zu den bereits vorhandenen Layern passt.
   ['fxAdsrAttack','fxAdsrSustain','fxAdsrRelease'].forEach(sid => {
     document.getElementById(sid)?.dispatchEvent(new Event('input'));
   });
   renderLayers();
 }
-  
 function removeLayer(id) {
   // Alle Voices dieses Layers via SpessaSynth stoppen
   [...engine.voices.keys()]
@@ -4112,27 +4639,18 @@ function renderLayers() {
     copyBtn.style.cssText = 'background:#07070f;border:1px solid var(--border);width:36px;height:36px;border-radius:7px;cursor:pointer;font-size:1rem;transition:all .12s;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--dim)';
     copyBtn.addEventListener('mouseenter', () => copyBtn.style.color = 'var(--accent)');
     copyBtn.addEventListener('mouseleave', () => copyBtn.style.color = 'var(--dim)');
-
     copyBtn.addEventListener('click', () => {
   const id = nextLayerId++;
 
-  // Deep-ish Copy: verschachtelte Objekte/Arrays (envOverride, sources)
-  // müssen eigene Referenzen bekommen, damit Original und Kopie sich
-  // nicht gegenseitig überschreiben.
   const clone = Object.assign({}, layer, {
     id,
-    // Laufzeit-Zustände zurücksetzen — die Kopie ist eine neue Stimme
     melodyNote: null,
     bassNote:   null,
     _expanded:  false,
-    // Frische Referenzen für alles, was sonst geteilt würde
     envOverride: layer.envOverride ? { ...layer.envOverride } : {},
     sources:     layer.sources     ? [...layer.sources]     : ['screen','keys','midi','player'],
   });
 
-  // Sicherheitsnetz: Falls die Quell-Layer aus einem alten Save-State kommt
-  // und eines der Felder noch gar nicht hat, hier mit Defaults auffüllen —
-  // damit die Kopie identisch zu einem per addLayer() angelegten Layer ist.
   if (clone.saturation    == null) clone.saturation    = 0;
   if (clone.buzzEnabled   == null) clone.buzzEnabled   = false;
   if (clone.buzzThreshold == null) clone.buzzThreshold = 127;
@@ -4149,9 +4667,6 @@ function renderLayers() {
   layers.splice(idx + 1, 0, clone);
   renderLayers();
 
-  // Aktuellen globalen Hüllkurven-Stand auf den neuen Layer anwenden,
-  // analog zu addLayer(). Der dispatchEvent triggert applyGlobalAdsr(),
-  // das envOverride auf ALLEN Layern synchronisiert — inkl. der Kopie.
   ['fxAdsrAttack','fxAdsrSustain','fxAdsrRelease'].forEach(sid => {
     document.getElementById(sid)?.dispatchEvent(new Event('input'));
   });
@@ -5116,7 +5631,6 @@ function fxSave() {
     const sliders = document.querySelectorAll('#fxSliders input[type=range]');
     const vals = {};
     FX_DEFS.forEach((def, i) => { vals[def.id] = parseFloat(sliders[i].value); });
-    // ADSR-Slider explizit mit sichern — liegen NICHT in #fxSliders
     const adsr = {
       attack:  parseFloat(document.getElementById('fxAdsrAttack')?.value  ?? 0),
       sustain: parseFloat(document.getElementById('fxAdsrSustain')?.value ?? 1000),
@@ -5124,15 +5638,13 @@ function fxSave() {
     };
     localStorage.setItem(FX_KEY, JSON.stringify({ sliders: vals, filterType, adsr }));
   } catch(e) {}
-}
-
+  }
 function fxLoad() {
   try {
     const raw = localStorage.getItem(FX_KEY);
     if (!raw) return;
     const d = JSON.parse(raw);
 
-    // ── FX-Slider ────────────────────────────────────────────
     if (d.sliders) {
       const sliders = document.querySelectorAll('#fxSliders input[type=range]');
       FX_DEFS.forEach((def, i) => {
@@ -5147,7 +5659,6 @@ function fxLoad() {
       });
     }
 
-    // ── Filter-Typ ───────────────────────────────────────────
     if (d.filterType && d.filterType !== filterType) {
       filterType = d.filterType;
       const btns = document.querySelectorAll('#fxToggles button[data-filter]');
@@ -5157,9 +5668,6 @@ function fxLoad() {
       if (freqDef && freqSlider) applyFx('filterFreq', parseFloat(freqSlider.value));
     }
 
-    // ── ADSR-Slider ──────────────────────────────────────────
-    // setTimeout(0): initGlobalAdsr()-IIFE läuft erst NACH fxLoad(),
-    // also ihre input-Listener erst danach registriert sind.
     if (d.adsr) {
       setTimeout(() => {
         const aEl = document.getElementById('fxAdsrAttack');
@@ -5168,13 +5676,11 @@ function fxLoad() {
         if (aEl) aEl.value = d.adsr.attack  ?? 0;
         if (sEl) sEl.value = d.adsr.sustain ?? 1000;
         if (rEl) rEl.value = d.adsr.release ?? 0;
-        // input-Event feuern → updateLabels() + applyGlobalAdsr()
         [aEl, sEl, rEl].forEach(el => el?.dispatchEvent(new Event('input')));
       }, 0);
     }
   } catch(e) {}
-  }
-
+          }
 function applyFx(id, sliderVal) {
   if (!engine.ctx) return;
   const def = FX_DEFS.find(d=>d.id===id);
@@ -5199,9 +5705,6 @@ function applyFx(id, sliderVal) {
   }
 }
 
-// Liest ALLE FX-Slider-Stellungen und wendet sie auf die Audio-Engine an.
-// Wird nach SF2-Load aufgerufen, damit die aktuellen Werte sofort greifen,
-// ohne dass jeder Slider einmal bewegt werden muss.
 function fxApplyAllFromSliders() {
   if (!engine.ctx) return;
   const sliders = document.querySelectorAll('#fxSliders input[type=range]');
@@ -5218,6 +5721,7 @@ function adsrApplyFromSliders() {
   });
 }
 window.adsrApplyFromSliders = adsrApplyFromSliders;
+
 // Build sliders
 const fxSlidersEl = document.getElementById('fxSliders');
 const fxLockBtn = document.getElementById('fxLockBtn');
@@ -5470,16 +5974,10 @@ async function loadFile(file) {
     }
     renderSoundfonts();
     updateDrumSfSel();
-	
-	// ── NEU: aktuelle Slider-Stellungen auf die neue Synth-Instanz + Layer anwenden ──
-// FX-Slider (Reverb, Delay, EQ, Filter etc.) sind global auf der Audio-Engine —
-// sie müssen der frisch erzeugten Synth-Instanz explizit mitgeteilt werden.
-fxApplyAllFromSliders();
-// ADSR: dispatchEvent → applyGlobalAdsr() verteilt den aktuellen Stand auf alle
-// Layer (inkl. des gerade angelegten). Damit klingt der neue Layer sofort so,
-// wie die Slider es anzeigen.
+
+    fxApplyAllFromSliders();
 adsrApplyFromSliders();
-	
+    
     setStatus('ready', engine.soundfonts.length + ' SF2 · ' + engine.soundfonts.reduce((s,sf)=>s+sf.presets.length,0) + ' Presets');
 
     // Smart background pre-decode + memory display
@@ -5839,11 +6337,11 @@ setTimeout(() => { if(typeof buildCinematicBtns==='function') buildCinematicBtns
   document.getElementById(id)?.addEventListener('input', () => {
     updateLabels();
     applyGlobalAdsr();
-    fxSave();                          // ← NEU: localStorage aktualisieren
-    if (typeof autoSaveSession === 'function') autoSaveSession(); // ← NEU: Session aktualisieren
+    fxSave();
+    if (typeof autoSaveSession === 'function') autoSaveSession();
   })
 );
-document.getElementById('fxAdsrResetBtn')?.addEventListener('click', () => {
+  document.getElementById('fxAdsrResetBtn')?.addEventListener('click', () => {
   document.getElementById('fxAdsrAttack').value  = 0;
   document.getElementById('fxAdsrSustain').value = 1000;
   document.getElementById('fxAdsrRelease').value = 0;
@@ -5853,6 +6351,7 @@ document.getElementById('fxAdsrResetBtn')?.addEventListener('click', () => {
   if (typeof autoSaveSession === 'function') autoSaveSession();
 });
 })();
+
 
 // Show cached SF2s on startup
 renderCachedSF2s();
@@ -5927,13 +6426,10 @@ function melodySwitch(layer, newMidi, vel, startT) {
 
 async function playMidi(midi, vel=100, ch=null, source='keys', inputId=null) {
   // ── MIDI-Velocity-Boost ───────────────────────────────────────
-  // SpessaSynth verarbeitet Velocity linear (SF2-spezifikationsgetreu),
-  // FluidSynth verwendet eine eingebaute Kompressionskurve, die sanfte
-  // Anschläge lauter erscheinen lässt. Dieser Boost gleicht die MIDI-
-  // Eingabe an das FluidSynth-Gefühl an, ohne Touch/Tastatur anzufassen.
   if (source === 'midi') {
     vel = Math.min(127, Math.round(vel * 1.25 + 10));
   }
+  
   if (typeof rec !== 'undefined' && rec.state === 'armed') {
     // Looper-Modus: Aufnahme startet erst beim ersten Ton
     rec.startT = performance.now();
@@ -7649,7 +8145,7 @@ const PITCH_MAP_B = new Proxy({}, { get: (_, p) => typeof p === 'string' ? pitch
 
 // ── Hilfslinien: liefert Array von Y-Positionen für alle benötigten Linien ──
 // Notensystem-Randlinien (verifiziert anhand bisheriger Spezialfälle C4/E2):
-//   Violinschlüssel: unterste Linie G4 (y=70), oberste Linie A5 (y=110)
+//   Violinschlüssel: unterste Linie E4 (y=60), oberste Linie F5 (y=110)
 //   Bassschlüssel:   unterste Linie G2 (y=60), oberste Linie A3 (y=100)
 // Hilfslinien liegen im Abstand von 10 (= 2 diatonische Stufen) jenseits der
 // jeweiligen Randlinie. Eine Linie bei Position ly wird gezeichnet, wenn die
@@ -7657,8 +8153,8 @@ const PITCH_MAP_B = new Proxy({}, { get: (_, p) => typeof p === 'string' ? pitch
 // eine Zwischenraum-Note teilt sich die nächstgelegene Hilfslinie mit der
 // Liniennote direkt darunter/darüber).
 function getLedgerLines(y, clef) {
-  const lowLine  = clef === 'bass' ? 60 : 70;
-  const highLine = clef === 'bass' ? 100 : 110;
+  const lowLine  = clef === 'bass' ? 60 : 60;
+  const highLine = clef === 'bass' ? 100 : 100;
   const lines = [];
   if (y < lowLine) {
     for (let ly = lowLine - 10; ly >= y; ly -= 10) lines.push(ly);
@@ -7813,7 +8309,7 @@ function getKeyAwarePitchRange(key, clef) {
   return { inKey, outKey };
 }
 
-const DUR_MAP   = {'1n':4,'2n':2,'4n':1,'8n':.5,'16n':.25,'32n':.125};
+const DUR_MAP = {'1n':4,'2n':2,'4n':1,'8n':.5,'16n':.25,'32n':.125,'64n':.0625};
 // Taktart: frei wählbar über {num, den}. beats = Viertelnoten pro Takt.
 // num: Anzahl der Zähleinheiten (2,3,4,5,6,7,8,9,12...)
 // den: Notenwert der Zähleinheit (2=Halbe, 4=Viertel, 8=Achtel)
@@ -7821,7 +8317,96 @@ function tsBeats(num, den) { return num * (4 / den); }
 function tsLabel(num, den) { return `${num}/${den}`; }
 // Sinnvolle Default-Nenner für den Stepper
 const TIME_SIG_DENS = [2, 4, 8];
+const BASE_64 = 40;
 const STEP_W    = 120; // px pro Viertelnote
+
+// ── Mehrstimmigkeit: gleichzeitige Anzeige ─────────────────────
+// Rendert eine ZUSÄTZLICHE (nicht-aktive) Stimme als nicht-interaktives
+// Overlay direkt über der Haupt-Timeline des Tracks. Da die Breite jedes
+// Steps in JEDER Stimme proportional zur Notendauer ist (DUR_MAP*STEP_W),
+// richten sich mehrere Stimmen mit gleicher Gesamtdauer automatisch zeitlich
+// zueinander aus — keine gesonderte Zeitachsen-Synchronisation nötig.
+// Bewusst schlank gehalten (keine Balken/Haltebögen/Selektion) — reicht für
+// den ersten Überblick; "Nachjustierung" (Kollisionsvermeidung etc.) folgt später.
+// Baut eine eigenständige, nicht-interaktive Zeile für eine ZUSÄTZLICHE
+// (nicht-aktive) Stimme — im normalen Dokumentfluss (kein position:absolute-
+// Overlay-Trick mehr, der sich als zu fragil erwiesen hat). Bekommt eigenen
+// Schlüssel + Vorzeichen (gleiche Breite wie die Hauptzeile, für Spalten-
+// Ausrichtung), direkt darunter angehängt — "ein Track im Track".
+// Baut den Noten-Inhalt einer ZUSÄTZLICHEN (nicht-aktiven) Stimme, zum
+// Einfügen als Overlay direkt in die BESTEHENDE Timeline der Hauptstimme
+// (echtes gemeinsames Notensystem, Klavier-/Orgelstil — kein zweites, separat
+// scrollendes System, da zwei unabhängig scrollende Bereiche beim mobilen
+// Scrollen sonst auseinanderlaufen würden).
+function scoreRenderVoiceOverlay(track, voiceIdx, pMap,minDurValue) {
+  const voiceData = track.voices[voiceIdx].data;
+  const overlay = document.createElement('div');
+  overlay.className = 'score-voice-overlay';
+  overlay.dataset.voiceIdx = voiceIdx;
+  overlay.style.cssText = 'position:absolute;top:0;left:0;height:100%;display:flex;pointer-events:none;opacity:.8;';
+
+  voiceData.forEach((s, sIdx) => {
+  /*const baseW = (s.len==='32n' ? 30 : DUR_MAP[s.len] * STEP_W);*/
+    // Basisbreite der 64tel (kleinste Einheit) – anpassbar!
+ // z.B. 10px oder 12px
+/*
+const factor  = DUR_MAP[s.len] / 0.0625; // 1, 2, 4, 8, 16, 32, 64
+const baseW   = BASE_64 * factor;
+*/
+const factor  = DUR_MAP[s.len] / minDurValue; // Skaliert relativ zum kleinsten Wert im Score
+const baseW   = BASE_64 * factor;             // BASE_64 = 20px ist jetzt die Breite des kleinsten Wertes
+    // WICHTIG: eigene Klasse 'score-voice-step' statt 'score-step' — sonst
+    // würden Abfragen der Haupt-Balkenlogik (die per .score-step sucht) auch
+    // diese Steps mit-erfassen und die Index-Zuordnung durcheinanderbringen.
+    const wrap = document.createElement('div');
+    wrap.className = 'score-voice-step';
+    wrap.dataset.sidx = sIdx;
+    wrap.style.cssText = `flex-shrink:0;height:100%;position:relative;width:${baseW * (s.dot?1.5:1)}px;`;
+    if (s.rest) { overlay.appendChild(wrap); return; }
+
+    const topY = s.notes.reduce((max, n) => Math.max(max, pMap[n.p] ?? 70), -Infinity);
+    let topAssigned = false;
+    s.notes.forEach(n => {
+      const y = pMap[n.p] ?? 70;
+      const isTop = !topAssigned && y === topY;
+      if (isTop) topAssigned = true;
+      const stemDown = scoreStemIsDown(track, voiceIdx, y);
+      const iconSet = scoreNoteIconSet(stemDown);
+      const flaglessSet = scoreFlaglessIconSet(stemDown);
+      const notehead = stemDown ? NOTEHEAD_ONLY_DOWN : NOTEHEAD_ONLY;
+      const isBeamedTop = isTop && s.beamId && BEAM_LEVELS[s.len];
+
+      if (n.a) {
+        const ac = document.createElement('div');
+        ac.innerHTML = svgAcc[n.a];
+        ac.firstChild.style.top = `${n.a === '#' ? 153-y : 150-y}px`;
+        wrap.appendChild(ac.firstChild);
+      }
+      const nw = document.createElement('div');
+      nw.innerHTML = isBeamedTop
+        ? notehead
+        : (isTop || !flaglessSet[s.len]) ? iconSet[s.len] : flaglessSet[s.len];
+      nw.firstChild.style.top = `${scoreNoteTopOffset(y, stemDown)}px`;
+      if (isTop) {
+        nw.firstChild.classList.add('score-beam-anchor');
+        if (stemDown) nw.firstChild.classList.add('score-stem-down');
+      }
+      wrap.appendChild(nw.firstChild);
+      if (s.dot) {
+        const d = document.createElement('div');
+        d.className = 'score-dot'; d.style.top = `${165-y}px`; wrap.appendChild(d);
+      }
+      // Hilfslinien — beliebig viele, je nach Abstand zum Notensystem
+      // (fehlten bisher bei zusätzlichen Stimmen, jetzt wie bei der Hauptstimme)
+      getLedgerLines(y, track.clef).forEach(ly => {
+        const l = document.createElement('div');
+        l.className = 'score-ledger'; l.style.top = `${169 - ly}px`; wrap.appendChild(l);
+      });
+    });
+    overlay.appendChild(wrap);
+  });
+  return overlay;
+}
 
 // ── SVGs ─────────────────────────────────────────────────────
 // Exakt wie Original Editor.html — class="score-acc" setzt Größe+Position
@@ -8002,6 +8587,22 @@ const noteIconsStaff = {
   '8n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 28" fill="none" stroke="black" stroke-width="3"/></svg>`,
   '16n':`<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 22" fill="none" stroke="black" stroke-width="3"/><path d="M16 14 Q 27 24 27 31" fill="none" stroke="black" stroke-width="3"/></svg>`,
   '32n':`<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 18" fill="none" stroke="black" stroke-width="3"/><path d="M16 10 Q 27 20 27 23" fill="none" stroke="black" stroke-width="3"/><path d="M16 15 Q 27 25 27 28" fill="none" stroke="black" stroke-width="3"/></svg>`,
+  '64n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/><path d="M16 5 Q 27 15 27 18" fill="none" stroke="black" stroke-width="3"/><path d="M16 10 Q 27 20 27 23" fill="none" stroke="black" stroke-width="3"/><path d="M16 15 Q 27 25 27 28" fill="none" stroke="black" stroke-width="3"/><path d="M16 20 Q 27 30 27 33" fill="none" stroke="black" stroke-width="3"/></svg>`,
+};
+// Stiel-runter-Varianten — jede Y-Koordinate exakt vertikal gespiegelt
+// (y_neu = 50 - y_alt) innerhalb desselben viewBox, X-Koordinaten unverändert
+// (Fahne zeigt weiterhin nach rechts, wie gewünscht — nur vertikal gespiegelt,
+// keine Links-Rechts-Spiegelung). Notenkopf-Mittelpunkt wandert dadurch von
+// cy=40 auf cy=10 — die Top-Offset-Formel beim Rendern muss das entsprechend
+// berücksichtigen (siehe scoreNoteTopOffset).
+const noteIconsStaffDown = {
+  '1n': noteIconsStaff['1n'], // Ganze Note hat ohnehin keinen Stiel — Richtung irrelevant
+  '2n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="10" rx="7" ry="4.2" fill="black"/><ellipse cx="10" cy="10" rx="3.6" ry="1.9" fill="white"/><path class="note-stem" d="M3 10 L3 45" stroke="black" stroke-width="2"/></svg>`,
+  '4n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="10" rx="6" ry="4" fill="black"/><path class="note-stem" d="M4 10 L4 45" stroke="black" stroke-width="2.2"/></svg>`,
+  '8n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="10" rx="6" ry="4" fill="black"/><path class="note-stem" d="M4 10 L4 45" stroke="black" stroke-width="2.2"/><path d="M4 45 Q 15 35 15 22" fill="none" stroke="black" stroke-width="3"/></svg>`,
+  '16n':`<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="10" rx="6" ry="4" fill="black"/><path class="note-stem" d="M4 10 L4 45" stroke="black" stroke-width="2.2"/><path d="M4 45 Q 15 35 15 28" fill="none" stroke="black" stroke-width="3"/><path d="M4 36 Q 15 26 15 19" fill="none" stroke="black" stroke-width="3"/></svg>`,
+  '32n':`<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="10" rx="6" ry="4" fill="black"/><path class="note-stem" d="M4 10 L4 45" stroke="black" stroke-width="2.2"/><path d="M4 45 Q 15 35 15 32" fill="none" stroke="black" stroke-width="3"/><path d="M4 40 Q 15 30 15 27" fill="none" stroke="black" stroke-width="3"/><path d="M4 35 Q 15 25 15 22" fill="none" stroke="black" stroke-width="3"/></svg>`,
+  '64n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="10" rx="6" ry="4" fill="black"/><path class="note-stem" d="M4 10 L4 45" stroke="black" stroke-width="2.2"/><path d="M4 45 Q 15 35 15 32" fill="none" stroke="black" stroke-width="3"/><path d="M4 40 Q 15 30 15 27" fill="none" stroke="black" stroke-width="3"/><path d="M4 35 Q 15 25 15 22" fill="none" stroke="black" stroke-width="3"/><path d="M4 30 Q 15 20 15 17" fill="none" stroke="black" stroke-width="3"/></svg>`,
 };
 // Fahnenlose Varianten für Akkord-Töne, die nicht die oberste Note sind
 // (Notenkopf + Hals identisch zur Viertel-Note, nur ohne Fahnen-Kringel)
@@ -8009,10 +8610,47 @@ const FLAGLESS_ICON = {
   '8n':  `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
   '16n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
   '32n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
+  '64n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="40" rx="6" ry="4" fill="black"/><path class="note-stem" d="M16 40 L16 5" stroke="black" stroke-width="2.2"/></svg>`,
 };
+const FLAGLESS_ICON_DOWN = {
+  '8n':  `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="10" rx="6" ry="4" fill="black"/><path class="note-stem" d="M4 10 L4 45" stroke="black" stroke-width="2.2"/></svg>`,
+  '16n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="10" rx="6" ry="4" fill="black"/><path class="note-stem" d="M4 10 L4 45" stroke="black" stroke-width="2.2"/></svg>`,
+  '32n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="10" rx="6" ry="4" fill="black"/><path class="note-stem" d="M4 10 L4 45" stroke="black" stroke-width="2.2"/></svg>`,
+  '64n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse cx="10" cy="10" rx="6" ry="4" fill="black"/><path class="note-stem" d="M4 10 L4 45" stroke="black" stroke-width="2.2"/></svg>`,
+};
+// Mittlere (3.) Notenlinie in der internen y-Koordinate — empirisch korrigiert
+// (löste vorher schon ab der 2. statt erst ab der 3. Linie aus, daher +10
+// gegenüber der rein rechnerischen Herleitung).
+const SCORE_MIDDLE_LINE_Y = 80;
+// Bestimmt die Stielrichtung einer Note:
+// - Bei ≥2 Stimmen auf einem Track: NUR die Stimmennummer entscheidet — die
+//   oberste (erste) Stimme immer Stiel hoch, alle weiteren immer Stiel runter
+//   (Standard bei Chor-/Klavierpartituren, unabhängig von der Tonhöhe).
+// - Bei nur 1 Stimme: die Tonhöhe entscheidet — ab der mittleren (3.) Notenlinie
+//   und höher zeigt der Stiel nach unten (gespiegelt, Fahne bleibt rechts),
+//   darunter zeigt er wie gewohnt nach oben.
+function scoreStemIsDown(track, voiceIdx, y) {
+  if (track.voices && track.voices.length >= 2) return voiceIdx > 0;
+  return y >= SCORE_MIDDLE_LINE_Y;
+}
+// Liefert das passende Notenkopf-Icon-Set (hoch/runter) für eine Stielrichtung
+function scoreNoteIconSet(stemDown) {
+  return stemDown ? noteIconsStaffDown : noteIconsStaff;
+}
+function scoreFlaglessIconSet(stemDown) {
+  return stemDown ? FLAGLESS_ICON_DOWN : FLAGLESS_ICON;
+}
+// Berechnet den CSS-"top"-Offset für ein Notenkopf-Icon, abhängig von der
+// Stielrichtung — bei Stiel-runter sitzt der Notenkopf-Mittelpunkt lokal bei
+// cy=10 statt cy=40 im viewBox, wodurch sich der externe Offset verschiebt
+// (hergeleitet so, dass der Notenkopf trotzdem exakt auf der Tonhöhe y landet).
+function scoreNoteTopOffset(y, stemDown) {
+  return stemDown ? (158 - y) : (122 - y);
+}
 // Nur Notenkopf ohne Hals — für balkierte Noten, deren Stiel dynamisch
 // von scoreDrawBeams() gezeichnet wird (Länge hängt vom Balkenverlauf ab)
 const NOTEHEAD_ONLY = `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse class="note-head" cx="10" cy="40" rx="6" ry="4" fill="black"/></svg>`;
+const NOTEHEAD_ONLY_DOWN = `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse class="note-head" cx="10" cy="10" rx="6" ry="4" fill="black"/></svg>`;
 const restIconsStaff = {
   '1n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><rect x="5" y="30" width="20" height="6" fill="black"/></svg>`,
   '2n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><rect x="5" y="24" width="20" height="6" fill="black"/></svg>`,
@@ -8020,6 +8658,13 @@ const restIconsStaff = {
   '8n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="20" r="3" fill="black"/><path d="M10 20 Q 20 20 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
   '16n':`<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="20" r="3" fill="black"/><circle cx="10" cy="30" r="3" fill="black"/><path d="M10 20 Q 20 20 20 40 M10 30 Q 20 30 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
   '32n':`<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="15" r="2" fill="black"/><circle cx="10" cy="25" r="2" fill="black"/><circle cx="10" cy="35" r="2" fill="black"/><path d="M10 15 Q 20 15 20 40 M10 25 Q 20 25 20 40 M10 35 Q 20 35 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
+  '64n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none">
+<circle cx="10" cy="10" r="2" fill="black"/>
+<circle cx="10" cy="20" r="2" fill="black"/>
+<circle cx="10" cy="30" r="2" fill="black"/>
+<circle cx="10" cy="40" r="2" fill="black"/>
+<path d="M10 10 Q 20 10 20 40 M10 20 Q 20 20 20 40 M10 30 Q 20 30 20 40 M10 40 Q 20 40 20 40" stroke="black" stroke-width="2" fill="none"/>
+</svg>`,
 };
 // Toolbar-Icons (klein, für Notenwert-Buttons) — dunkle Farbe auf dunklem Hintergrund
 const noteIcons = {
@@ -8029,6 +8674,7 @@ const noteIcons = {
   '8n': `<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="10" cy="40" rx="7" ry="5" fill="#000"/><path d="M17 40 L17 5" stroke="#000" stroke-width="2.5"/><path d="M17 5 Q 28 15 28 28" fill="none" stroke="#000" stroke-width="3.5"/></svg>`,
   '16n':`<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="10" cy="40" rx="7" ry="5" fill="#000"/><path d="M17 40 L17 5" stroke="#000" stroke-width="2.5"/><path d="M17 5 Q 28 15 28 22" fill="none" stroke="#000" stroke-width="3.5"/><path d="M17 14 Q 28 24 28 31" fill="none" stroke="#000" stroke-width="3.5"/></svg>`,
   '32n':`<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="10" cy="40" rx="7" ry="5" fill="#000"/><path d="M17 40 L17 5" stroke="#000" stroke-width="2.5"/><path d="M17 5 Q 28 15 28 18" fill="none" stroke="#000" stroke-width="3.5"/><path d="M17 10 Q 28 20 28 23" fill="none" stroke="#000" stroke-width="3.5"/><path d="M17 15 Q 28 25 28 28" fill="none" stroke="#000" stroke-width="3.5"/></svg>`,
+  '64n': `<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="10" cy="40" rx="7" ry="5" fill="#000"/><path d="M17 40 L17 5" stroke="#000" stroke-width="2.5"/><path d="M17 5 Q 28 15 28 15" fill="none" stroke="#000" stroke-width="3"/><path d="M17 10 Q 28 20 28 20" fill="none" stroke="#000" stroke-width="3"/><path d="M17 15 Q 28 25 28 25" fill="none" stroke="#000" stroke-width="3"/><path d="M17 20 Q 28 30 28 30" fill="none" stroke="#000" stroke-width="3"/></svg>`,
 };
 const restIcons = {
   '1n': `<svg viewBox="0 0 30 50" height="44" width="28"><rect x="5" y="30" width="20" height="6" fill="#000"/></svg>`,
@@ -8037,6 +8683,7 @@ const restIcons = {
   '8n': `<svg viewBox="0 0 30 50" height="44" width="28"><circle cx="10" cy="20" r="3" fill="#000"/><path d="M10 20 Q 20 20 20 40" stroke="#000" stroke-width="2" fill="none"/></svg>`,
   '16n':`<svg viewBox="0 0 30 50" height="44" width="28"><circle cx="10" cy="20" r="3" fill="#000"/><circle cx="10" cy="30" r="3" fill="#000"/><path d="M10 20 Q 20 20 20 40 M10 30 Q 20 30 20 40" stroke="#000" stroke-width="2" fill="none"/></svg>`,
   '32n':`<svg viewBox="0 0 30 50" height="44" width="28"><circle cx="10" cy="15" r="2" fill="#000"/><circle cx="10" cy="25" r="2" fill="#000"/><circle cx="10" cy="35" r="2" fill="#000"/><path d="M10 15 Q 20 15 20 40 M10 25 Q 20 25 20 40 M10 35 Q 20 35 20 40" stroke="#000" stroke-width="2" fill="none"/></svg>`,
+  '64n': `<svg viewBox="0 0 30 50" height="44" width="28"><circle cx="10" cy="15" r="2" fill="#000"/><circle cx="10" cy="25" r="2" fill="#000"/><circle cx="10" cy="35" r="2" fill="#000"/><circle cx="10" cy="45" r="2" fill="#000"/><path d="M10 15 Q 20 15 20 40 M10 25 Q 20 25 20 40 M10 35 Q 20 35 20 40 M10 45 Q 20 45 20 40" stroke="#000" stroke-width="2" fill="none"/></svg>`,
 };
 
 // ── State ─────────────────────────────────────────────────────
@@ -8051,8 +8698,71 @@ function scoreMigrateTrack(track) {
     track.timeSigNum = n || 4;
     track.timeSigDen = d || 4;
   }
+  // Mehrstimmigkeit (Chor-/Klavierpartitur-Prinzip, z.B. Sopran+Alt auf einem
+  // System, Tenor+Bass auf einem anderen): track.data wird zu einer Zugriffs-
+  // Eigenschaft (Getter/Setter) auf die AKTIVE Stimme umgebaut. Dadurch kann der
+  // gesamte übrige Code (Rendering, Wiedergabe, Export, Editor-Funktionen) völlig
+  // unverändert weiter mit track.data arbeiten — nur WELCHE Stimme "data"
+  // liefert, hängt von track.activeVoiceIdx ab. Deckt sowohl alte Tracks (nur
+  // data, kein voices) als auch frisch importierte JSON-Tracks ab (voices
+  // vorhanden, aber noch als reine Daten ohne den JS-Getter).
+  if (!track.voices) {
+    const initialData = track.data || [{notes:[{p:'C4',a:null}],len:'4n',rest:false,dot:false}];
+    track.voices = [{ name: 'Stimme 1', data: initialData }];
+    track.activeVoiceIdx = 0;
+  }
+  if (typeof track.activeVoiceIdx !== 'number') track.activeVoiceIdx = 0;
+  const desc = Object.getOwnPropertyDescriptor(track, 'data');
+  if (!desc || !desc.get) {
+    delete track.data;
+    Object.defineProperty(track, 'data', {
+      get() { return track.voices[track.activeVoiceIdx].data; },
+      set(v) { track.voices[track.activeVoiceIdx].data = v; },
+      enumerable: false, configurable: true
+    });
+  }
   return track;
 }
+// Neue Stimme zu einem Track hinzufügen (z.B. Alt-Stimme neben Sopran) —
+// startet mit einem einzelnen Platzhalter-Step, gleiche Taktart wie der Track.
+window.scoreAddVoice = function(tIdx) {
+  const track = scoreTracks[tIdx];
+  if (!track) return;
+  scoreMigrateTrack(track);
+  const n = track.voices.length + 1;
+  track.voices.push({ name: `Stimme ${n}`, data: [{notes:[{p:'C4',a:null}],len:'4n',rest:false,dot:false}] });
+  track.activeVoiceIdx = track.voices.length - 1;
+  if (scoreActive && scoreActive.tIdx === tIdx) scoreActive = null;
+  scoreRender();
+};
+// Aktive (gerade bearbeitete) Stimme eines Tracks umschalten
+window.scoreSetActiveVoice = function(tIdx, voiceIdx) {
+  const track = scoreTracks[tIdx];
+  if (!track) return;
+  scoreMigrateTrack(track);
+  track.activeVoiceIdx = Math.max(0, Math.min(track.voices.length - 1, voiceIdx));
+  // Geöffnetes Editor-Panel schließen: scoreActive zeigt sonst weiter auf den
+  // Step-Index der VORHERIGEN Stimme — existiert dieser Step in der neuen
+  // Stimme nicht (z.B. weil sie kürzer ist), crasht scoreRenderEditor beim
+  // Zugriff auf undefined ("Cannot read properties of undefined (reading 'len')").
+  if (scoreActive && scoreActive.tIdx === tIdx) scoreActive = null;
+  scoreRender();
+};
+// Stimme umbenennen (z.B. "Stimme 1" -> "Sopran")
+window.scoreRenameVoice = function(tIdx, voiceIdx, name) {
+  const track = scoreTracks[tIdx];
+  if (!track || !track.voices[voiceIdx]) return;
+  track.voices[voiceIdx].name = name || `Stimme ${voiceIdx+1}`;
+};
+// Stimme löschen (mindestens eine muss bestehen bleiben)
+window.scoreDeleteVoice = function(tIdx, voiceIdx) {
+  const track = scoreTracks[tIdx];
+  if (!track || track.voices.length <= 1) return;
+  track.voices.splice(voiceIdx, 1);
+  if (track.activeVoiceIdx >= track.voices.length) track.activeVoiceIdx = track.voices.length - 1;
+  if (scoreActive && scoreActive.tIdx === tIdx) scoreActive = null;
+  scoreRender();
+};
 let scoreActive      = null;
 let scoreCursor      = null;
 let scoreTool        = { len:'4n', rest:false, dot:false };
@@ -8133,8 +8843,8 @@ function scoreSelUpdateToolbar() {
     if (n >= 1) {
       lenWrap.style.display = 'inline-flex';
       lenWrap.innerHTML = '';
-      const vals = ['1n','2n','4n','8n','16n','32n'];
-      const labels = {'1n':'Ganze','2n':'Halbe','4n':'Viertel','8n':'Achtel','16n':'16tel','32n':'32tel'};
+      const vals = ['1n','2n','4n','8n','16n','32n','64n'];
+      const labels = {'1n':'Ganze','2n':'Halbe','4n':'Viertel','8n':'Achtel','16n':'16tel','32n':'32tel','64n':'64tel'};
       vals.forEach(v => {
         const b = document.createElement('button');
         b.className = 'score-nv-btn';
@@ -8227,7 +8937,7 @@ window.scoreSelSetLen = function(len) {
 // Prüft, ob die aktuelle Selektion balkenfähig ist: ≥2 Steps, selber Track,
 // lückenlos aufeinanderfolgend, keine Pausen, alle Notenwerte 8tel/16tel/32tel.
 // Gibt bei Erfolg die Step-Objekte in Reihenfolge zurück, sonst null.
-const BEAM_LEVELS = { '8n':1, '16n':2, '32n':3 };
+const BEAM_LEVELS = { '8n':1, '16n':2, '32n':3, '64n':4 };
 function scoreBeamableSelection() {
   if (scoreSelection.size < 2) return null;
   const keys = [...scoreSelection].map(k => k.split('_').map(Number));
@@ -8483,8 +9193,8 @@ window.scoreChangeTimeSigNum = function(tIdx, delta) {
 
 // ── Toolbar ───────────────────────────────────────────────────
 function scoreRenderToolbar() {
-  const vals = ['1n','2n','4n','8n','16n','32n'];
-  const labels = {'1n':'Ganze','2n':'Halbe','4n':'Viertel','8n':'Achtel','16n':'16tel','32n':'32tel'};
+  const vals = ['1n','2n','4n','8n','16n','32n','64n'];
+  const labels = {'1n':'Ganze','2n':'Halbe','4n':'Viertel','8n':'Achtel','16n':'16tel','32n':'32tel','64n':'64tel'};
   const wrap = document.getElementById('scoreNoteValBtns');
   if (!wrap) return;
   wrap.innerHTML = '';
@@ -8547,8 +9257,662 @@ try {
     if (dotCb)  dotCb.checked  = scoreTool.dot;
   }
 } catch(e) {}
+//neu
+function resizeScorePaper() {
+  const paper     = document.getElementById('scorePaper');
+  const scaleWrap = paper?.parentElement;
+  const scrollArea = document.querySelector('.score-scroll-area');
+  if (!paper || !scaleWrap || !scrollArea) return;
 
+  paper.style.transform = 'none';
+  paper.style.width = '794px';
+  scaleWrap.style.width = '';
+  scaleWrap.style.height = '';
+
+  const naturalH = paper.scrollHeight;
+  const paperW = 794;
+  const availW = scrollArea.clientWidth - 16;
+  const scale = availW / paperW;
+
+  paper.style.transform = `scale(${scale})`;
+  scaleWrap.style.width  = (paperW * scale) + 'px';
+  scaleWrap.style.height = (naturalH * scale) + 'px';
+      }
+
+// ── Velocity-Sidebar ─────────────────────────────────────────
+(function initVelSidebar() {
+  const sidebar = document.getElementById('velSidebar');
+  const track   = document.getElementById('velTrack');
+  const thumb   = document.getElementById('velThumb');
+  const valueEl = document.getElementById('velValue');
+  const toggle  = document.getElementById('velToggleBtn');
+  if (!sidebar || !track || !thumb || !valueEl) return;
+
+  // Aktueller Wert (0–127)
+  let velValue = 110;
+  let dragging = false;
+  let targetTrack = 0;   // welcher Track wird beim Malen bearbeitet
+
+  // Beim ersten Mal: gespeicherten Zustand laden
+  try {
+    const saved = localStorage.getItem('ensemble_vel_sidebar');
+    const show = saved === '1';
+    sidebar.style.display = show ? 'flex' : 'none';
+    toggle?.classList.toggle('active', show);
+    const savedVel = parseInt(localStorage.getItem('ensemble_vel_value') || '90');
+    if (isFinite(savedVel)) velValue = Math.max(1, Math.min(127, savedVel));
+  } catch(e) {}
+
+  function updateThumb() {
+    // 0 = unten, 127 = oben
+    const pct = velValue / 127;
+    const topPct = (1 - pct) * 100;
+    thumb.style.top = topPct + '%';
+    valueEl.textContent = velValue;
+  }
+
+  function setVel(newVel, source) {
+    velValue = Math.max(1, Math.min(127, Math.round(newVel)));
+    updateThumb();
+    try { localStorage.setItem('ensemble_vel_value', String(velValue)); } catch(e) {}
+
+    if (source === 'drag') {
+      // Bei Selektion immer live schreiben (unabhängig vom Mal-Modus)
+      if (scoreSelection && scoreSelection.size > 0) {
+        applyVelToSelection();
+      }
+      // Wenn Mal-Modus aktiv, greift der Playback-Hook von selbst —
+      // der nächste durchlaufende Step bekommt den neuen Wert.
+    }
+  }
+  function yToVel(clientY) {
+    const rect = track.getBoundingClientRect();
+    const pct = 1 - (clientY - rect.top) / rect.height;
+    return Math.max(1, Math.min(127, Math.round(pct * 127)));
+  }
+
+  function onStart(e) {
+    e.preventDefault();
+    dragging = true;
+    thumb.classList.add('active');
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    setVel(yToVel(clientY), 'drag');
+  }
+
+  function onMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    setVel(yToVel(clientY), 'drag');
+  }
+
+  function onEnd() {
+    if (!dragging) return;
+    dragging = false;
+    thumb.classList.remove('active');
+  }
+
+    let paintMode = false;
+
+  window.toggleVelPaint = function() {
+    paintMode = !paintMode;
+    const btn = document.getElementById('velPaintBtn');
+    if (btn) {
+      btn.classList.toggle('active', paintMode);
+      btn.textContent = paintMode ? '✎ Malen: AN' : '✎ Malen: AUS';
+      btn.style.borderColor = paintMode ? '#69ff47' : '';
+      btn.style.color       = paintMode ? '#69ff47' : '';
+    }
+  };
+
+  window._velPaintActive = () => paintMode;
+  track.addEventListener('mousedown',  onStart);
+  track.addEventListener('touchstart', onStart, { passive: false });
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('mouseup',   onEnd);
+  window.addEventListener('touchend',  onEnd);
+  window.addEventListener('touchcancel', onEnd);
+
+  
+  // Schreibfunktion: setzt den aktuellen Velocity-Wert auf den gerade klingenden Step
+  function applyVelToCurrentStep() {
+    if (typeof scorePlayTimer === 'undefined' || scorePlayTimer === null) return;
+    if (!scorePlayPos) return;
+    const trackIdx = scorePlayPos.tIdx;
+    const stepIdx  = scorePlayPos.sIdx;
+    const step = scoreTracks[trackIdx]?.data?.[stepIdx];
+    if (!step || step.rest) return;
+    step.vel = velValue;
+    // Visuelles Feedback im Step (ohne vollen Re-Render)
+    const stepEl = document.querySelector(
+      `.score-track-unit:nth-child(${trackIdx+1}) .score-step[data-sidx="${stepIdx}"]`
+    );
+    if (stepEl) {
+  const velLbl = stepEl.querySelector('.score-step-vel');
+  if (velLbl) velLbl.textContent = velValue;
+  }
+  }
+  // Schreibt die aktuelle Velocity auf alle selektierten Steps
+  function applyVelToSelection() {
+    if (!scoreSelection || scoreSelection.size === 0) return false;
+
+    scoreSelection.forEach(key => {
+      const [ti, si] = key.split('_').map(Number);
+      const step = scoreTracks[ti]?.data?.[si];
+      if (!step || step.rest) return;
+      step.vel = velValue;
+
+      // Visuelles Feedback im Step (ohne vollen Re-Render)
+      const stepEl = document.querySelector(
+        `.score-track-unit:nth-child(${ti+1}) .score-step[data-sidx="${si}"]`
+      );
+      if (stepEl) {
+        const velLbl = stepEl.querySelector('.score-step-vel');
+        if (velLbl) velLbl.textContent = velValue;
+      }
+    });
+    return true;
+  }
+  // Expose, damit scheduleTrackStep den aktuellen Wert auslesen kann
+  window._velSliderGet = () => velValue;
+  window._velSliderIsDragging = () => dragging;
+  window._velApplyToCurrentStep = applyVelToCurrentStep;
+
+  // Globaler Toggle
+  window.toggleVelSidebar = function() {
+    const show = sidebar.style.display === 'none';
+    sidebar.style.display = show ? 'flex' : 'none';
+    toggle?.classList.toggle('active', show);
+    try { localStorage.setItem('ensemble_vel_sidebar', show ? '1' : '0'); } catch(e) {}
+    // Layout anpassen (score-paper könnte sich verbreitern)
+    if (typeof resizeScorePaper === 'function') {
+      requestAnimationFrame(() => resizeScorePaper());
+    }
+  };
+
+  updateThumb();
+})();
+/*//neu
+window.addEventListener('resize', resizeScorePaper);
+*/
+//besser
+window.addEventListener('resize', () => {
+  resizeScorePaper();
+  // Nach Layout-Änderung Balken neu zeichnen
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (typeof window.scoreDrawBeams === 'function') window.scoreDrawBeams();
+  }));
+});
+window.addEventListener('orientationchange', () => setTimeout(resizeScorePaper, 200));
+/* //alt
+function resizeScorePaper() {
+    const paper = document.getElementById('scorePaper');
+    const wrap = document.querySelector('.score-content-wrap');
+    if (!paper || !wrap) return;
+
+    // Verfügbare Breite im Container (abzüglich Padding)
+    const availW = wrap.clientWidth - 40; // 20px padding links + rechts
+    const paperW = 794;                   // Fest definierte A4-Breite
+
+    let scale = 1;
+    if (paperW > availW) {
+        scale = availW / paperW;
+    }
+
+    paper.style.transform = `scale(${scale})`;
+    // Da wir skalieren, muss die Höhe des Wrappers kompensiert werden,
+    // damit kein Leerraum unter dem Blatt entsteht.
+    // Die tatsächliche Höhe des Blatts wird durch den Inhalt bestimmt.
+    const paperHeight = paper.scrollHeight;
+    paper.style.marginBottom = `${paperHeight * (1 - scale)}px`;
+}
+
+//Initial und bei Resize aufrufen
+window.addEventListener('resize', resizeScorePaper);
+setTimeout(resizeScorePaper, 100); // nach dem ersten Rendern
+*/ //alt
+function scoreRender() {
+  const container = document.getElementById('scoreTracksContainer');
+  if (!container) return;
+// --- NEU: Globalen minimalen Notenwert berechnen (über alle Tracks & Stimmen) ---
+  let minDurValue = Infinity;
+  scoreTracks.forEach(t => {
+    // Aktive Stimme prüfen
+    if (t.data) t.data.forEach(s => {
+      if (DUR_MAP[s.len] !== undefined) minDurValue = Math.min(minDurValue, DUR_MAP[s.len]);
+    });
+    // Alle weiteren Stimmen (Overlays) prüfen
+    if (t.voices) t.voices.forEach(v => {
+      if (v.data) v.data.forEach(s => {
+        if (DUR_MAP[s.len] !== undefined) minDurValue = Math.min(minDurValue, DUR_MAP[s.len]);
+      });
+    });
+  });
+  // Fallback: Falls kein Notenwert gefunden wurde, nimm 4n (1) als Minimum
+  if (minDurValue === Infinity) minDurValue = 1;
+  // -----------------------
+  // Scroll-Positionen sichern
+  const scrollPositions = [];
+  container.querySelectorAll('.score-track-row').forEach((row, i) => {
+    scrollPositions[i] = row.scrollLeft;
+  });
+
+  container.innerHTML = '';
+
+  // Hilfsfunktion für kompakte Buttons (einmal außerhalb der Schleife)
+  function makeCompactBtn(label, onClick, danger = false) {
+    const b = document.createElement('button');
+    b.className = 'score-btn' + (danger ? ' danger' : '');
+    b.textContent = label;
+    b.style.cssText = 'padding:1px 5px;font-size:.6rem;line-height:1.2';
+    b.onclick = onClick;
+    return b;
+  }
+
+  scoreTracks.forEach((track, tIdx) => {
+    scoreMigrateTrack(track);
+    const pMap = track.clef === 'treble' ? PITCH_MAP_T : PITCH_MAP_B;
+    const keySig = KEY_SIGS[track.key] || [];
+
+    // ---- Track-Unit (enthält Header + Notensystem) ----
+    const unit = document.createElement('div');
+    unit.className = 'score-track-unit';
+
+    // ---- HEADER (nicht skaliert) ----
+    const hdr = document.createElement('div');
+    hdr.className = 'score-track-header';
+
+    // Feste Elemente
+    const trackLabel = document.createElement('span');
+    trackLabel.textContent = `♩ T${tIdx+1}`;
+    trackLabel.style.cssText = 'color:var(--accent3);font-size:.65rem;font-weight:bold';
+
+    // Clef
+    const clefSel = document.createElement('select');
+    clefSel.style.cssText = 'font-size:.6rem;padding:1px 4px;max-width:70px';
+    clefSel.innerHTML = `
+      <option value="treble" ${track.clef==='treble'?'selected':''}>𝄞</option>
+      <option value="bass"   ${track.clef==='bass'?'selected':''}>𝄢</option>
+    `;
+    clefSel.onchange = () => { track.clef = clefSel.value; scoreRender(); };
+
+    // Key
+    const keySel = document.createElement('select');
+    keySel.style.cssText = 'font-size:.6rem;padding:1px 4px;max-width:70px';
+    const keyOpts = Object.keys(KEY_SIGS).map(k =>
+      `<option value="${k}" ${(track.key??'C-Dur')===k?'selected':''}>${k}</option>`
+    ).join('');
+    keySel.innerHTML = keyOpts;
+    keySel.onchange = () => scoreChangeKey(tIdx, keySel.value, keySel);
+
+    // Taktart
+    const tsGroup = document.createElement('span');
+    tsGroup.className = 'score-ts-group';
+    tsGroup.style.cssText = 'display:inline-flex;align-items:center;gap:2px;font-size:.6rem';
+    tsGroup.innerHTML = `
+      <button class="score-btn" style="padding:1px 4px;font-size:.6rem" onclick="scoreChangeTimeSigNum(${tIdx},-1)">−</button>
+      <span style="min-width:14px;text-align:center">${track.timeSigNum}</span>
+      <button class="score-btn" style="padding:1px 4px;font-size:.6rem" onclick="scoreChangeTimeSigNum(${tIdx},1)">+</button>
+      <span style="color:var(--dim)">/</span>
+      <select onchange="track.timeSigDen=parseInt(this.value);scoreRender()" style="width:36px;font-size:.6rem">
+        ${TIME_SIG_DENS.map(d => `<option value="${d}" ${track.timeSigDen===d?'selected':''}>${d}</option>`).join('')}
+      </select>
+    `;
+
+    // Layer
+    const layerSel = document.createElement('select');
+    layerSel.style.cssText = 'font-size:.6rem;padding:1px 4px;max-width:80px';
+    layerSel.innerHTML = (typeof layers !== 'undefined' ? layers : [])
+      .map((l, i) => `<option value="${i}" ${track.layerIdx===i?'selected':''}>L${i+1}</option>`)
+      .join('') || '<option value="0">—</option>';
+    layerSel.onchange = () => { track.layerIdx = parseInt(layerSel.value); scoreRender(); };
+
+    // Stimme
+    const voiceSel = document.createElement('select');
+    voiceSel.style.cssText = 'font-size:.6rem;padding:1px 4px;max-width:60px';
+    voiceSel.innerHTML = track.voices.map((v, vi) =>
+      `<option value="${vi}" ${track.activeVoiceIdx===vi?'selected':''}>${v.name}</option>`
+    ).join('');
+    voiceSel.onchange = () => { scoreSetActiveVoice(tIdx, parseInt(voiceSel.value)); };
+
+    // Buttons
+    const addVoiceBtn = makeCompactBtn('+V', () => scoreAddVoice(tIdx));
+    const renameVoiceBtn = makeCompactBtn('✎', () => {
+      const n = prompt('Name:', track.voices[track.activeVoiceIdx].name);
+      if(n !== null) scoreRenameVoice(tIdx, track.activeVoiceIdx, n);
+    });
+    const delVoiceBtn = track.voices.length > 1 ? makeCompactBtn('✕V', () => scoreDeleteVoice(tIdx, track.activeVoiceIdx)) : null;
+    const addStepBtn = makeCompactBtn('+Step', () => scoreAddStep(tIdx));
+    const playBtn = makeCompactBtn('▶', () => scoreStartPlay(tIdx, 0));
+    const playCursorBtn = makeCompactBtn('▶✦', () => scoreStartPlayTrackCursor(tIdx));
+    const octUpBtn = makeCompactBtn('8↑', () => scoreOctaveShift(tIdx, 1));
+    const octDownBtn = makeCompactBtn('8↓', () => scoreOctaveShift(tIdx, -1));
+    const dupBtn = makeCompactBtn('⧉', () => scoreDuplicateTrack(tIdx));
+    const delTrackBtn = tIdx > 0 ? makeCompactBtn('✕', () => { scoreTracks.splice(tIdx,1); scoreRender(); }, true) : null;
+
+    // Alle Header-Elemente zusammenfügen
+    /*
+    hdr.append(
+      trackLabel, clefSel, keySel, tsGroup, layerSel, voiceSel,
+      addVoiceBtn, renameVoiceBtn, delVoiceBtn, addStepBtn,
+      playBtn, playCursorBtn, octUpBtn, octDownBtn, dupBtn, delTrackBtn
+    );
+*/
+    [
+  trackLabel, clefSel, keySel, tsGroup, layerSel, voiceSel,
+  addVoiceBtn, renameVoiceBtn, delVoiceBtn, addStepBtn,
+  playBtn, playCursorBtn, octUpBtn, octDownBtn, dupBtn, delTrackBtn
+].filter(Boolean).forEach(el => hdr.appendChild(el));
+    // Editor-Inline-Container (für Step-Bearbeitung, wird bei Klick eingeblendet)
+    const editorContainer = document.createElement('div');
+    editorContainer.className = 'score-editor-inline';
+    editorContainer.id = `scoreEdInline-${tIdx}`;
+    editorContainer.style.cssText = `
+      display: none;
+      width: 100%;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 20px;
+      align-items: center;
+      padding: 2px 0;
+    `;
+    hdr.appendChild(editorContainer); //neu vielleicht aber auch besser als die nachfolgende variante
+    
+    /*unit.insertBefore(editorContainer, notationWrapper);*/
+    unit.appendChild(hdr);
+
+    // ---- NOTENSYSTEM (skalierbar) ----
+    const notationWrapper = document.createElement('div');
+    notationWrapper.className = 'score-notation-wrapper';
+    
+
+    const row = document.createElement('div');
+    row.className = 'score-track-row';
+
+    // Schlüssel
+    const clefArea = document.createElement('div');
+    clefArea.className = 'score-clef-area';
+    clefArea.innerHTML = (track.clef==='treble' ? svgClefT : svgClefB);
+    row.appendChild(clefArea);
+
+    // Vorzeichen
+    const keyArea = document.createElement('div');
+    keyArea.className = 'score-key-sig';
+    keySig.forEach(sig => {
+      const pm = track.clef==='bass' ? PITCH_MAP_B : PITCH_MAP_T;
+      const bpk = track.clef==='bass'
+        ? fromDiatonicIndex(diatonicIndex(sig.p) - 14)
+        : sig.p;
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;width:14px;height:100%';
+      const accEl = document.createElement('div');
+      accEl.innerHTML = svgAcc[sig.t];
+      accEl.firstChild.style.top = `${sig.t === '#' ? 153-(pm[bpk]||70) : 150-(pm[bpk]||70)}px`;
+      wrap.appendChild(accEl.firstChild);
+      keyArea.appendChild(wrap);
+    });
+    row.appendChild(keyArea);
+
+    // Taktart
+    const tsNum = track.timeSigNum ?? 4, tsDen = track.timeSigDen ?? 4;
+    const tsArea = document.createElement('div');
+    tsArea.style.cssText = 'flex-shrink:0;width:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;background-color:#fff;border-right:1px solid rgba(0,0,0,0.15);background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;background-size:100% 1px';
+    tsArea.innerHTML = `<svg viewBox="0 0 28 50" height="50" width="28">
+      <text x="14" y="24" text-anchor="middle" font-family="serif" font-size="22" font-weight="bold" fill="#000">${tsNum}</text>
+      <text x="14" y="46" text-anchor="middle" font-family="serif" font-size="22" font-weight="bold" fill="#000">${tsDen}</text>
+    </svg>`;
+    row.appendChild(tsArea);
+
+    // Timeline
+    const timeline = document.createElement('div');
+    timeline.className = 'score-timeline';
+    let totalX = 0, durSum = 0;
+
+    const beatsPerBar = tsBeats(track.timeSigNum ?? 4, track.timeSigDen ?? 4);
+    const stepIdxInfo = [];
+    { let measure = 1, noteInBar = 1, acc = 0;
+      track.data.forEach((s, sIdx) => {
+        stepIdxInfo[sIdx] = { measure, noteInBar };
+        acc += (DUR_MAP[s.len] || 1) * (s.dot ? 1.5 : 1);
+        noteInBar++;
+        if (acc >= beatsPerBar - 1e-6) { measure++; noteInBar = 1; acc = 0; }
+      });
+    }
+
+    track.data.forEach((s, sIdx) => {
+      const step = document.createElement('div');
+      step.className = 'score-step';
+      step.dataset.sidx = sIdx;
+      /*const baseW = (s.len==='32n' ? 30 : DUR_MAP[s.len] * STEP_W);*/
+      // Basisbreite der 64tel (kleinste Einheit) – anpassbar!
+ // z.B. 10px oder 12px
+/*
+const factor  = DUR_MAP[s.len] / 0.0625; // 1, 2, 4, 8, 16, 32, 64
+const baseW   = BASE_64 * factor;
+*/
+const factor  = DUR_MAP[s.len] / minDurValue; // Skaliert relativ zum kleinsten Wert im Score
+const baseW   = BASE_64 * factor;             // BASE_64 = 20px ist jetzt die Breite des kleinsten Wertes
+      step.style.width = (baseW * (s.dot ? 1.5 : 1)) + 'px';
+
+      const isSelected = scoreActive && scoreActive.tIdx===tIdx && scoreActive.sIdx===sIdx;
+      const isPlay     = scorePlayPos && scorePlayPos.tIdx===tIdx && scorePlayPos.sIdx===sIdx;
+      const isCursor   = scoreKbInput && scoreCursor && scoreCursor.tIdx===tIdx && scoreCursor.sIdx===sIdx;
+      const isMarked   = scoreSelHas(tIdx, sIdx);
+      if (isSelected) step.classList.add('selected');
+      if (isPlay)     step.classList.add('playhead');
+      if (isCursor)   step.classList.add('cursor');
+      if (isMarked)   step.classList.add('sel-marked');
+
+      // Selektions-Checkbox
+      const selbox = document.createElement('div');
+      selbox.className = 'score-step-selbox' + (isMarked ? ' checked' : '');
+      selbox.title = isMarked ? 'Auswahl aufheben' : 'Step markieren';
+      selbox.addEventListener('click', e => {
+        e.stopPropagation();
+        scoreSelToggle(tIdx, sIdx);
+        scoreSelUpdateToolbar();
+        scoreRender();
+      });
+      step.appendChild(selbox);
+
+      // Index-Label
+      const idxInfo = stepIdxInfo[sIdx];
+      const idxLbl = document.createElement('div');
+      idxLbl.className = 'score-step-idx';
+      idxLbl.textContent = `${idxInfo.measure}/${idxInfo.noteInBar}`;
+      step.appendChild(idxLbl);
+
+      if (idxInfo.noteInBar === 1) {
+        const barNumLbl = document.createElement('div');
+        barNumLbl.className = 'score-step-barnum';
+        barNumLbl.textContent = idxInfo.measure;
+        step.appendChild(barNumLbl);
+
+              // Velocity-Anzeige in der Mitte oben (nur bei Noten, nicht bei Pausen)
+      
+      }
+      if (!s.rest) {
+        const stepVel = s.vel ?? 110;
+        const velLbl = document.createElement('div');
+        velLbl.className = 'score-step-vel';
+        velLbl.textContent = stepVel;
+        step.appendChild(velLbl);
+    }
+
+      // Klick-Event für Editor
+      step.addEventListener('click', (e) => {
+        if (e.shiftKey) { return; }
+        if (scoreKbInput) { return; }
+        if (scoreActive && scoreActive.tIdx === tIdx && scoreActive.sIdx === sIdx) {
+          scoreActive = null;
+        } else {
+          scoreActive = {tIdx, sIdx};
+        }
+        scoreRender();
+        if (scoreActive) {
+          setTimeout(() => scoreRenderEditor(scoreActive.tIdx, scoreActive.sIdx), 0);
+        }
+      });
+
+      // Noteninhalt
+      if (s.rest) {
+        const r = document.createElement('div');
+        r.innerHTML = restIconsStaff[s.len];
+        r.firstChild.style.bottom = '70px';
+        step.appendChild(r.firstChild);
+        if (s.dot) {
+          const d = document.createElement('div');
+          d.className = 'score-dot'; d.style.top = '78px'; step.appendChild(d);
+        }
+      } else {
+        const topY = s.notes.reduce((max, n) => Math.max(max, pMap[n.p] ?? 70), -Infinity);
+        let topAssigned = false;
+        s.notes.forEach(n => {
+          const y = pMap[n.p] ?? 70;
+          const isTop = !topAssigned && y === topY;
+          if (isTop) topAssigned = true;
+          if (n.a) {
+            const ac = document.createElement('div');
+            ac.innerHTML = svgAcc[n.a];
+            ac.firstChild.style.top = `${n.a === '#' ? 153-y : 150-y}px`;
+            step.appendChild(ac.firstChild);
+          }
+          const stemDown = scoreStemIsDown(track, track.activeVoiceIdx ?? 0, y);
+          const iconSet = scoreNoteIconSet(stemDown);
+          const flaglessSet = scoreFlaglessIconSet(stemDown);
+          const notehead = stemDown ? NOTEHEAD_ONLY_DOWN : NOTEHEAD_ONLY;
+          const isBeamedTop = isTop && s.beamId && BEAM_LEVELS[s.len];
+          const suppressFlag = !isTop || !!s.beamId;
+          const nw = document.createElement('div');
+          nw.innerHTML = isBeamedTop
+            ? notehead
+            : (suppressFlag && flaglessSet[s.len]) ? flaglessSet[s.len] : iconSet[s.len];
+          nw.firstChild.style.top = `${scoreNoteTopOffset(y, stemDown)}px`;
+          if (isTop) {
+            nw.firstChild.classList.add('score-beam-anchor');
+            if (stemDown) nw.firstChild.classList.add('score-stem-down');
+          }
+          step.appendChild(nw.firstChild);
+          if (s.dot) {
+            const d = document.createElement('div');
+            d.className = 'score-dot'; d.style.top = `${165-y}px`; step.appendChild(d);
+          }
+          getLedgerLines(y, track.clef).forEach(ly => {
+            const l = document.createElement('div');
+            l.className = 'score-ledger'; l.style.top = `${169 - ly}px`; step.appendChild(l);
+          });
+        });
+      }
+
+      // Haltebogen
+      if (s.tie && !s.rest) {
+        const noteY   = pMap[s.notes[0]?.p] ?? 70;
+        const topPx   = (122 - noteY) + 58;
+        const arcW    = Math.round(baseW * (s.dot ? 1.5 : 1));
+        const arcH    = Math.max(12, Math.round(arcW * 0.12));
+        const svg     = document.createElementNS('http://www.w3.org/2000/svg','svg');
+        svg.setAttribute('width', arcW);
+        svg.setAttribute('height', arcH + 4);
+        svg.style.cssText = `position:absolute;top:${topPx}px;left:30px;overflow:visible;pointer-events:none;z-index:5`;
+        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d', `M 0 0 Q ${arcW/2} ${arcH} ${arcW} 0`);
+        path.setAttribute('fill','none');
+        path.setAttribute('stroke','var(--accent3)');
+        path.setAttribute('stroke-width','2.5');
+        path.setAttribute('stroke-linecap','round');
+        svg.appendChild(path);
+        step.appendChild(svg);
+        step.classList.add('tied-from');
+      }
+
+      timeline.appendChild(step);
+
+      const actualDur = DUR_MAP[s.len] * (s.dot ? 1.5 : 1);
+      durSum += actualDur;
+      totalX += baseW * (s.dot ? 1.5 : 1);
+
+      /*const beatsPerBar = tsBeats(track.timeSigNum ?? 4, track.timeSigDen ?? 4);*/
+      if (Math.round(durSum * 1000) % Math.round(beatsPerBar * 1000) === 0) {
+        const b = document.createElement('div');
+        b.className = 'score-bar-line';
+        b.style.left = `${totalX - 1}px`;
+        timeline.appendChild(b);
+      }
+    });
+
+    // End-Cursor
+    const endZone = document.createElement('div');
+    const isEndCursor = scoreKbInput && scoreCursor &&
+      scoreCursor.tIdx === tIdx && scoreCursor.sIdx === track.data.length;
+    if (isEndCursor) endZone.className = 'score-end-cursor';
+    else {
+      endZone.style.cssText = 'flex-shrink:0;width:40px;height:100%;cursor:pointer';
+      if (scoreKbInput) endZone.style.background = 'rgba(0,229,255,.02)';
+    }
+    endZone.title = 'Cursor ans Ende setzen';
+    endZone.addEventListener('click', () => {
+      if (scoreKbInput) {
+        scoreCursor = {tIdx, sIdx: track.data.length};
+        scoreActive = null;
+        scoreRender();
+      }
+    });
+    timeline.appendChild(endZone);
+
+    // Overlay-Stimmen
+    if (track.voices && track.voices.length > 1) {
+      track.voices.forEach((v, vIdx) => {
+        if (vIdx === track.activeVoiceIdx) return;
+        try {
+          timeline.appendChild(scoreRenderVoiceOverlay(track, vIdx, pMap,minDurValue));
+        } catch (err) {
+          console.error('Stimmen-Overlay fehlgeschlagen für Track', tIdx, 'Stimme', vIdx, err);
+        }
+      });
+    }
+
+    row.appendChild(timeline);
+
+    // ---- Zeile in den skalierbaren Wrapper packen ----
+    notationWrapper.appendChild(row);
+    unit.appendChild(notationWrapper);
+
+    // Editor-Panel (für erweiterte Bearbeitung, wird bei Doppelklick oder über anderen Mechanismus eingeblendet)
+    const ed = document.createElement('div');
+    ed.className = 'score-editor-panel';
+    ed.id = `scoreEd-${tIdx}`;
+    unit.insertBefore(ed, notationWrapper); // vor dem Notensystem, aber nach dem Header
+
+    container.appendChild(unit);
+  });
+
+  // Editor wiederherstellen
+  if (scoreActive) scoreRenderEditor(scoreActive.tIdx, scoreActive.sIdx);
+
+  // Scroll-Positionen wiederherstellen
+  requestAnimationFrame(() => {
+    container.querySelectorAll('.score-track-row').forEach((row, i) => {
+      if (scrollPositions[i]) row.scrollLeft = scrollPositions[i];
+    });
+  });
+
+  // Nachbearbeitung
+  if (typeof updateScorePianoInfo === 'function') updateScorePianoInfo();
+  if (typeof scorePianoHighlightNext === 'function') scorePianoHighlightNext();
+  if (typeof scoreAutoSave === 'function') scoreAutoSave();
+  scoreRenderToolbar();
+  //neu zu #1
+  resizeScorePaper();
+
+  // Balken zeichnen
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (typeof scoreDrawBeams === 'function') scoreDrawBeams();
+  }));
+  //setTimeout(resizeScorePaper, 0);
+      }
 // ── Render ────────────────────────────────────────────────────
+/*
 function scoreRender() {
   const container = document.getElementById('scoreTracksContainer');
   if (!container) return;
@@ -8565,60 +9929,139 @@ function scoreRender() {
     scoreMigrateTrack(track);
     const pMap = track.clef === 'treble' ? PITCH_MAP_T : PITCH_MAP_B;
     const keySig = KEY_SIGS[track.key] || [];
+// ab hier neu einfügen
+    // ... innerhalb der Schleife über scoreTracks ...
 
-    const unit = document.createElement('div');
-    unit.className = 'score-track-unit';
+const unit = document.createElement('div');
+unit.className = 'score-track-unit';
 
-    // Header
-    const hdr = document.createElement('div');
-    hdr.className = 'score-track-header';
-    // Layer-Dropdown aus den aktiven Ensemble-Layern aufbauen
-    const layerOpts = (typeof layers !== 'undefined' ? layers : [])
-      .map((l, i) => {
-        const sfName = (typeof engine !== 'undefined' && engine.synths[l.sfIdx])
-          ? engine.synths[l.sfIdx].name : `SF${l.sfIdx}`;
-        const presetName = (typeof engine !== 'undefined' && engine.synths[l.sfIdx])
-          ? (engine.synths[l.sfIdx].presets[l.presetIdx]?.name ?? '—') : '—';
-        return `<option value="${i}" ${track.layerIdx===i?'selected':''}>L${i+1}: ${presetName}</option>`;
-      }).join('') || '<option value="0">— kein Layer —</option>';
+// --- Header (kompakt, max 2 Zeilen) ---
+const hdr = document.createElement('div');
+hdr.className = 'score-track-header';
 
-    hdr.innerHTML = `<span style="color:var(--accent3)">♩ Track ${tIdx+1}</span>
-      <select onchange="window.scoreTracks[${tIdx}].clef=this.value;window.scoreRender()" style="margin-left:4px">
-        <option value="treble" ${track.clef==='treble'?'selected':''}>𝄞 Violin</option>
-        <option value="bass"   ${track.clef==='bass'?'selected':''} >𝄢 Bass</option>
-      </select>
-      <select onchange="window.scoreChangeKey(${tIdx},this.value,this)" style="max-width:90px">
-        <optgroup label="── Dur ──">
-          ${Object.keys(KEY_SIGS).filter(k=>k.includes('Dur')||k==='C-Dur').map(k=>`<option value="${k}" ${(track.key??'C-Dur')===k?'selected':''}>${k}</option>`).join('')}
-        </optgroup>
-        <optgroup label="── Moll ──">
-          ${Object.keys(KEY_SIGS).filter(k=>k.includes('Moll')).map(k=>`<option value="${k}" ${(track.key??'C-Dur')===k?'selected':''}>${k}</option>`).join('')}
-        </optgroup>
-      </select>
-      <span class="score-ts-group" style="display:inline-flex;align-items:center;gap:2px;margin-left:2px">
-        <button class="score-btn" style="padding:2px 6px;font-size:.6rem;min-width:18px"
-          onclick="window.scoreChangeTimeSigNum(${tIdx},-1)" title="Zähler verringern">−</button>
-        <span style="font-size:.62rem;font-family:'Share Tech Mono',monospace;color:var(--accent3);min-width:14px;text-align:center;display:inline-block">${track.timeSigNum}</span>
-        <button class="score-btn" style="padding:2px 6px;font-size:.6rem;min-width:18px"
-          onclick="window.scoreChangeTimeSigNum(${tIdx},1)" title="Zähler erhöhen">+</button>
-        <span style="color:var(--dim);font-size:.6rem">/</span>
-        <select onchange="window.scoreTracks[${tIdx}].timeSigDen=parseInt(this.value);window.scoreRender()" style="width:42px;font-size:.62rem">
-          ${TIME_SIG_DENS.map(d=>`<option value="${d}" ${track.timeSigDen===d?'selected':''}>${d}</option>`).join('')}
-        </select>
-      </span>
-      <span style="font-size:.6rem;color:var(--dim);margin-left:4px">↔ Layer:</span>
-      <select onchange="window.scoreTracks[${tIdx}].layerIdx=parseInt(this.value);window.scoreRender()"
-        title="Welcher Ensemble-Layer spielt diesen Track ab">${layerOpts}</select>
-      <button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreAddStep(${tIdx})">+ Step</button>
-      <button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreStartPlay(${tIdx},0)" title="Nur diesen Track von Anfang">▶</button>
-      <button class="score-btn" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreStartPlayTrackCursor(${tIdx})" title="Nur diesen Track ab Cursor">▶✦</button>
-      <button class="score-btn" style="padding:3px 8px;font-size:.75rem" onclick="window.scoreOctaveShift(${tIdx},1)"       title="Alle Noten eine Oktave höher">8↑</button>
-      <button class="score-btn" style="padding:3px 8px;font-size:.75rem" onclick="window.scoreOctaveShift(${tIdx},-1)"      title="Alle Noten eine Oktave tiefer">8↓</button>
-      <button class="score-btn" style="padding:3px 8px;font-size:.75rem" onclick="window.scoreDuplicateTrack(${tIdx})"      title="Track duplizieren">⧉</button>
-      ${tIdx>0?`<button class="score-btn danger" style="padding:3px 8px;font-size:.62rem" onclick="window.scoreTracks.splice(${tIdx},1);window.scoreRender()">✕</button>`:''}`;
+// 1. Feste Elemente (immer sichtbar)
+const trackLabel = document.createElement('span');
+trackLabel.textContent = `♩ T${tIdx+1}`;
+trackLabel.style.cssText = 'color:var(--accent3);font-size:.65rem;font-weight:bold';
 
-    // Notensystem-Zeile
-    unit.appendChild(hdr);
+// Clef-Dropdown
+const clefSel = document.createElement('select');
+clefSel.style.cssText = 'font-size:.6rem;padding:1px 4px;max-width:70px';
+clefSel.innerHTML = `
+  <option value="treble" ${track.clef==='treble'?'selected':''}>𝄞</option>
+  <option value="bass"   ${track.clef==='bass'?'selected':''}>𝄢</option>
+`;
+clefSel.onchange = () => { track.clef = clefSel.value; scoreRender(); };
+
+// Key-Dropdown
+const keySel = document.createElement('select');
+keySel.style.cssText = 'font-size:.6rem;padding:1px 4px;max-width:70px';
+const keyOpts = Object.keys(KEY_SIGS).map(k =>
+  `<option value="${k}" ${(track.key??'C-Dur')===k?'selected':''}>${k}</option>`
+).join('');
+keySel.innerHTML = keyOpts;
+keySel.onchange = () => scoreChangeKey(tIdx, keySel.value, keySel);
+
+// Taktart (Zähler + Nenner)
+const tsGroup = document.createElement('span');
+tsGroup.className = 'score-ts-group';
+tsGroup.style.cssText = 'display:inline-flex;align-items:center;gap:2px;font-size:.6rem';
+tsGroup.innerHTML = `
+  <button class="score-btn" style="padding:1px 4px;font-size:.6rem" onclick="scoreChangeTimeSigNum(${tIdx},-1)">−</button>
+  <span style="min-width:14px;text-align:center">${track.timeSigNum}</span>
+  <button class="score-btn" style="padding:1px 4px;font-size:.6rem" onclick="scoreChangeTimeSigNum(${tIdx},1)">+</button>
+  <span style="color:var(--dim)">/</span>
+  <select onchange="track.timeSigDen=parseInt(this.value);scoreRender()" style="width:36px;font-size:.6rem">
+    ${TIME_SIG_DENS.map(d => `<option value="${d}" ${track.timeSigDen===d?'selected':''}>${d}</option>`).join('')}
+  </select>
+`;
+
+// Layer-Dropdown
+const layerSel = document.createElement('select');
+layerSel.style.cssText = 'font-size:.6rem;padding:1px 4px;max-width:80px';
+layerSel.innerHTML = (typeof layers !== 'undefined' ? layers : [])
+  .map((l, i) => `<option value="${i}" ${track.layerIdx===i?'selected':''}>L${i+1}</option>`)
+  .join('') || '<option value="0">—</option>';
+layerSel.onchange = () => { track.layerIdx = parseInt(layerSel.value); scoreRender(); };
+
+// Stimmen-Dropdown
+const voiceSel = document.createElement('select');
+voiceSel.style.cssText = 'font-size:.6rem;padding:1px 4px;max-width:60px';
+voiceSel.innerHTML = track.voices.map((v, vi) =>
+  `<option value="${vi}" ${track.activeVoiceIdx===vi?'selected':''}>${v.name}</option>`
+).join('');
+voiceSel.onchange = () => { scoreSetActiveVoice(tIdx, parseInt(voiceSel.value)); };
+
+// --- Buttons (kompakt) ---
+const addVoiceBtn = makeCompactBtn('+V', () => scoreAddVoice(tIdx));
+const renameVoiceBtn = makeCompactBtn('✎', () => {
+  const n = prompt('Name:', track.voices[track.activeVoiceIdx].name);
+  if(n !== null) scoreRenameVoice(tIdx, track.activeVoiceIdx, n);
+});
+const delVoiceBtn = track.voices.length > 1 ? makeCompactBtn('✕V', () => scoreDeleteVoice(tIdx, track.activeVoiceIdx)) : null;
+const addStepBtn = makeCompactBtn('+Step', () => scoreAddStep(tIdx));
+const playBtn = makeCompactBtn('▶', () => scoreStartPlay(tIdx, 0));
+const playCursorBtn = makeCompactBtn('▶✦', () => scoreStartPlayTrackCursor(tIdx));
+const octUpBtn = makeCompactBtn('8↑', () => scoreOctaveShift(tIdx, 1));
+const octDownBtn = makeCompactBtn('8↓', () => scoreOctaveShift(tIdx, -1));
+const dupBtn = makeCompactBtn('⧉', () => scoreDuplicateTrack(tIdx));
+const delTrackBtn = tIdx > 0 ? makeCompactBtn('✕', () => { scoreTracks.splice(tIdx,1); scoreRender(); }, true) : null;
+
+// Hilfsfunktion für kompakte Buttons
+function makeCompactBtn(label, onClick, danger = false) {
+  const b = document.createElement('button');
+  b.className = 'score-btn' + (danger ? ' danger' : '');
+  b.textContent = label;
+  b.style.cssText = 'padding:1px 5px;font-size:.6rem;line-height:1.2';
+  b.onclick = onClick;
+  return b;
+}
+
+// Alle festen Elemente dem Header hinzufügen
+hdr.append(trackLabel, clefSel, keySel, tsGroup, layerSel, voiceSel,
+          addVoiceBtn, renameVoiceBtn, delVoiceBtn, addStepBtn,
+          playBtn, playCursorBtn, octUpBtn, octDownBtn, dupBtn, delTrackBtn);*/
+
+// --- Editor-Inline-Container (wird später befüllt) ---
+/*//alt
+const editorContainer = document.createElement('div');
+editorContainer.className = 'score-editor-inline';
+editorContainer.id = `scoreEdInline-${tIdx}`;
+editorContainer.style.cssText = 'display:inline-flex;flex-wrap:wrap;gap:3px;align-items:center;';
+// Zunächst versteckt, wird von scoreRenderEditor() eingeblendet
+editorContainer.style.display = 'none';
+hdr.appendChild(editorContainer);
+
+unit.appendChild(hdr);*/
+/*
+const editorContainer = document.createElement('div');
+editorContainer.className = 'score-editor-inline';
+editorContainer.id = `scoreEdInline-${tIdx}`;
+editorContainer.style.cssText = `
+  display: none;
+  width: 100%;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 4px;
+  align-items: center;
+  padding: 2px 0;
+`;
+hdr.appendChild(editorContainer);
+
+unit.appendChild(hdr);
+// ... Rest der scoreRender-Funktion (Notensystem, etc.) ...
+    const notationWrapper = document.createElement('div');
+notationWrapper.className = 'score-notation-wrapper';
+
+//NOTATION SKALIEREN
+notationWrapper.style.cssText = `
+  transform: scale(0.8);
+  transform-origin: top left;
+  width: calc(100% / 0.8);
+  height: calc(100% / 0.8);
+  overflow: hidden;
+`;
+    
     const row = document.createElement('div');
     row.className = 'score-track-row';
 
@@ -8721,7 +10164,26 @@ function scoreRender() {
         barNumLbl.textContent = idxInfo.measure;
         step.appendChild(barNumLbl);
       }
-
+      // innerhalb der Step-Erstellung:
+step.addEventListener('click', (e) => {
+  if (e.shiftKey) { /* Markierung */ 
+/*
+return; }
+  if (scoreKbInput) { */
+  /* Cursor setzen *//* return; }
+  // Editor umschalten
+  if (scoreActive && scoreActive.tIdx === tIdx && scoreActive.sIdx === sIdx) {
+    scoreActive = null;
+  } else {
+    scoreActive = {tIdx, sIdx};
+  }
+  scoreRender();
+  if (scoreActive) {
+    setTimeout(() => scoreRenderEditor(scoreActive.tIdx, scoreActive.sIdx), 0);
+  }
+});
+*/
+/*//alt
       step.addEventListener('click', e => {
         if (e.shiftKey) {
           // Shift+Click: Step markieren ohne Editor zu öffnen
@@ -8736,8 +10198,8 @@ function scoreRender() {
         } else {
           scoreToggleEditor(tIdx, sIdx);
         }
-      });
-
+      });*/
+/*
       if (s.rest) {
         const r = document.createElement('div');
         r.innerHTML = restIconsStaff[s.len];
@@ -8765,6 +10227,12 @@ function scoreRender() {
             ac.firstChild.style.top = `${n.a === '#' ? 153-y : 150-y}px`;
             step.appendChild(ac.firstChild);
           }
+          // Note — Stielrichtung bestimmen: bei ≥2 Stimmen nach Stimmennummer,
+          // sonst nach Tonhöhe (ab mittlerer Notenlinie: Stiel runter).
+          const stemDown = scoreStemIsDown(track, track.activeVoiceIdx ?? 0, y);
+          const iconSet = scoreNoteIconSet(stemDown);
+          const flaglessSet = scoreFlaglessIconSet(stemDown);
+          const notehead = stemDown ? NOTEHEAD_ONLY_DOWN : NOTEHEAD_ONLY;
           // Note — balkierte Top-Note: nur Kopf, Stiel wird dynamisch von
           // scoreDrawBeams() passend zum Balkenverlauf gezeichnet.
           // Sonst wie bisher: Fahne unterdrücken bei Nicht-Top oder Balken.
@@ -8772,11 +10240,14 @@ function scoreRender() {
           const suppressFlag = !isTop || !!s.beamId;
           const nw = document.createElement('div');
           nw.innerHTML = isBeamedTop
-            ? NOTEHEAD_ONLY
-            : (suppressFlag && FLAGLESS_ICON[s.len]) ? FLAGLESS_ICON[s.len] : noteIconsStaff[s.len];
+            ? notehead
+            : (suppressFlag && flaglessSet[s.len]) ? flaglessSet[s.len] : iconSet[s.len];
           nw.firstChild.style.bottom = undefined;
-          nw.firstChild.style.top = `${122 - y}px`;
-          if (isTop) nw.firstChild.classList.add('score-beam-anchor'); // Balken-Ansatzpunkt
+          nw.firstChild.style.top = `${scoreNoteTopOffset(y, stemDown)}px`;
+          if (isTop) {
+            nw.firstChild.classList.add('score-beam-anchor'); // Balken-Ansatzpunkt
+            if (stemDown) nw.firstChild.classList.add('score-stem-down');
+          }
           step.appendChild(nw.firstChild);
           // Punkt
           if (s.dot) {
@@ -8849,8 +10320,31 @@ function scoreRender() {
     });
     timeline.appendChild(endZone);
 
+    // Gleichzeitige Anzeige weiterer Stimmen (Chor-/Klavierpartitur-Prinzip):
+    // jede nicht-aktive Stimme wird als Overlay DIREKT IN DIE TIMELINE der
+    // Hauptstimme eingefügt (echtes gemeinsames Notensystem, gemeinsames
+    // Scrollen) — nicht als separate Zeile, da zwei unabhängig scrollende
+    // Bereiche beim mobilen Scrollen auseinanderlaufen würden.
+    // WICHTIG: try/catch — ein Fehler hier darf NICHT die gesamte
+    // scoreRender()-Funktion abbrechen, sonst werden weder Scroll-Position
+    // wiederhergestellt noch Balken gezeichnet (beides passiert erst am Ende
+    // der Funktion, würde bei einer Exception hier nie erreicht).
+    if (track.voices && track.voices.length > 1) {
+      track.voices.forEach((v, vIdx) => {
+        if (vIdx === track.activeVoiceIdx) return;
+        try {
+          timeline.appendChild(scoreRenderVoiceOverlay(track, vIdx, pMap));
+        } catch (err) {
+          console.error('Stimmen-Overlay fehlgeschlagen für Track', tIdx, 'Stimme', vIdx, err);
+        }
+      });
+    }
+
     row.appendChild(timeline);
-    unit.appendChild(row);
+    //notensystem in wrapper
+    notationWrapper.appendChild(row);
+unit.appendChild(notationWrapper);
+    //unit.appendChild(row);
 
     // Editor-Subpanel ÜBER dem Notensystem (vor der row)
     const ed = document.createElement('div');
@@ -8863,9 +10357,16 @@ function scoreRender() {
   // Aktiven Editor wiederherstellen
   if (scoreActive) scoreRenderEditor(scoreActive.tIdx, scoreActive.sIdx);
 
-  // Scroll-Positionen wiederherstellen
-  container.querySelectorAll('.score-track-row').forEach((row, i) => {
-    if (scrollPositions[i]) row.scrollLeft = scrollPositions[i];
+  // Scroll-Positionen wiederherstellen — per requestAnimationFrame verzögert,
+  // damit der Browser das (durch die Mehrstimmen-Overlays komplexere) Layout
+  // erst fertig berechnet hat, bevor wir scrollLeft setzen. Ohne diese
+  // Verzögerung konnte der Browser die gesetzte Position sofort wieder auf 0
+  // zurücksetzen, sobald das Overlay den scrollbaren Bereich nachträglich
+  // vergrößerte ("Track scrollt nach jeder Selektion nach links").
+  requestAnimationFrame(() => {
+    container.querySelectorAll('.score-track-row').forEach((row, i) => {
+      if (scrollPositions[i]) row.scrollLeft = scrollPositions[i];
+    });
   });
 
   // Piano-Highlight + Info nach jedem Render synchronisieren
@@ -8875,30 +10376,61 @@ function scoreRender() {
   if (typeof scoreAutoSave === 'function') scoreAutoSave();
   // Notenwert-Buttons immer aktuell halten
   scoreRenderToolbar();
-  // Balken zwischen selektierten 8tel/16tel/32tel-Noten zeichnen (Layout muss stehen)
-  setTimeout(() => { if (typeof scoreDrawBeams === 'function') scoreDrawBeams(); }, 0);
-}
-
+  // Balken zwischen selektierten 8tel/16tel/32tel-Noten zeichnen (Layout muss
+  // stehen) — per doppeltem requestAnimationFrame statt setTimeout(0), da die
+  // zusätzlichen Mehrstimmen-Overlays das Layout komplexer gemacht haben und
+  // ein einzelner Zyklus nicht immer ausreichte (führte zu "nur Notenköpfe,
+  // keine Balken" durch verfrühte getBoundingClientRect-Messung).
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (typeof scoreDrawBeams === 'function') scoreDrawBeams();
+  }));
+}*/
+/*
 // ── Balken ────────────────────────────────────────────────────
 // Zeichnet Balken (Beams) + dynamische Stiele für jede beamId-Gruppe.
 // Wie im echten Notensatz: Stiele bleiben immer vertikal, ihre LÄNGE
 // passt sich der (leicht geneigten) Balkenlinie an. Die Balkenlinie
 // selbst folgt näherungsweise dem Notenverlauf (Steigung aus erster/
 // letzter Note), wird aber ggf. hochgeschoben, damit kein Stiel kürzer
-// als STEM_MIN wird (z.B. bei einer einzelnen sehr hohen Note mittendrin).
-const STEM_LEN = 45, STEM_MIN = 24, BEAM_GAP = 6;
+// als STEM_MIN wird (z.B. bei einer einzelnen sehr hohen Note mittendrin).*/
+const STEM_LEN = 45, STEM_MIN = 24, BEAM_GAP = 8;
+/*
 function scoreDrawBeams() {
+  //const paper = document.getElementById('scorePaper');
+
   scoreTracks.forEach((track, tIdx) => {
     const units = document.querySelectorAll('.score-track-unit');
     const unit  = units[tIdx];
     if (!unit) return;
     const timeline = unit.querySelector('.score-timeline');
-    const steps    = unit.querySelectorAll('.score-step');
-    if (!timeline || !steps.length) return;
+    if (!timeline) return;
 
+    // Aktive Stimme: normale Steps
+    const steps = unit.querySelectorAll('.score-step');
+    if (steps.length) scoreDrawBeamsForVoice(timeline, steps, track.data);
+
+    // Zusätzliche (nicht-aktive) Stimmen: je Overlay eigene Balken zeichnen —
+    // eigene Klasse .score-voice-step, damit keine Vermischung mit den
+    // normalen Steps der aktiven Stimme entsteht.
+    if (track.voices && track.voices.length > 1) {
+      track.voices.forEach((v, vIdx) => {
+        if (vIdx === track.activeVoiceIdx) return;
+        const overlay = timeline.querySelector(`.score-voice-overlay[data-voice-idx="${vIdx}"]`);
+        if (!overlay) return;
+        const vsteps = overlay.querySelectorAll('.score-voice-step');
+        if (vsteps.length) scoreDrawBeamsForVoice(timeline, vsteps, v.data);
+      });
+    }
+  });
+}
+// Kernlogik der Balken-Zeichnung, wiederverwendbar für die aktive Stimme UND
+// für jede zusätzliche (Overlay-)Stimme — `steps` und `dataArr` müssen
+// index-parallel sein (steps[i] entspricht dataArr[i]).
+/*
+function scoreDrawBeamsForVoice(timeline, steps, dataArr) {
     // Gruppen sammeln (Reihenfolge = sIdx)
     const groups = {};
-    track.data.forEach((s, sIdx) => {
+    dataArr.forEach((s, sIdx) => {
       if (!s.beamId) return;
       (groups[s.beamId] = groups[s.beamId] || []).push(sIdx);
     });
@@ -8906,7 +10438,18 @@ function scoreDrawBeams() {
     const TR = timeline.getBoundingClientRect();
     Object.values(groups).forEach(sIdxs => {
       if (sIdxs.length < 2) return;
-      // Notenkopf-Position je Step (rechter Rand/vertikale Mitte = Stiel-Ansatz)
+      // Stielrichtung der Gruppe: an der ersten Note der Gruppe ablesen
+      // (score-stem-down-Klasse, beim Rendern gesetzt) — alle Noten einer
+      // Balkengruppe teilen sich dieselbe Richtung.
+      const firstAnchor = steps[sIdxs[0]]?.querySelector('.score-beam-anchor');
+      const stemDown = !!firstAnchor?.classList.contains('score-stem-down');
+      const dirSign = stemDown ? 1 : -1; // Bildschirmkoordinaten: größeres Y = weiter unten,
+                                          // daher +1 für Stiel-runter (Balken unterhalb),
+                                          // -1 für Stiel-hoch (Balken oberhalb)
+
+      // Notenkopf-Position je Step — Stiel-Ansatz ist bei Stiel-hoch die
+      // rechte Notenkopf-Kante, bei Stiel-runter die LINKE Kante (Notation-
+      // Konvention, siehe auch die gespiegelten Icons oben).
       const pts = sIdxs.map(sIdx => {
         const anchor = steps[sIdx]?.querySelector('.score-beam-anchor');
         const head   = anchor?.querySelector('.note-head');
@@ -8914,31 +10457,33 @@ function scoreDrawBeams() {
         const R = head.getBoundingClientRect();
         return {
           sIdx,
-          headX: R.left + R.width - TR.left + timeline.scrollLeft,
+          headX: (stemDown ? R.left : R.left + R.width) - TR.left + timeline.scrollLeft,
           headY: R.top  + R.height/2 - TR.top + timeline.scrollTop,
-          level: BEAM_LEVELS[track.data[sIdx].len] || 1
+          level: BEAM_LEVELS[dataArr[sIdx].len] || 1
         };
       }).filter(Boolean);
       if (pts.length < 2) return;
 
-      // Balken-Grundlinie aus erster/letzter Note (Standard-Stiellänge)
+      // Balken-Grundlinie aus erster/letzter Note (Standard-Stiellänge) —
+      // bei Stiel-runter liegt die Grundlinie UNTERHALB der Notenköpfe (dirSign=-1)
       const first = pts[0], last = pts[pts.length - 1];
-      const y0 = first.headY - STEM_LEN, yN = last.headY - STEM_LEN;
+      const y0 = first.headY + dirSign * STEM_LEN, yN = last.headY + dirSign * STEM_LEN;
       const slope = (yN - y0) / ((last.headX - first.headX) || 1);
       let beamYs = pts.map(p => y0 + slope * (p.headX - first.headX));
 
-      // Mindest-Stiellänge sicherstellen — sonst ganzen Balken hochschieben
-      const minStem = Math.min(...pts.map((p,i) => p.headY - beamYs[i]));
+      // Mindest-Stiellänge sicherstellen — sonst ganzen Balken weiter weg schieben
+      // (bei Stiel-hoch nach oben, bei Stiel-runter nach unten)
+      const minStem = Math.min(...pts.map((p,i) => dirSign * (beamYs[i] - p.headY)));
       if (minStem < STEM_MIN) {
         const shift = STEM_MIN - minStem;
-        beamYs = beamYs.map(y => y - shift);
+        beamYs = beamYs.map(y => y + dirSign * shift);
       }
 
       const svgNS = 'http://www.w3.org/2000/svg';
       const minX = Math.min(...pts.map(p=>p.headX));
       const maxX = Math.max(...pts.map(p=>p.headX));
-      const minY = Math.min(...beamYs) - 2;
-      const maxY = Math.max(...pts.map(p=>p.headY));
+      const minY = Math.min(...beamYs, ...pts.map(p=>p.headY)) - 2;
+      const maxY = Math.max(...beamYs, ...pts.map(p=>p.headY)) + 2;
       const maxLevel = Math.max(...pts.map(p=>p.level));
       const svg = document.createElementNS(svgNS,'svg');
       svg.setAttribute('style', `position:absolute;left:${minX}px;top:${minY}px;pointer-events:none;overflow:visible`);
@@ -8962,8 +10507,14 @@ function scoreDrawBeams() {
       line(first.headX, beamYs[0], last.headX, beamYs[beamYs.length-1]);
 
       // Level 2 und 3: pro Nachbarpaar voll, sonst Hook zur balken-bedürftigen Seite
+      // WICHTIG: Vorzeichen umgekehrt zu dirSign — der Hauptbalken (Level 1)
+      // sitzt am STIELENDE (am weitesten vom Notenkopf entfernt), weitere
+      // Balken (16tel/32tel) rücken schrittweise NÄHER zum Notenkopf, nicht
+      // weiter weg. Bei Stiel-hoch (dirSign=-1, Balken oben) müssen sie also
+      // nach UNTEN (Richtung Notenkopf) versetzt werden, bei Stiel-runter
+      // entsprechend nach OBEN.
       for (let lvl = 2; lvl <= 3; lvl++) {
-        const yOff = (lvl - 1) * BEAM_GAP;
+        const yOff = -dirSign * (lvl - 1) * BEAM_GAP;
         for (let i = 0; i < pts.length - 1; i++) {
           const a = pts[i], b = pts[i+1];
           const aHas = a.level >= lvl, bHas = b.level >= lvl;
@@ -8980,8 +10531,287 @@ function scoreDrawBeams() {
 
       timeline.appendChild(svg);
     });
+}*/
+
+//neue angepasste funktionen #1
+/*
+function scoreDrawBeams() {
+  scoreTracks.forEach((track, tIdx) => {
+    const units = document.querySelectorAll('.score-track-unit');
+    const unit  = units[tIdx];
+    if (!unit) return;
+    const timeline = unit.querySelector('.score-timeline');
+    if (!timeline) return;
+
+    // Aktive Stimme
+    const steps = unit.querySelectorAll('.score-step');
+    if (steps.length) scoreDrawBeamsForVoice(timeline, steps, track.data);
+
+    // Zusätzliche Stimmen (Overlay)
+    if (track.voices && track.voices.length > 1) {
+      track.voices.forEach((v, vIdx) => {
+        if (vIdx === track.activeVoiceIdx) return;
+        const overlay = timeline.querySelector(`.score-voice-overlay[data-voice-idx="${vIdx}"]`);
+        if (!overlay) return;
+        const vsteps = overlay.querySelectorAll('.score-voice-step');
+        if (vsteps.length) scoreDrawBeamsForVoice(timeline, vsteps, v.data);
+      });
+    }
+  });
+}*/
+/*
+function scoreDrawBeamsForVoice(timeline, steps, dataArr) {
+  // Skalierungsfaktor von #scorePaper ermitteln
+  const paper = document.getElementById('scorePaper');
+  const scale = paper ? (parseFloat(getComputedStyle(paper).transform.split(',')[0]) || 1) : 1;
+  const invScale = 1 / scale *2.8 * scale; // Umkehrung für die Positionierung
+
+  // Gruppen sammeln
+  const groups = {};
+  dataArr.forEach((s, sIdx) => {
+    if (!s.beamId) return;
+    (groups[s.beamId] = groups[s.beamId] || []).push(sIdx);
+  });
+
+  Object.values(groups).forEach(sIdxs => {
+    if (sIdxs.length < 2) return;
+
+    // Stielrichtung der Gruppe (erste Note entscheidet)
+    const firstAnchor = steps[sIdxs[0]]?.querySelector('.score-beam-anchor');
+    const stemDown = !!firstAnchor?.classList.contains('score-stem-down');
+    const dirSign = stemDown ? 1 : -1;
+
+    // Notenkopf-Positionen relativ zur Timeline, aber unskaliert
+    // (getBoundingClientRect liefert skalierte Werte, daher mit invScale teilen)
+    const timelineRect = timeline.getBoundingClientRect();
+    const pts = sIdxs.map(sIdx => {
+      const anchor = steps[sIdx]?.querySelector('.score-beam-anchor');
+      const head   = anchor?.querySelector('.note-head');
+      if (!head) return null;
+
+      const headRect = head.getBoundingClientRect();
+      // Skalierte Differenz zur Timeline, dann durch scale teilen
+      const scaledX = headRect.left - timelineRect.left;
+      const scaledY = headRect.top  - timelineRect.top;
+      const headX = scaledX * invScale;
+      const headY = scaledY * invScale;
+
+      return {
+        sIdx,
+        headX,
+        headY,
+        level: BEAM_LEVELS[dataArr[sIdx].len] || 1
+      };
+    }).filter(Boolean);
+
+    if (pts.length < 2) return;
+
+    // Balken-Grundlinie aus erster/letzter Note
+    const first = pts[0], last = pts[pts.length - 1];
+    const y0 = first.headY + dirSign * STEM_LEN;
+    const yN = last.headY + dirSign * STEM_LEN;
+    const slope = (yN - y0) / ((last.headX - first.headX) || 1);
+    let beamYs = pts.map(p => y0 + slope * (p.headX - first.headX));
+
+    // Mindest-Stiellänge
+    const minStem = Math.min(...pts.map((p, i) => dirSign * (beamYs[i] - p.headY)));
+    if (minStem < STEM_MIN) {
+      const shift = STEM_MIN - minStem;
+      beamYs = beamYs.map(y => y + dirSign * shift);
+    }
+
+    // SVG-Container erstellen
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const minX = Math.min(...pts.map(p => p.headX));
+    const maxX = Math.max(...pts.map(p => p.headX));
+    const minY = Math.min(...beamYs, ...pts.map(p => p.headY)) - 2;
+    const maxY = Math.max(...beamYs, ...pts.map(p => p.headY)) + 2;
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('style', `position:absolute;left:${minX}px;top:${minY}px;pointer-events:none;overflow:visible`);
+    svg.setAttribute('width', Math.max(1, maxX - minX));
+    svg.setAttribute('height', Math.max(1, maxY - minY));
+    svg.classList.add('score-beam-svg');
+
+    const line = (x1, y1, x2, y2, w) => {
+      const l = document.createElementNS(svgNS, 'line');
+      l.setAttribute('x1', x1 - minX);
+      l.setAttribute('y1', y1 - minY);
+      l.setAttribute('x2', x2 - minX);
+      l.setAttribute('y2', y2 - minY);
+      l.setAttribute('stroke', 'black');
+      l.setAttribute('stroke-width', w ?? 5);
+      l.setAttribute('stroke-linecap', 'butt');
+      svg.appendChild(l);
+    };
+
+    // Stiele zeichnen
+    pts.forEach(p => line(p.headX, p.headY, p.headX, beamYs[pts.indexOf(p)], 2.2));
+
+    // Balken Level 1
+    line(first.headX, beamYs[0], last.headX, beamYs[beamYs.length - 1]);
+
+    // Balken Level 2 und 3
+    for (let lvl = 2; lvl <= 3; lvl++) {
+      const yOff = -dirSign * (lvl - 1) * BEAM_GAP;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        const aHas = a.level >= lvl, bHas = b.level >= lvl;
+        const ay = beamYs[i] + yOff, by = beamYs[i + 1] + yOff;
+        if (aHas && bHas) {
+          line(a.headX, ay, b.headX, by);
+        } else if (aHas || bHas) {
+          const stubLen = Math.max(8, (b.headX - a.headX) * 0.35) * (aHas ? 1 : -1);
+          const fromX = aHas ? a.headX : b.headX;
+          const fromY = aHas ? ay : by;
+          line(fromX, fromY, fromX + stubLen, fromY);
+        }
+      }
+    }
+
+    timeline.appendChild(svg);
+  });
+}*/
+
+function scoreDrawBeams() {
+  scoreTracks.forEach((track, tIdx) => {
+    const units = document.querySelectorAll('.score-track-unit');
+    const unit  = units[tIdx];
+    if (!unit) return;
+    const timeline = unit.querySelector('.score-timeline');
+    if (!timeline) return;
+
+    // Aktive Stimme
+    const steps = unit.querySelectorAll('.score-step');
+    if (steps.length) scoreDrawBeamsForVoice(timeline, steps, track.data);
+
+    // Zusätzliche Stimmen (Overlay)
+    if (track.voices && track.voices.length > 1) {
+      track.voices.forEach((v, vIdx) => {
+        if (vIdx === track.activeVoiceIdx) return;
+        const overlay = timeline.querySelector(`.score-voice-overlay[data-voice-idx="${vIdx}"]`);
+        if (!overlay) return;
+        const vsteps = overlay.querySelectorAll('.score-voice-step');
+        if (vsteps.length) scoreDrawBeamsForVoice(timeline, vsteps, v.data);
+      });
+    }
   });
 }
+
+function scoreDrawBeamsForVoice(timeline, steps, dataArr) {
+  // Skalierungsfaktor aus der tatsächlichen Breite des Papiers ermitteln
+  const paper = document.getElementById('scorePaper');
+  const BASE_WIDTH = 794; // feste Breite des unskalierten Blatts
+  const scale = paper ? (paper.getBoundingClientRect().width / BASE_WIDTH) : 1;
+  const invScale = 1 / scale; // Umrechnung von skaliert -> unskaliert
+
+  // Gruppen sammeln
+  const groups = {};
+  dataArr.forEach((s, sIdx) => {
+    if (!s.beamId) return;
+    (groups[s.beamId] = groups[s.beamId] || []).push(sIdx);
+  });
+
+  Object.values(groups).forEach(sIdxs => {
+    if (sIdxs.length < 2) return;
+
+    // Stielrichtung
+    const firstAnchor = steps[sIdxs[0]]?.querySelector('.score-beam-anchor');
+    const stemDown = !!firstAnchor?.classList.contains('score-stem-down');
+    const dirSign = stemDown ? 1 : -1;
+
+    // Timeline-Referenz
+    const timelineRect = timeline.getBoundingClientRect();
+
+    // Punkte: Unskalierte Koordinaten berechnen
+    const pts = sIdxs.map(sIdx => {
+      const anchor = steps[sIdx]?.querySelector('.score-beam-anchor');
+      const head   = anchor?.querySelector('.note-head');
+      if (!head) return null;
+
+      const headRect = head.getBoundingClientRect();
+      const headWidth = headRect.width * invScale; // unskalierte Breite
+
+      // Basis: linke Kante (unskaliert)
+      let headX = (headRect.left - timelineRect.left) * invScale;
+let headY = (headRect.top + headRect.height / 2 - timelineRect.top) * invScale;
+      // Bei Stiel nach oben: Balken beginnt am RECHTEN Rand des Notenkopfes
+      if (!stemDown) {
+        headX += headWidth;
+      }
+
+      return { sIdx, headX, headY, level: BEAM_LEVELS[dataArr[sIdx].len] || 1 };
+    }).filter(Boolean);
+
+    if (pts.length < 2) return;
+
+    // Balken-Grundlinie (in unskalierten Einheiten)
+    const first = pts[0], last = pts[pts.length - 1];
+    const y0 = first.headY + dirSign * STEM_LEN;
+    const yN = last.headY + dirSign * STEM_LEN;
+    const slope = (yN - y0) / ((last.headX - first.headX) || 1);
+    let beamYs = pts.map(p => y0 + slope * (p.headX - first.headX));
+
+    // Mindest-Stiellänge
+    const minStem = Math.min(...pts.map((p, i) => dirSign * (beamYs[i] - p.headY)));
+    if (minStem < STEM_MIN) {
+      const shift = STEM_MIN - minStem;
+      beamYs = beamYs.map(y => y + dirSign * shift);
+    }
+
+    // SVG-Container erstellen – OHNE CSS-Transform, mit unskalierten Maßen
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const minX = Math.min(...pts.map(p => p.headX));
+    const maxX = Math.max(...pts.map(p => p.headX));
+    const minY = Math.min(...beamYs, ...pts.map(p => p.headY)) - 2;
+    const maxY = Math.max(...beamYs, ...pts.map(p => p.headY)) + 2;
+
+    const svg = document.createElementNS(svgNS, 'svg');
+    // WICHTIG: Kein transform:scale() mehr!
+    svg.setAttribute('style', `position:absolute;left:${minX}px;top:${minY}px;pointer-events:none;overflow:visible;`);
+    svg.setAttribute('width', Math.max(1, maxX - minX));
+    svg.setAttribute('height', Math.max(1, maxY - minY));
+    svg.classList.add('score-beam-svg');
+
+    const line = (x1, y1, x2, y2, w) => {
+      const l = document.createElementNS(svgNS, 'line');
+      // Unskalierte Werte setzen – der Parent skaliert alles korrekt
+      l.setAttribute('x1', x1 - minX);
+      l.setAttribute('y1', y1 - minY);
+      l.setAttribute('x2', x2 - minX);
+      l.setAttribute('y2', y2 - minY);
+      l.setAttribute('stroke', 'black');
+      l.setAttribute('stroke-width', w ?? 5);
+      l.setAttribute('stroke-linecap', 'butt');
+      svg.appendChild(l);
+    };
+
+    // Stiele
+    pts.forEach((p, i) => line(p.headX, p.headY, p.headX, beamYs[i], 2.2));
+
+    // Balken Level 1
+    line(first.headX, beamYs[0], last.headX, beamYs[beamYs.length - 1]);
+
+    // Balken Level 2 und 3
+    for (let lvl = 2; lvl <= 3; lvl++) {
+      const yOff = -dirSign * (lvl - 1) * BEAM_GAP;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        const aHas = a.level >= lvl, bHas = b.level >= lvl;
+        const ay = beamYs[i] + yOff, by = beamYs[i + 1] + yOff;
+        if (aHas && bHas) {
+          line(a.headX, ay, b.headX, by);
+        } else if (aHas || bHas) {
+          const stubLen = Math.max(8, (b.headX - a.headX) * 0.35) * (aHas ? 1 : -1);
+          const fromX = aHas ? a.headX : b.headX;
+          const fromY = aHas ? ay : by;
+          line(fromX, fromY, fromX + stubLen, fromY);
+        }
+      }
+    }
+
+    timeline.appendChild(svg);
+  });
+  }
 window.scoreDrawBeams = scoreDrawBeams;
 
 // ── Editor-Subpanel ───────────────────────────────────────────
@@ -8993,11 +10823,23 @@ function scoreToggleEditor(tIdx, sIdx) {
   scoreActive = {tIdx, sIdx};
   scoreRender();
 }
-
+/*//alt#2
 function scoreRenderEditor(tIdx, sIdx) {
   const ed = document.getElementById(`scoreEd-${tIdx}`);
   if (!ed) return;
   const s = scoreTracks[tIdx].data[sIdx];
+  // Absicherung: der referenzierte Step existiert in der AKTUELL aktiven
+  // Stimme nicht (z.B. nach Stimmenwechsel/-hinzufügen mit weniger Steps als
+  // vorher) — Panel einfach schließen statt mit "Cannot read properties of
+  // undefined" abzustürzen (was bisher die GESAMTE scoreRender()-Funktion
+  // vorzeitig beendete und dadurch auch Scroll-Restore/Balken-Zeichnung
+  // verhinderte, obwohl die eigentliche Ursache oft in ANDEREN Funktionen lag
+  // wie scoreAddVoice/scoreSetActiveVoice, die scoreActive nicht bereinigten).
+  if (!s) {
+    ed.style.display = 'none';
+    if (scoreActive && scoreActive.tIdx === tIdx && scoreActive.sIdx === sIdx) scoreActive = null;
+    return;
+  }
   const trackKey  = scoreTracks[tIdx].key ?? 'C-Dur';
   const trackClef = scoreTracks[tIdx].clef ?? 'treble';
   const { inKey, outKey } = getKeyAwarePitchRange(trackKey, trackClef);
@@ -9061,8 +10903,143 @@ function scoreRenderEditor(tIdx, sIdx) {
       list.appendChild(div);
     });
   }
-}
+}*/
+function scoreRenderEditor(tIdx, sIdx) {
+  const container = document.getElementById(`scoreEdInline-${tIdx}`);
+  if (!container) return;
+  const s = scoreTracks[tIdx].data[sIdx];
+  if (!s) { container.style.display = 'none'; return; }
 
+  container.style.display = 'inline-flex';
+  container.innerHTML = ''; // leeren
+
+  // Notenwert-Buttons (kompakt)
+  const vals = ['1n','2n','4n','8n','16n','32n','64n'];
+  vals.forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'score-btn' + (s.len === v ? ' active' : '');
+    btn.textContent = v;
+    btn.style.cssText = 'padding:1px 4px;font-size:.55rem';
+    btn.onclick = () => {
+      s.len = v;
+      scoreActive = {tIdx, sIdx};
+      scoreRenderEditor(tIdx, sIdx);
+      scoreRender();
+    };
+    container.appendChild(btn);
+  });
+
+  // Pause + Punkt
+  const restLabel = document.createElement('label');
+  restLabel.style.cssText = 'font-size:.55rem;display:inline-flex;align-items:center;gap:2px';
+  const restCb = document.createElement('input');
+  restCb.type = 'checkbox';
+  restCb.checked = s.rest;
+  restCb.onchange = () => { s.rest = restCb.checked; scoreActive={tIdx,sIdx}; scoreRenderEditor(tIdx,sIdx); scoreRender(); };
+  restLabel.append(restCb, 'P');
+  container.appendChild(restLabel);
+
+  const dotLabel = document.createElement('label');
+  dotLabel.style.cssText = 'font-size:.55rem;display:inline-flex;align-items:center;gap:2px';
+  const dotCb = document.createElement('input');
+  dotCb.type = 'checkbox';
+  dotCb.checked = s.dot;
+  dotCb.onchange = () => { s.dot = dotCb.checked; scoreActive={tIdx,sIdx}; scoreRenderEditor(tIdx,sIdx); scoreRender(); };
+  dotLabel.append(dotCb, '.');
+  container.appendChild(dotLabel);
+
+  // Tonhöhe + Vorzeichen für jeden Akkord-Ton
+  if (!s.rest) {
+    s.notes.forEach((n, nIdx) => {
+      // Pitch-Dropdown (nur In-Key-Töne anzeigen)
+      const pitchSel = document.createElement('select');
+      pitchSel.style.cssText = 'font-size:.55rem;max-width:50px;padding:0 2px';
+      const key = scoreTracks[tIdx].key ?? 'C-Dur';
+      const clef = scoreTracks[tIdx].clef ?? 'treble';
+      const { inKey } = getKeyAwarePitchRange(key, clef);
+      inKey.slice().reverse().forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        if (n.p === p || baseNoteName(n.p) === baseNoteName(p)) opt.selected = true;
+        pitchSel.appendChild(opt);
+      });
+      pitchSel.onchange = () => {
+        n.p = pitchSel.value;
+        scoreActive = {tIdx, sIdx};
+        scoreRenderEditor(tIdx, sIdx);
+        scoreRender();
+      };
+
+      // Accidental-Dropdown
+      const accSel = document.createElement('select');
+      accSel.style.cssText = 'font-size:.55rem;max-width:40px;padding:0 2px';
+      accSel.innerHTML = `<option value="">—</option>
+                          <option value="#" ${n.a==='#'?'selected':''}>#</option>
+                          <option value="b" ${n.a==='b'?'selected':''}>b</option>
+                          <option value="n" ${n.a==='n'?'selected':''}>♮</option>`;
+      accSel.onchange = () => {
+        n.a = accSel.value || null;
+        scoreActive = {tIdx, sIdx};
+        scoreRenderEditor(tIdx, sIdx);
+        scoreRender();
+      };
+
+      // Löschbutton für diesen Akkordton
+      const delNoteBtn = document.createElement('button');
+      delNoteBtn.className = 'score-btn danger';
+      delNoteBtn.textContent = '×';
+      delNoteBtn.style.cssText = 'padding:0 3px;font-size:.55rem';
+      delNoteBtn.onclick = () => {
+        s.notes.splice(nIdx, 1);
+        if (s.notes.length === 0) s.rest = true; // falls keine Note mehr
+        scoreActive = {tIdx, sIdx};
+        scoreRenderEditor(tIdx, sIdx);
+        scoreRender();
+      };
+
+      container.append(pitchSel, accSel, delNoteBtn);
+    });
+
+    // Button "Akkordton hinzufügen"
+    const addChordBtn = document.createElement('button');
+    addChordBtn.className = 'score-btn';
+    addChordBtn.textContent = '+Akk';
+    addChordBtn.style.cssText = 'padding:1px 4px;font-size:.55rem';
+    addChordBtn.onclick = () => {
+      s.notes.push({p:'E4', a:null});
+      scoreActive = {tIdx, sIdx};
+      scoreRenderEditor(tIdx, sIdx);
+      scoreRender();
+    };
+    container.appendChild(addChordBtn);
+  }
+
+  // Button "Step danach einfügen"
+  const insertBtn = document.createElement('button');
+  insertBtn.className = 'score-btn';
+  insertBtn.textContent = '+Step danach';
+  insertBtn.style.cssText = 'padding:1px 4px;font-size:.55rem';
+  insertBtn.onclick = () => {
+    scoreInsertStep(tIdx, sIdx+1);
+    scoreActive = {tIdx, sIdx: sIdx+1};
+    scoreRenderEditor(tIdx, sIdx+1);
+    scoreRender();
+  };
+  container.appendChild(insertBtn);
+
+  // Button "Schließen" (Editor ausblenden)
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'score-btn';
+  closeBtn.textContent = '✕';
+  closeBtn.style.cssText = 'padding:1px 4px;font-size:.55rem';
+  closeBtn.onclick = () => {
+    scoreActive = null;
+    container.style.display = 'none';
+    scoreRender();
+  };
+  container.appendChild(closeBtn);
+}
 // ── Step-Operationen ─────────────────────────────────────────
 // Gibt die letzte nicht-Pause-Note eines Tracks zurück (für "Note davor" verwenden)
 function scoreLastNote(tIdx) {
@@ -9278,6 +11255,24 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
       scorePlayPos = { tIdx: ti, sIdx };
       scoreRender();
     }
+        // Wenn der Velocity-Slider gerade gezogen wird: den aktuellen Wert
+    // auf diesen Step schreiben (Pinsel-Effekt während der Wiedergabe)
+        // Mal-Modus: Solange er aktiv ist, wird jeder durchlaufende Step bemalt —
+    // unabhängig davon, ob der Finger gerade auf dem Slider liegt.
+    if (typeof window._velPaintActive === 'function' && window._velPaintActive()) {
+      const step = track.data[sIdx];
+      if (step && !step.rest) {
+        const newVel = window._velSliderGet();
+        step.vel = newVel;
+        const stepEl = document.querySelector(
+          `.score-track-unit:nth-child(${ti+1}) .score-step[data-sidx="${sIdx}"]`
+        );
+        if (stepEl) {
+          const velLbl = stepEl.querySelector('.score-step-vel');
+          if (velLbl) velLbl.textContent = newVel;
+        }
+      }
+  }
     // Aktuell klingende Note in Sicht scrollen — für jeden spielenden Track einzeln,
     // damit beim Abspielen mehrerer/aller Tracks alle gleichzeitig mitscrollen
     setTimeout(() => {
@@ -9315,7 +11310,8 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
             s.notes.forEach(n => {
               const midi = noteToMidi(n.p, n.a);
               try {
-                engine.playSync(midi, layerId, sfIdx, pIdx, 90, vol, tAbs, layer?.envOverride ?? {});
+                const stepVel = s.vel ?? 110;
+engine.playSync(midi, layerId, sfIdx, pIdx, stepVel, vol, tAbs, layer?.envOverride ?? {});
               } catch(e) {}
             });
           });
@@ -9686,6 +11682,25 @@ function scoreRenderPrintPages() {
         fullClone.style.left = (-startX * scaleXFactor) + 'px';
         fullClone.style.transform = `scaleX(${scaleXFactor})`;
         fullClone.style.transformOrigin = 'left top';
+        // WICHTIG: die Streckung soll nur die ABSTÄNDE zwischen den Noten
+        // justieren, nicht die Notenköpfe/-symbole selbst verzerren. Deshalb
+        // bekommt jeder einzelne Step eine GEGEN-Skalierung (1/Faktor) — die
+        // Positionen der Steps (bestimmt durch den äußeren Transform) bleiben
+        // gestreckt, aber ihr jeweiliger Inhalt (Notenkopf, Vorzeichen, Fahne)
+        // wird dadurch wieder auf die ursprüngliche, unverzerrte Form zurückgesetzt.
+        const invScale = 1 / scaleXFactor;
+        // WICHTIG: .score-voice-step (Overlay-Stimme) muss HIER genauso
+        // gegen-skaliert werden wie .score-step (Hauptstimme) — sonst bleibt
+        // nur die Hauptstimme unverzerrt, während die Overlay-Stimme beim
+        // Drucken gestreckt/gestaucht erscheint.
+        fullClone.querySelectorAll('.score-step, .score-voice-step').forEach(stepEl => {
+          stepEl.style.transform = `scaleX(${invScale})`;
+          stepEl.style.transformOrigin = 'left top';
+        });
+        fullClone.querySelectorAll('.score-beam-svg').forEach(svg => {
+  svg.style.transform = `scaleX(${invScale})`;
+  svg.style.transformOrigin = 'left top';
+});
         // Auswahl-/Cursor-/Wiedergabe-Hervorhebungen aus dem Editor gehören nicht
         // ins gedruckte Notenblatt — Klassen und Inline-Hervorhebungsfarben entfernen
         fullClone.querySelectorAll('.selected, .sel-marked').forEach(el => {
@@ -11973,7 +13988,6 @@ function sessionCollectFx() {
   };
   return { sliders: vals, filterType, adsr };
 }
-
 // ── Auto-Save / Auto-Restore ──────────────────────────────────
 const AUTO_SAVE_KEY = 'sf2player_autosave';
 
@@ -12021,7 +14035,6 @@ function autoSaveSession() {
     localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(data));
   } catch(e) {}
 }
-
 function autoRestoreSession() {
   try {
     const raw = localStorage.getItem(AUTO_SAVE_KEY);
@@ -12087,8 +14100,9 @@ function sessionSave() {
       delayTime:     l.delayTime    ?? 37,
     })),
   };
-const a = document.createElement('a');
+
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'session_' + new Date().toISOString().slice(0,10) + '.json';
   a.click();
@@ -12312,7 +14326,6 @@ if (d.fx?.adsr) {
   document.getElementById('sessionInfo').textContent =
     `✓ ${layers.length} Layer geladen: ${info}`;
 }
-
 // After SF2 load, apply pending session automatically
 const _origLoadFile = window.loadFile;
 window.loadFile = async function(file) {
@@ -13886,6 +15899,7 @@ function panelToggleSave(states) {
 // label        : Text im Streifen
 // storageKey   : localStorage-Key
 // defaultOpen  : ob Panel beim ersten Besuch sichtbar ist
+/*
 function addPanelToggle(panelId, label, storageKey, defaultOpen = true, extraIds = []) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
@@ -13924,7 +15938,108 @@ function addPanelToggle(panelId, label, storageKey, defaultOpen = true, extraIds
 
   panel.parentNode.insertBefore(btn, panel);
 }
+*/
+function addPanelToggle(panelId, label, storageKey, defaultOpen = true, extraIds = []) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
 
+  const states = panelToggleLoad();
+  let open = storageKey in states ? states[storageKey] : defaultOpen;
+
+  const btn = document.createElement('button');
+  btn.className = 'panel-toggle-btn' + (open ? '' : ' closed');
+  btn.innerHTML = `<span>${label}</span><span class="ptb-arrow">▾</span>`;
+  btn.title = open ? 'Panel einklappen' : 'Panel aufklappen';
+
+  const extraEls = extraIds.map(id => document.getElementById(id)).filter(Boolean);
+
+  function apply(isOpen) {
+    open = isOpen;
+    panel.style.display = open ? '' : 'none';
+    extraEls.forEach(el => { el.style.display = open ? '' : 'none'; });
+    btn.classList.toggle('closed', !open);
+    btn.title = open ? 'Panel einklappen' : 'Panel aufklappen';
+    const s = panelToggleLoad();
+    s[storageKey] = open;
+    panelToggleSave(s);
+    if (typeof tboneSizeMegaBlow === 'function') tboneSizeMegaBlow();
+  }
+
+  // ── Spezialfall: Noteneditor → Vollbild-Toggle ─────────────────
+  if (panelId === 'scorePanel') {
+    btn.addEventListener('click', () => {
+      const isFullscreen = panel.classList.contains('score-fullscreen');
+
+      if (isFullscreen) {
+        // Vollbild verlassen → Panel wieder normal anzeigen (und einklappen)
+        panel.classList.remove('score-fullscreen');
+        panel.style.position = '';
+        panel.style.inset = '';
+        panel.style.zIndex = '';
+        panel.style.margin = '';
+        panel.style.borderRadius = '';
+        document.body.style.overflow = '';
+
+        // Button-Styles zurücksetzen
+        btn.style.position = '';
+        btn.style.top = '';
+        btn.style.left = '';
+        btn.style.zIndex = '';
+        btn.innerHTML = `<span>${label}</span><span class="ptb-arrow">▾</span>`;
+        btn.title = 'Panel einklappen';
+
+        apply(true); // Panel offen lassen
+
+
+                // Sanft zum Noteneditor scrollen — Oberkante unter die Jump-Nav
+        setTimeout(() => {
+          const nav = document.getElementById('jumpNav');
+          const navOffset = nav ? nav.offsetHeight + 4 : 0;
+          const panelTop = panel.getBoundingClientRect().top + window.scrollY - navOffset;
+          window.scrollTo({ top: panelTop, behavior: 'smooth' });
+        }, 80);
+        
+      } else {
+        // Vollbild aktivieren
+        panel.classList.add('score-fullscreen');
+        panel.style.position = 'fixed';
+        panel.style.inset = '0';
+        panel.style.zIndex = '9999';
+        panel.style.margin = '50';
+        panel.style.borderRadius = '0';
+        document.body.style.overflow = 'hidden';
+
+        // Button fixieren und sichtbar machen
+        btn.style.position = 'fixed';
+        btn.style.top = '10px';
+        btn.style.left = '10px';
+        btn.style.zIndex = '10000';
+        btn.innerHTML = `<span>${label} – Vollbild beenden</span><span class="ptb-arrow">▾</span>`;
+        btn.title = 'Vollbild beenden';
+
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+        // Falls das Panel vorher geschlossen war, jetzt öffnen
+        if (!open) {
+          apply(true);
+        }
+        // Nach apply(true) Button-Label wieder überschreiben (apply ändert es)
+        btn.innerHTML = `<span>${label} – Vollbild beenden</span><span class="ptb-arrow">▾</span>`;
+        btn.title = 'Vollbild beenden';
+      }
+    });
+  } else {
+    // Normales Verhalten für alle anderen Panels
+    btn.addEventListener('click', () => apply(!open));
+  }
+
+  // Initialzustand anwenden (open/closed)
+  apply(open);
+
+  // Button vor dem Panel einfügen
+  panel.parentNode.insertBefore(btn, panel);
+}
 (function initPanelToggles() {
   addPanelToggle('ancKeys',      '🎹 Klaviatur',          'keys1',   true);
   addPanelToggle('masterPanel',  '🔊 Master / Transport', 'master',  true);
