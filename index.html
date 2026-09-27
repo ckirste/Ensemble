@@ -11350,7 +11350,8 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
       const pIdx  = layer ? (layer.presetIdx ?? 0) : 0;
       const vol   = layer ? (layer.vol       ?? 1) : 1;
       if (engine.synths[sfIdx]) {
-        const layerId   = `score_${ti}`;
+        /*const layerId   = `score_${ti}`;*/
+        const layerId = layer ? String(layer.id) : `score_${ti}`;
         const prevS     = sIdx > 0 ? track.data[sIdx - 1] : null;
         const isTiedTo  = prevS && prevS.tie; // diese Note ist angebunden → kein neuer noteOn
         const nextS     = track.data[sIdx + 1];
