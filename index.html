@@ -1226,7 +1226,14 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   max-height: none;     /* keine Höhenbegrenzung */
   overflow: visible;    /* nichts verstecken */
   }
-
+.score-header .score-btn {
+  min-height: 34px;
+  min-width: 34px;
+  padding: 4px 10px;
+  font-size: .78rem;
+  line-height: 1.1;
+  border-radius: 5px;
+  }
 .score-header{display:flex;gap:2px;align-items:center;flex-wrap:wrap;
   padding:0px 0px 0px 0px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--panel)}
 .score-body{display:flex;flex-direction:row;align-items:stretch;flex:1;min-height:0;width:100%;overflow:hidden}
@@ -1332,6 +1339,37 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   margin: 4px 0;
              }
 */
+.score-metro-ctrl {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-left: 1px solid var(--border);
+  margin-left: 4px;
+}
+
+.score-metro-lbl {
+  font-size: .8rem;
+  color: var(--accent3);
+  letter-spacing: .06em;
+}
+
+.score-metro-val {
+  font-family: 'Orbitron', monospace;
+  font-size: .85rem;
+  color: var(--accent3);
+  min-width: 34px;
+  text-align: center;
+  letter-spacing: .04em;
+}
+
+.score-metro-ctrl .score-btn {
+  min-height: 34px;
+  min-width: 34px;
+  padding: 4px 8px;
+  font-size: .9rem;
+  line-height: 1;
+}
 .score-notation-wrapper {
   /* Skalierung deaktivieren, da das Blatt feste Breite hat */
   transform: none !important;
@@ -1550,7 +1588,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   width: 100%;
 }
 .score-sel-toolbar .score-ctrl-btn {
-  font-size: .55rem;
+  font-size: .8rem;
   padding: 3px 0;
 }
 
@@ -1620,6 +1658,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   width: 100%;
   background: #ffffff;
   overflow: hidden;
+  padding: 0;
          }
   .score-scroll-area {
   flex: 1;
@@ -1640,6 +1679,15 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   display: block;
 
   }*/
+#scoreKb {
+  height: 95px !important;
+}
+#scoreKb .key.white {
+  height: 100px/* !important*/;
+}
+#scoreKb .key.black {
+  height: 50px/* !important*/;
+}
 #scoreTracksContainer {
   width: 100%;
   padding: 0px 20px;
@@ -1656,6 +1704,9 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   width: 100%;
   border-top: 1px solid #333;
   background: var(--panel);
+  margin-top: auto;
+  min-height: 0 !important;
+  max-height: none !important;
   }
   .score-piano-header{display:flex;align-items:center;gap:6px;padding:3px 8px;background:#111827;border-bottom:1px solid var(--border);flex-wrap:nowrap;min-height:28px}
 .score-piano-lbl{font-size:.52rem;letter-spacing:.12em;color:var(--accent3);text-transform:uppercase;white-space:nowrap}
@@ -1669,7 +1720,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 2px 2px;
+  gap: 2px 10px;
   padding: 0px 0px;
   background: #ffffff;
   border-bottom: 1px solid var(--border);
@@ -1682,7 +1733,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 
 .score-track-header .score-btn {
   padding: 1px 1px;
-  font-size: 1.0rem !important;
+  font-size: 0.7rem !important;
   line-height: 2.2;
   border-radius: 4px;
   background: #ffffff;
@@ -1691,7 +1742,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   cursor: pointer;
   transition: all .15s;
   white-space: nowrap;
-  min-height: 40px;
+  min-height: 30px;
 }
 .score-track-header .score-btn:hover {
   border-color: var(--accent);
@@ -1708,8 +1759,9 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 
 .score-track-header select {
   font-size: 1.00rem !important;
-  padding: 1px 2px;
-  max-width: 110px;/*70px;*/ /* je nach Bedarf anpassen */
+  padding: 1px 1px;
+  max-width: 60px !important;/*70px;*/ /* je nach Bedarf anpassen */
+  min-width: 40px !important;
   background: #ffffff;
   border: 1px solid var(--border);
   color: black;/*var(--text);*/
@@ -1735,20 +1787,20 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .score-editor-inline {
   display: inline-flex;
   flex-wrap:  nowrap;
-  gap: 3px;
+  gap: 0px;
   /*align-items: center;*/
   overflow-x: auto;
 }
 .score-editor-inline select {
   max-width: 50px;
   font-size: 1.55rem;
-  padding: 0 2px;
+  padding: 0 0px;
 }
 .score-editor-inline label {
   font-size: 2.55rem !important;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 0px;
 }
 .score-editor-inline .score-btn {
   font-size: 1.55rem;
@@ -2470,7 +2522,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   <!-- ══ Noten-Editor Panel ══ -->
   <div class="score-panel panel" id="scorePanel">
     <div class="score-header">
-      <span style="display: none;font-size:.6rem;letter-spacing:.14em;color:var(--accent);text-transform:uppercase">🎵 Noten-Editor</span>
+      <span style="display: none;font-size:1.0rem;letter-spacing:.14em;color:var(--accent);text-transform:uppercase">🎵 Noten-Editor</span>
       <button class="score-btn" onclick="scoreAddTrack()">+ Track</button>
       <button class="score-btn" id="scoreKbInputBtn" onclick="scoreToggleKbInput()"
         title="Klaviatur-Eingabe: Taste drücken = Note setzen + nächster Step">🎹 Eingabe</button>
@@ -2484,6 +2536,12 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
       <input type="file" id="scoreImportInput" accept=".json" style="display:none">
       <button class="score-btn" onclick="scoreOpenPrintPreview()" title="Druckvorschau: A4-Querformat mit einstellbaren Takten pro Zeile">🖨 Vorschau</button>
       <button class="score-btn" onclick="scoreQuickPrint()" title="Baut die Druckvorschau im Hintergrund auf und druckt sofort — ohne manuell in die Vorschau wechseln zu müssen">🖨⚡ Drucken</button>
+            <div class="score-metro-ctrl">
+        <span class="score-metro-lbl">♩</span>
+        <button class="score-btn" id="scoreMetroDown" title="BPM −1">−</button>
+        <span class="score-metro-val" id="scoreMetroDisp">120</span>
+        <button class="score-btn" id="scoreMetroUp" title="BPM +1">+</button>
+            </div>
     </div>
 
     <!-- score-body: toolbar links | content rechts -->
@@ -9613,9 +9671,9 @@ function scoreRender() {
       width: 100%;
       flex-wrap: nowrap;
       overflow-x: auto;
-      gap: 20px;
+      gap: 10px;
       align-items: center;
-      padding: 2px 0;
+      padding: 2px;
     `;
     hdr.appendChild(editorContainer); //neu vielleicht aber auch besser als die nachfolgende variante
     
@@ -10953,7 +11011,7 @@ function scoreRenderEditor(tIdx, sIdx) {
     s.notes.forEach((n, nIdx) => {
       // Pitch-Dropdown (nur In-Key-Töne anzeigen)
       const pitchSel = document.createElement('select');
-      pitchSel.style.cssText = 'font-size:.55rem;max-width:50px;padding:0 2px';
+      pitchSel.style.cssText = 'font-size:.55rem;max-width:80px;padding:0 2px';
       const key = scoreTracks[tIdx].key ?? 'C-Dur';
       const clef = scoreTracks[tIdx].clef ?? 'treble';
       const { inKey } = getKeyAwarePitchRange(key, clef);
@@ -10973,7 +11031,7 @@ function scoreRenderEditor(tIdx, sIdx) {
 
       // Accidental-Dropdown
       const accSel = document.createElement('select');
-      accSel.style.cssText = 'font-size:.55rem;max-width:40px;padding:0 2px';
+      accSel.style.cssText = 'font-size:.55rem;max-width:80px;padding:2px 2px';
       accSel.innerHTML = `<option value="">—</option>
                           <option value="#" ${n.a==='#'?'selected':''}>#</option>
                           <option value="b" ${n.a==='b'?'selected':''}>b</option>
@@ -16040,6 +16098,62 @@ function addPanelToggle(panelId, label, storageKey, defaultOpen = true, extraIds
   // Button vor dem Panel einfügen
   panel.parentNode.insertBefore(btn, panel);
 }
+// ── Metronom-Steuerung im Score-Header ───────────────────────
+(function initScoreMetroControls() {
+  const downBtn = document.getElementById('scoreMetroDown');
+  const upBtn   = document.getElementById('scoreMetroUp');
+  const disp    = document.getElementById('scoreMetroDisp');
+  if (!downBtn || !upBtn || !disp) return;
+
+  function updateDisplay() {
+    if (typeof metro !== 'undefined') disp.textContent = metro.bpm;
+  }
+
+  downBtn.addEventListener('click', () => {
+    if (typeof metroSetBpm === 'function') metroSetBpm(metro.bpm - 1);
+    updateDisplay();
+  });
+
+  upBtn.addEventListener('click', () => {
+    if (typeof metroSetBpm === 'function') metroSetBpm(metro.bpm + 1);
+    updateDisplay();
+  });
+
+  // Long-Press für schnelles Ändern (wie im Metronom-Panel)
+  function attachHold(btn, dir) {
+    let iv = null;
+    const start = () => {
+      clearInterval(iv);
+      iv = setInterval(() => {
+        if (typeof metroSetBpm === 'function') metroSetBpm(metro.bpm + dir);
+        updateDisplay();
+      }, 80);
+    };
+    const stop = () => { clearInterval(iv); iv = null; };
+
+    btn.addEventListener('mousedown', start);
+    btn.addEventListener('touchstart', start, { passive: true });
+    ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev =>
+      btn.addEventListener(ev, stop));
+  }
+  attachHold(downBtn, -1);
+  attachHold(upBtn,   1);
+
+  // Anzeige initial und bei jeder externen BPM-Änderung aktualisieren
+  updateDisplay();
+
+  // Hook: wenn metroSetBpm irgendwo anders aufgerufen wird (Tap, Panel, Session),
+  // soll die Anzeige im Score-Header mitlaufen. Der sauberste Weg ist der
+  // gleiche wie beim Arp: metroSetBpm kurz wrappen.
+  if (typeof window.metroSetBpm === 'function' && !window._scoreMetroSyncInstalled) {
+    window._scoreMetroSyncInstalled = true;
+    const _prev = window.metroSetBpm;
+    window.metroSetBpm = function(bpm) {
+      _prev(bpm);
+      updateDisplay();
+    };
+  }
+})();
 (function initPanelToggles() {
   addPanelToggle('ancKeys',      '🎹 Klaviatur',          'keys1',   true);
   addPanelToggle('masterPanel',  '🔊 Master / Transport', 'master',  true);
