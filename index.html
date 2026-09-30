@@ -1930,7 +1930,9 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   border: 1px solid var(--accent3); border-radius: 8px; margin: 4px 0;
 }
 .score-sel-toolbar span { font-size: .55rem; color: var(--accent3); font-family: 'Share Tech Mono',monospace; }
-.score-sel-toolbar button { font-size: .58rem; padding: 3px 10px; }
+.score-sel-toolbar button { font-size: .58rem; padding: 3px 10px; height: 40px;
+                        
+}
 .score-sel-clear { color: var(--dim) !important; border-color: var(--border) !important; }
 .score-step.playhead{background:rgba(0,255,150,.15);outline:2px solid #00ff96}
 .score-bar-line{position:absolute;top:70px;width:2px;height:41px;background:#000;pointer-events:none;z-index:60}
@@ -1953,6 +1955,31 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   height:100%;background:#00e5ff;border-radius:2px;
   animation:score-cursor-blink .7s ease-in-out infinite}
 .score-end-cursor:hover{background:rgba(0,229,255,.04)}
+/* Triolen / N-tolen */
+.score-step .score-sub-note {
+  position: absolute;
+  pointer-events: none;
+}
+
+.score-step .score-sub-acc {
+  position: absolute;
+  pointer-events: none;
+}
+
+.score-tuplet-bracket {
+  pointer-events: none;
+}
+.score-tuplet-bracket path {
+  stroke: #000;
+  stroke-width: 1.2;
+  fill: none;
+}
+.score-tuplet-bracket text {
+  font-family: serif;
+  font-style: italic;
+  font-size: 11px;
+  fill: #000;
+}
 </style>
 </head>
 <body>
@@ -2558,6 +2585,8 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
     <button class="score-ctrl-btn" onclick="scoreSelCopyPaste()">📋</button>
     <button class="score-ctrl-btn" onclick="scoreSelDelete()">🗑</button>
     <button class="score-ctrl-btn score-sel-clear" onclick="scoreSelClearAll()">✕</button>
+    <button class="score-ctrl-btn" id="scoreTupletBtn" onclick="scoreSelMakeTuplet()" 
+        title="Auswahl zu N-tole zusammenfassen" style="display:none">÷n</button>
   </div>
 
   <div class="score-sep"></div>
@@ -2571,6 +2600,9 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
     <label><input type="checkbox" id="scoreToolRest"> P</label>
     <label><input type="checkbox" id="scoreToolDot"> .</label>
   </div>
+  <button id="tupletTestBtn" style="background:#ff4060;color:#fff;padding:6px;margin-top:8px;font-size:.6rem;border-radius:4px;border:none;cursor:pointer">
+  🧪 Tuplet-Test
+  </button>
 
   <!-- Tonart -->
   <span style="font-size:.5rem;color:var(--dim);text-align:center">Tonart</span>
@@ -6953,6 +6985,8 @@ document.addEventListener('pointerdown', () => {
     p.track.addEventListener('mousedown',  e => onStart(p.track, e), {passive:false});
     p.track.addEventListener('touchstart', e => onStart(p.track, e), {passive:false});
   });
+
+  
   window.addEventListener('mousemove',   onMove,  {passive:false});
   window.addEventListener('touchmove',   onMove,  {passive:false});
   window.addEventListener('mouseup',     onEnd);
@@ -8893,7 +8927,18 @@ function scoreSelUpdateToolbar() {
       beamBtn.style.display = 'none';
     }
   }
-
+const tupletBtn = document.getElementById('scoreTupletBtn');
+if (tupletBtn) {
+  const keys = n > 0 ? [...scoreSelection].map(k => k.split('_').map(Number)) : [];
+  const sameTrack = n >= 2 && keys.every(([t]) => t === keys[0][0]);
+  if (sameTrack) {
+    tupletBtn.style.display = '';
+    tupletBtn.title = `Auswahl zu ${n}-tole zusammenfassen`;
+    tupletBtn.textContent = '÷' + n;
+  } else {
+    tupletBtn.style.display = 'none';
+  }
+  }
   // Notenwert-Buttons für die Selektion: bei ≥1 markiertem Step erscheinen
   // Buttons, mit denen der Notenwert aller markierten Steps gleichzeitig geändert wird.
   const lenWrap = document.getElementById('scoreSelLenBtns');
@@ -9621,9 +9666,17 @@ function scoreRender() {
     // Layer
     const layerSel = document.createElement('select');
     layerSel.style.cssText = 'font-size:.6rem;padding:1px 4px;max-width:80px';
-    layerSel.innerHTML = (typeof layers !== 'undefined' ? layers : [])
-      .map((l, i) => `<option value="${i}" ${track.layerIdx===i?'selected':''}>L${i+1}</option>`)
-      .join('') || '<option value="0">—</option>';
+    layerSel.innerHTML = (typeof layers !== 'undefined' && layers.length ? layers : [])
+  .map((l, i) => {
+    if (!l) return '';
+    const sf = engine.soundfonts[l.sfIdx];
+    const p  = sf?.presets[l.presetIdx];
+    const presetName = p?.name ?? '—';
+    // Layer-Name (falls vorhanden) + Presetname, z.B. "Sopran · Violin"
+    const label = (l.label ? l.label + ' · ' : '') + `L${i+1}: ${presetName}`;
+    return `<option value="${i}" ${track.layerIdx===i?'selected':''}>${label}</option>`;
+  })
+  .join('') || '<option value="0">—</option>';
     layerSel.onchange = () => { track.layerIdx = parseInt(layerSel.value); scoreRender(); };
 
     // Stimme
@@ -9751,8 +9804,12 @@ const baseW   = BASE_64 * factor;
 */
 const factor  = DUR_MAP[s.len] / minDurValue; // Skaliert relativ zum kleinsten Wert im Score
 const baseW   = BASE_64 * factor;             // BASE_64 = 20px ist jetzt die Breite des kleinsten Wertes
-      step.style.width = (baseW * (s.dot ? 1.5 : 1)) + 'px';
+//alt vor triolen erhänzung
+      /*step.style.width = (baseW * (s.dot ? 1.5 : 1)) + 'px';*/
 
+      const tupletW = (s.subdivision && s.subdivision > 1) ? 2 : 1;
+const stepW   = baseW * (s.dot ? 1.5 : 1) * tupletW;
+step.style.width = stepW + 'px';
       const isSelected = scoreActive && scoreActive.tIdx===tIdx && scoreActive.sIdx===sIdx;
       const isPlay     = scorePlayPos && scorePlayPos.tIdx===tIdx && scorePlayPos.sIdx===sIdx;
       const isCursor   = scoreKbInput && scoreCursor && scoreCursor.tIdx===tIdx && scoreCursor.sIdx===sIdx;
@@ -9823,6 +9880,135 @@ const baseW   = BASE_64 * factor;             // BASE_64 = 20px ist jetzt die Br
           const d = document.createElement('div');
           d.className = 'score-dot'; d.style.top = '78px'; step.appendChild(d);
         }
+      } else if (s.subdivision && s.subdivision > 1 && s.subNotes && s.subNotes.length) {
+        // ── DEBUG ────────────────────────────────────────────
+        console.log('Tuplet render: subdiv=', s.subdivision, 'len=', s.len, 'stepW=', stepW);
+        // ─────────────────────────────────────────────────────
+
+        const subW = stepW / s.subdivision;
+        console.log('subW=', subW, 'subNotes=', s.subNotes.length);
+
+        // Stielrichtung EINMAL für die ganze Gruppe bestimmen
+        const avgY = s.subNotes.reduce((sum, sub) => sum + (pMap[sub.p] ?? 70), 0) / s.subNotes.length;
+        const stemDown = scoreStemIsDown(track, track.activeVoiceIdx ?? 0, avgY);
+        const noteheadIcon = stemDown ? NOTEHEAD_ONLY_DOWN : NOTEHEAD_ONLY;
+
+        const headPositions = [];
+
+        s.subNotes.forEach((sub, i) => {
+          const y = pMap[sub.p] ?? 70;
+          const topOffset = scoreNoteTopOffset(y, stemDown);
+
+          // Vorzeichen
+          if (sub.a) {
+            const ac = document.createElement('div');
+            ac.innerHTML = svgAcc[sub.a];
+            const acSvg = ac.querySelector('svg');
+            if (acSvg) {
+              acSvg.classList.add('score-sub-acc-svg');
+              acSvg.style.setProperty('left', (i * subW + 4) + 'px', 'important');
+              acSvg.style.setProperty('top', `${sub.a === '#' ? 153-y : 150-y}px`, 'important');
+              step.appendChild(acSvg);
+            }
+          }
+
+          // Notenkopf OHNE Hals
+          const nw = document.createElement('div');
+          nw.innerHTML = noteheadIcon;
+          const noteSvg = nw.querySelector('svg');
+          if (noteSvg) {
+            noteSvg.classList.add('score-sub-note-svg');
+            const leftPx = i * subW + 6;
+            noteSvg.style.setProperty('left', leftPx + 'px', 'important');
+            noteSvg.style.setProperty('top', topOffset + 'px', 'important');
+            step.appendChild(noteSvg);
+
+            const headCenterX = leftPx + 12;
+            const headCenterY = topOffset + (stemDown ? 12 : 48);
+            headPositions.push({ x: headCenterX, y: headCenterY });
+          }
+
+          getLedgerLines(y, track.clef).forEach(ly => {
+            const l = document.createElement('div');
+            l.className = 'score-ledger';
+            l.style.top = `${169 - ly}px`;
+            step.appendChild(l);
+          });
+        });
+
+        // ── Stiele + Balken zeichnen ─────────────────────────────
+        if (headPositions.length >= 2) {
+          const beamSvgNS = 'http://www.w3.org/2000/svg';
+          const dirSign = stemDown ? 1 : -1;
+          const stemLen = 45;
+          const beamLevel = BEAM_LEVELS[s.len] || 1;
+
+          const minHeadY = Math.min(...headPositions.map(p => p.y));
+          const maxHeadY = Math.max(...headPositions.map(p => p.y));
+          const beamY = stemDown
+            ? maxHeadY + stemLen
+            : minHeadY - stemLen;
+
+          const beamSvg = document.createElementNS(beamSvgNS, 'svg');
+          beamSvg.setAttribute('width', stepW);
+          beamSvg.setAttribute('height', 180);
+          beamSvg.style.cssText = 'position:absolute;top:0;left:0;overflow:visible;pointer-events:none;z-index:14';
+
+          const mkLine = (x1, y1, x2, y2, w) => {
+            const l = document.createElementNS(beamSvgNS, 'line');
+            l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+            l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+            l.setAttribute('stroke', '#000');
+            l.setAttribute('stroke-width', w);
+            beamSvg.appendChild(l);
+          };
+
+          headPositions.forEach(p => {
+            mkLine(p.x, p.y, p.x, beamY, 2.2);
+          });
+
+          mkLine(headPositions[0].x, beamY,
+                 headPositions[headPositions.length - 1].x, beamY, 5);
+
+          for (let lvl = 2; lvl <= beamLevel; lvl++) {
+            const offset = -dirSign * (lvl - 1) * 8;
+            mkLine(headPositions[0].x, beamY + offset,
+                   headPositions[headPositions.length - 1].x, beamY + offset, 4);
+          }
+
+          step.appendChild(beamSvg);
+}
+        // Klammerposition aus höchster Note
+        const yValues = s.subNotes.map(sub => pMap[sub.p] ?? 70);
+        const maxY = Math.max(...yValues);
+        const highestNoteTop = 122 - maxY;
+        const bracketTop = highestNoteTop - 15;
+        console.log('bracketTop=', bracketTop, '(highest note top=', highestNoteTop + ')');
+
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const brW = stepW;
+        const bracket = document.createElementNS(svgNS, 'svg');
+        bracket.setAttribute('class', 'score-tuplet-bracket');
+        bracket.setAttribute('width', brW);
+        bracket.setAttribute('height', 20);
+        bracket.style.position = 'absolute';
+        bracket.style.left = '0';
+        bracket.style.top = bracketTop + 'px';
+        bracket.style.pointerEvents = 'none';
+        bracket.style.zIndex = '15';
+
+        const p = document.createElementNS(svgNS, 'path');
+        p.setAttribute('d', `M 4 16 L 4 8 L ${brW - 4} 8 L ${brW - 4} 16`);
+        bracket.appendChild(p);
+
+        const num = document.createElementNS(svgNS, 'text');
+        num.setAttribute('x', brW / 2);
+        num.setAttribute('y', 6);
+        num.setAttribute('text-anchor', 'middle');
+        num.textContent = s.subdivision;
+        bracket.appendChild(num);
+
+        step.appendChild(bracket);
       } else {
         const topY = s.notes.reduce((max, n) => Math.max(max, pMap[n.p] ?? 70), -Infinity);
         let topAssigned = false;
@@ -11343,59 +11529,87 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
     const dur       = s ? DUR_MAP[s.len] * (s.dot ? 1.5 : 1) : 1;
     const thisDurMs = Math.round(dur * msPerBeat);
 
-    if (s && !s.rest && typeof engine !== 'undefined' && engine.synths.length) {
-      const lIdx  = track.layerIdx ?? 0;
-      const layer = (typeof layers !== 'undefined') ? layers[lIdx] : null;
-      const sfIdx = layer ? (layer.sfIdx     ?? 0) : 0;
-      const pIdx  = layer ? (layer.presetIdx ?? 0) : 0;
-      const vol   = layer ? (layer.vol       ?? 1) : 1;
-      if (engine.synths[sfIdx]) {
-        /*const layerId   = `score_${ti}`;*/
-        const layerId = layer ? String(layer.id) : `score_${ti}`;
-        const prevS     = sIdx > 0 ? track.data[sIdx - 1] : null;
-        const isTiedTo  = prevS && prevS.tie; // diese Note ist angebunden → kein neuer noteOn
-        const nextS     = track.data[sIdx + 1];
-        const noteOffMs = (s.tie && nextS)
-          ? thisDurMs + Math.round(DUR_MAP[nextS.len] * (nextS.dot ? 1.5 : 1) * msPerBeat) - 40
-          : Math.max(50, thisDurMs - 40);
+if (s && !s.rest && typeof engine !== 'undefined' && engine.synths.length) {
+  const lIdx  = track.layerIdx ?? 0;
+  const layer = (typeof layers !== 'undefined') ? layers[lIdx] : null;
+  const sfIdx = layer ? (layer.sfIdx     ?? 0) : 0;
+  const pIdx  = layer ? (layer.presetIdx ?? 0) : 0;
+  const vol   = layer ? (layer.vol       ?? 1) : 1;
 
-        if (!isTiedTo) {
-          // Normale Note oder Start eines Tie-Bogens: noteOn spielen
-          const noteOffDelay = noteOffMs; // Wert sichern vor async
-          engine.ensureCtx().then(() => {
+  if (engine.synths[sfIdx]) {
+    const layerId = `score_${ti}`;
+    const stepVel = s.vel ?? 90;
+
+    if (s.subdivision && s.subdivision > 1 && s.subNotes && s.subNotes.length) {
+      // ── N-tole: Sub-Noten zeitversetzt ──────────────────
+      const subDurMs = thisDurMs / s.subdivision;
+      const subNoteDurMs = Math.max(30, subDurMs * 0.85);
+
+      engine.ensureCtx().then(() => {
+        if (scorePlayTimer === null) return;
+        engine.ensureChannel(layerId, sfIdx, pIdx);
+
+        s.subNotes.forEach((sub, i) => {
+          const offsetMs = i * subDurMs;
+          const midi = noteToMidi(sub.p, sub.a);
+          if (midi < 0 || midi > 127) return;
+
+          setTimeout(() => {
             if (scorePlayTimer === null) return;
             const tAbs = engine.ctx.currentTime + 0.012;
-            engine.ensureChannel(layerId, sfIdx, pIdx);
-            s.notes.forEach(n => {
-              const midi = noteToMidi(n.p, n.a);
-              try {
-                const stepVel = s.vel ?? 110;
-engine.playSync(midi, layerId, sfIdx, pIdx, stepVel, vol, tAbs, layer?.envOverride ?? {});
-              } catch(e) {}
-            });
-          });
-          // noteOff separat schedulen — außerhalb von .then() damit der Delay korrekt läuft
+            try {
+              engine.playSync(midi, layerId, sfIdx, pIdx, stepVel, vol, tAbs, layer?.envOverride ?? {});
+            } catch(e) {}
+          }, offsetMs);
+
           setTimeout(() => {
-            if (s.tie) return; // Tie-Noten: stop kommt vom Ende der gebundenen Note
+            engine.stop(midi, layerId);
+          }, offsetMs + subNoteDurMs);
+        });
+      });
+
+    } else {
+      // ── Normale Note oder Akkord (bestehende Logik) ─────
+      const prevS     = sIdx > 0 ? track.data[sIdx - 1] : null;
+      const isTiedTo  = prevS && prevS.tie;
+      const nextS     = track.data[sIdx + 1];
+      const noteOffMs = (s.tie && nextS)
+        ? thisDurMs + Math.round(DUR_MAP[nextS.len] * (nextS.dot ? 1.5 : 1) * msPerBeat) - 40
+        : Math.max(50, thisDurMs - 40);
+
+      if (!isTiedTo) {
+        const noteOffDelay = noteOffMs;
+        engine.ensureCtx().then(() => {
+          if (scorePlayTimer === null) return;
+          const tAbs = engine.ctx.currentTime + 0.012;
+          engine.ensureChannel(layerId, sfIdx, pIdx);
+          s.notes.forEach(n => {
+            const midi = noteToMidi(n.p, n.a);
+            try {
+              engine.playSync(midi, layerId, sfIdx, pIdx, stepVel, vol, tAbs, layer?.envOverride ?? {});
+            } catch(e) {}
+          });
+        });
+        setTimeout(() => {
+          if (s.tie) return;
+          s.notes.forEach(n => {
+            const midi = noteToMidi(n.p, n.a);
+            engine.stop(midi, layerId);
+          });
+        }, noteOffDelay);
+
+        if (s.tie && nextS) {
+          setTimeout(() => {
             s.notes.forEach(n => {
               const midi = noteToMidi(n.p, n.a);
               engine.stop(midi, layerId);
             });
-          }, noteOffDelay);
-
-          // Bei Tie: stop erst nach akkumulierter Gesamtdauer
-          if (s.tie && nextS) {
-            setTimeout(() => {
-              s.notes.forEach(n => {
-                const midi = noteToMidi(n.p, n.a);
-                engine.stop(midi, layerId);
-              });
-            }, noteOffMs);
-          }
+          }, noteOffMs);
         }
       }
     }
-
+  }
+  }
     // Nächsten Step planen
     const nextSIdx = sIdx + 1;
     scoreTrackPos[ti] = nextSIdx;
@@ -12238,6 +12452,58 @@ function updateScorePianoInfo() {
     el.textContent = 'Klaviatur-Eingabe aktivieren um Noten einzufügen';
   }
 }
+window.scoreSelMakeTuplet = function() {
+  const n = scoreSelection.size;
+  if (n < 2) return;
+
+  const keys = [...scoreSelection].map(k => k.split('_').map(Number));
+  const ti = keys[0][0];
+  if (!keys.every(([t]) => t === ti)) return;
+
+  const track = scoreTracks[ti];
+  if (!track) return;
+
+  // Sortierte Step-Indizes
+  const sIdxs = keys.map(([, s]) => s).sort((a, b) => a - b);
+
+  // Prüfen: alle Steps müssen dieselbe Länge haben (für saubere N-tole)
+  const lengths = sIdxs.map(si => track.data[si]?.len).filter(Boolean);
+  const allSameLen = lengths.length === n && lengths.every(l => l === lengths[0]);
+  if (!allSameLen) {
+    alert('Alle markierten Steps müssen denselben Notenwert haben.');
+    return;
+  }
+
+  // Sub-Noten aus den ausgewählten Steps bauen
+  const subNotes = sIdxs.map(si => {
+    const s = track.data[si];
+    if (!s || s.rest || !s.notes?.length) return { p: 'C4', a: null };
+    return { p: s.notes[0].p, a: s.notes[0].a };
+  });
+
+  // Gemeinsamer Notenwert und Velocity (vom ersten Step)
+  const firstS = track.data[sIdxs[0]];
+  const newStep = {
+    len: firstS.len,
+    dot: firstS.dot,
+    rest: false,
+    vel: firstS.vel ?? 90,
+    subdivision: n,
+    subNotes: subNotes,
+    notes: [{ p: subNotes[0].p, a: subNotes[0].a }], // Fallback für Legacy-Code
+  };
+
+  // Steps ersetzen: erste Position = neuer Tuplet-Step, Rest löschen
+  track.data[sIdxs[0]] = newStep;
+  // Von hinten nach vorne löschen (Indexverschiebung vermeiden)
+  for (let i = sIdxs.length - 1; i >= 1; i--) {
+    track.data.splice(sIdxs[i], 1);
+  }
+
+  scoreSelClear();
+  scoreSelUpdateToolbar();
+  scoreRender();
+};
 
 // scoreKbNoteInput ist bereits via window-Exposition global zugänglich
 // (Piano-Highlight wird direkt am Ende von scoreKbNoteInput aufgerufen)
@@ -16155,6 +16421,26 @@ function addPanelToggle(panelId, label, storageKey, defaultOpen = true, extraIds
     };
   }
 })();
+
+document.getElementById('tupletTestBtn')?.addEventListener('click', () => {
+  const track = scoreTracks[0];
+  if (!track || !track.data.length) {
+    alert('Kein Track/Step vorhanden');
+    return;
+  }
+  const s = track.data[0];
+  s.len = '8n';                    // Basis: Achtel
+  s.subdivision = 3;               // → Triole
+  s.rest = false;
+  s.dot = false;
+  s.subNotes = [
+    { p: 'C4', a: null },
+    { p: 'D4', a: null },
+    { p: 'E4', a: null },
+  ];
+  s.notes = [{ p: 'C4', a: null }]; // Fallback für Code, der s.notes liest
+  scoreRender();
+});
 (function initPanelToggles() {
   addPanelToggle('ancKeys',      '🎹 Klaviatur',          'keys1',   true);
   addPanelToggle('masterPanel',  '🔊 Master / Transport', 'master',  true);
