@@ -8491,9 +8491,12 @@ const baseW   = BASE_64 * factor;             // BASE_64 = 20px ist jetzt die Br
       // Hilfslinien — beliebig viele, je nach Abstand zum Notensystem
       // (fehlten bisher bei zusätzlichen Stimmen, jetzt wie bei der Hauptstimme)
       getLedgerLines(y, track.clef).forEach(ly => {
-        const l = document.createElement('div');
-        l.className = 'score-ledger'; l.style.top = `${169 - ly}px`; wrap.appendChild(l);
-      });
+  const l = document.createElement('div');
+  l.className = 'score-ledger';
+  l.style.setProperty('left', (i * subW + 2) + 'px', 'important');
+  l.style.top = `${169 - ly}px`;
+  step.appendChild(l);
+});
     });
     overlay.appendChild(wrap);
   });
@@ -9889,8 +9892,14 @@ step.style.width = stepW + 'px';
         console.log('subW=', subW, 'subNotes=', s.subNotes.length);
 
         // Stielrichtung EINMAL für die ganze Gruppe bestimmen
-        const avgY = s.subNotes.reduce((sum, sub) => sum + (pMap[sub.p] ?? 70), 0) / s.subNotes.length;
-        const stemDown = scoreStemIsDown(track, track.activeVoiceIdx ?? 0, avgY);
+        // Standard-Notenregel für Balkengruppen: Sobald EINE Note auf/über der
+// Mittellinie liegt, gehen ALLE Stiele nach unten.
+const MIDDLE = 80;
+const anyOnOrAbove = s.subNotes.some(sub => (pMap[sub.p] ?? 70) >= MIDDLE);
+// Bei ≥2 Stimmen auf einem Track entscheidet weiterhin die Stimmennummer.
+const stemDown = (track.voices && track.voices.length >= 2)
+  ? track.activeVoiceIdx > 0
+  : anyOnOrAbove;
         const noteheadIcon = stemDown ? NOTEHEAD_ONLY_DOWN : NOTEHEAD_ONLY;
 
         const headPositions = [];
@@ -9923,17 +9932,18 @@ step.style.width = stepW + 'px';
             noteSvg.style.setProperty('top', topOffset + 'px', 'important');
             step.appendChild(noteSvg);
 
-            const headCenterX = leftPx + 12;
+            const headStemX = stemDown ? (leftPx - 1) : (leftPx + 13);/*neu x*/
             const headCenterY = topOffset + (stemDown ? 12 : 48);
-            headPositions.push({ x: headCenterX, y: headCenterY });
+            headPositions.push({ x: headStemX, y: headCenterY });
           }
 
           getLedgerLines(y, track.clef).forEach(ly => {
-            const l = document.createElement('div');
-            l.className = 'score-ledger';
-            l.style.top = `${169 - ly}px`;
-            step.appendChild(l);
-          });
+  const l = document.createElement('div');
+  l.className = 'score-ledger';
+  l.style.setProperty('left', (i * subW + 2) + 'px', 'important');
+  l.style.top = `${169 - ly}px`;
+  step.appendChild(l);
+});
         });
 
         // ── Stiele + Balken zeichnen ─────────────────────────────
@@ -11526,8 +11536,11 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
     }, 0);
 
     // Note spielen
-    const dur       = s ? DUR_MAP[s.len] * (s.dot ? 1.5 : 1) : 1;
-    const thisDurMs = Math.round(dur * msPerBeat);
+    let dur = s ? DUR_MAP[s.len] * (s.dot ? 1.5 : 1) : 1;
+// N-tole: 2/N-Regel → die Gesamtdauer ist IMMER 2× die Basisnote
+// (3 Achtel-Triolen = 1 Viertel = 2 × Achtel)
+if (s && s.subdivision && s.subdivision > 1) dur *= 2;
+const thisDurMs = Math.round(dur * msPerBeat);
 
 if (s && !s.rest && typeof engine !== 'undefined' && engine.synths.length) {
   const lIdx  = track.layerIdx ?? 0;
