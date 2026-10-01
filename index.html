@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v116</title>
+<title>Ensemble v117</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -2006,7 +2006,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
     <h1>Ensemble</h1>
-    <h3>v116</h3>
+    <h3>v117</h3>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -8430,7 +8430,7 @@ const STEP_W    = 120; // px pro Viertelnote
 // (echtes gemeinsames Notensystem, Klavier-/Orgelstil — kein zweites, separat
 // scrollendes System, da zwei unabhängig scrollende Bereiche beim mobilen
 // Scrollen sonst auseinanderlaufen würden).
-function scoreRenderVoiceOverlay(track, voiceIdx, pMap,minDurValue) {
+  function scoreRenderVoiceOverlay(track, voiceIdx, pMap, minDurValue, tupletWidthFactor) {
   const voiceData = track.voices[voiceIdx].data;
   const overlay = document.createElement('div');
   overlay.className = 'score-voice-overlay';
@@ -8446,7 +8446,7 @@ const factor  = DUR_MAP[s.len] / 0.0625; // 1, 2, 4, 8, 16, 32, 64
 const baseW   = BASE_64 * factor;
 */
 const factor  = DUR_MAP[s.len] / minDurValue; // Skaliert relativ zum kleinsten Wert im Score
-const baseW   = BASE_64 * factor;             // BASE_64 = 20px ist jetzt die Breite des kleinsten Wertes
+    const baseW   = BASE_64 * factor * (tupletWidthFactor ?? 1);
     // WICHTIG: eigene Klasse 'score-voice-step' statt 'score-step' — sonst
     // würden Abfragen der Haupt-Balkenlogik (die per .score-step sucht) auch
     // diese Steps mit-erfassen und die Index-Zuordnung durcheinanderbringen.
@@ -9597,6 +9597,20 @@ function scoreRender() {
   });
   // Fallback: Falls kein Notenwert gefunden wurde, nimm 4n (1) als Minimum
   if (minDurValue === Infinity) minDurValue = 1;
+  // NEU: Wenn irgendwo eine N-tole mit >3 Sub-Noten existiert, wird die
+// gesamte Zeichenbasis gestreckt, damit Vorzeichen zwischen die Noten passen.
+let tupletWidthFactor = 1;
+scoreTracks.forEach(t => {
+  const voices = t.voices || [{ data: t.data }];
+  voices.forEach(v => {
+    (v.data || []).forEach(s => {
+      if (s.subdivision && s.subdivision > 3) {
+        const f = s.subdivision / 3;
+        if (f > tupletWidthFactor) tupletWidthFactor = f;
+      }
+    });
+  });
+});
   // -----------------------
   // Scroll-Positionen sichern
   const scrollPositions = [];
@@ -9806,7 +9820,7 @@ const factor  = DUR_MAP[s.len] / 0.0625; // 1, 2, 4, 8, 16, 32, 64
 const baseW   = BASE_64 * factor;
 */
 const factor  = DUR_MAP[s.len] / minDurValue; // Skaliert relativ zum kleinsten Wert im Score
-const baseW   = BASE_64 * factor;             // BASE_64 = 20px ist jetzt die Breite des kleinsten Wertes
+const baseW   = BASE_64 * factor * tupletWidthFactor;             // BASE_64 = 20px ist jetzt die Breite des kleinsten Wertes
 //alt vor triolen erhänzung
       /*step.style.width = (baseW * (s.dot ? 1.5 : 1)) + 'px';*/
 
@@ -9861,7 +9875,12 @@ step.style.width = stepW + 'px';
       // Klick-Event für Editor
       step.addEventListener('click', (e) => {
         if (e.shiftKey) { return; }
-        if (scoreKbInput) { return; }
+        if (scoreKbInput) {
+  scoreCursor = { tIdx, sIdx };
+  scoreActive = null;
+  scoreRender();
+  return;
+  }
         if (scoreActive && scoreActive.tIdx === tIdx && scoreActive.sIdx === sIdx) {
           scoreActive = null;
         } else {
@@ -9990,9 +10009,15 @@ const stemDown = (track.voices && track.voices.length >= 2)
 }
         // Klammerposition aus höchster Note
         const yValues = s.subNotes.map(sub => pMap[sub.p] ?? 70);
-        const maxY = Math.max(...yValues);
-        const highestNoteTop = 122 - maxY;
-        const bracketTop = highestNoteTop - 15;
+const maxY = Math.max(...yValues);
+const minY = Math.min(...yValues);
+const highestNoteTop = 122 - maxY;
+const lowestNoteTop  = 122 - minY;
+
+// Klammer über den Noten bei Stiel-hoch, unter den Noten bei Stiel-runter
+const bracketTop = stemDown
+  ? lowestNoteTop + 90
+  : highestNoteTop - 15;
         console.log('bracketTop=', bracketTop, '(highest note top=', highestNoteTop + ')');
 
         const svgNS = 'http://www.w3.org/2000/svg';
@@ -10008,12 +10033,16 @@ const stemDown = (track.voices && track.voices.length >= 2)
         bracket.style.zIndex = '15';
 
         const p = document.createElementNS(svgNS, 'path');
-        p.setAttribute('d', `M 4 16 L 4 8 L ${brW - 4} 8 L ${brW - 4} 16`);
-        bracket.appendChild(p);
+p.setAttribute('d', stemDown
+  ? `M 4 4 L 4 12 L ${brW - 4} 12 L ${brW - 4} 4`
+  : `M 4 16 L 4 8 L ${brW - 4} 8 L ${brW - 4} 16`);
+bracket.appendChild(p);
 
-        const num = document.createElementNS(svgNS, 'text');
-        num.setAttribute('x', brW / 2);
-        num.setAttribute('y', 6);
+const num = document.createElementNS(svgNS, 'text');
+num.setAttribute('x', brW / 2);
+num.setAttribute('y', stemDown ? 22 : 6);
+        num.setAttribute('font-family', 'Georgia, serif');
+num.setAttribute('font-style', 'italic');
         num.setAttribute('text-anchor', 'middle');
         num.textContent = s.subdivision;
         bracket.appendChild(num);
@@ -10082,9 +10111,10 @@ const stemDown = (track.voices && track.voices.length >= 2)
 
       timeline.appendChild(step);
 
-      const actualDur = DUR_MAP[s.len] * (s.dot ? 1.5 : 1);
-      durSum += actualDur;
-      totalX += baseW * (s.dot ? 1.5 : 1);
+      let actualDur = DUR_MAP[s.len] * (s.dot ? 1.5 : 1);
+if (s.subdivision && s.subdivision > 1) actualDur *= 2;
+durSum += actualDur;
+totalX += stepW;
 
       /*const beatsPerBar = tsBeats(track.timeSigNum ?? 4, track.timeSigDen ?? 4);*/
       if (Math.round(durSum * 1000) % Math.round(beatsPerBar * 1000) === 0) {
@@ -10119,7 +10149,7 @@ const stemDown = (track.voices && track.voices.length >= 2)
       track.voices.forEach((v, vIdx) => {
         if (vIdx === track.activeVoiceIdx) return;
         try {
-          timeline.appendChild(scoreRenderVoiceOverlay(track, vIdx, pMap,minDurValue));
+          timeline.appendChild(scoreRenderVoiceOverlay(track, vIdx, pMap, minDurValue, tupletWidthFactor));
         } catch (err) {
           console.error('Stimmen-Overlay fehlgeschlagen für Track', tIdx, 'Stimme', vIdx, err);
         }
