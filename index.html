@@ -1903,14 +1903,14 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   font-size: 10px; color: #fff; line-height: 12px;
 }
 .score-step-idx {
-  position: absolute; top: 2px; left: 2px; font-size: 7px;
+  position: absolute; top: 16px; left: 2px; font-size: 14px;
   font-family: 'Share Tech Mono', monospace; color: var(--dim);
   pointer-events: none; white-space: nowrap; z-index: 10; line-height: 1;
 }
 .score-step-vel {
   position: absolute;
-  top: 16px;
-  left: 10%;
+  top: 2px;
+  left: 2px;
   transform: translateX(-10%);
   font-size: 14px;
   font-family: 'Share Tech Mono', monospace;
@@ -2587,6 +2587,10 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
     <button class="score-ctrl-btn score-sel-clear" onclick="scoreSelClearAll()">✕</button>
     <button class="score-ctrl-btn" id="scoreTupletBtn" onclick="scoreSelMakeTuplet()" 
         title="Auswahl zu N-tole zusammenfassen" style="display:none">÷n</button>
+    <button class="score-ctrl-btn" id="scoreExplodeBtn"
+        onclick="scoreSelExplodeTuplet()"
+        title="N-tole in einzelne Steps auflösen (behält Auswahl)"
+        style="display:none">✂</button>
   </div>
 
   <div class="score-sep"></div>
@@ -8818,6 +8822,7 @@ function scoreMigrateTrack(track) {
   }
   return track;
 }
+window.scoreStopPlay = scoreStopPlay;
 // Neue Stimme zu einem Track hinzufügen (z.B. Alt-Stimme neben Sopran) —
 // startet mit einem einzelnen Platzhalter-Step, gleiche Taktart wie der Track.
 window.scoreAddVoice = function(tIdx) {
@@ -8866,6 +8871,16 @@ let scorePlayStartTime = 0; // absoluter Zeit-Nullpunkt der aktuellen Wiedergabe
 let scorePlayPos     = null;
 let scorePlayTrackFilter = null;
 let scoreTrackTimers = [];
+let scoreAllTimers = new Set();
+
+function scoreSetTimeout(fn, delay) {
+  const id = setTimeout(() => {
+    scoreAllTimers.delete(id);
+    fn();
+  }, delay);
+  scoreAllTimers.add(id);
+  return id;
+      }
 let scoreTrackPos    = [];
 let scoreKbInput     = false;
 let scoreSelection   = new Set(); // Keys: 'tIdx_sIdx'
@@ -8942,6 +8957,16 @@ if (tupletBtn) {
     tupletBtn.style.display = 'none';
   }
   }
+  const explodeBtn = document.getElementById('scoreExplodeBtn');
+if (explodeBtn) {
+  if (n === 1) {
+    const [ti, si] = [...scoreSelection][0].split('_').map(Number);
+    const s = scoreTracks[ti]?.data[si];
+    explodeBtn.style.display = (s && s.subdivision > 1) ? '' : 'none';
+  } else {
+    explodeBtn.style.display = 'none';
+  }
+    }
   // Notenwert-Buttons für die Selektion: bei ≥1 markiertem Step erscheinen
   // Buttons, mit denen der Notenwert aller markierten Steps gleichzeitig geändert wird.
   const lenWrap = document.getElementById('scoreSelLenBtns');
@@ -9715,6 +9740,9 @@ scoreTracks.forEach(t => {
     const playBtn = makeCompactBtn('▶', () => scoreStartPlay(tIdx, 0));
     const playCursorBtn = makeCompactBtn('▶✦', () => scoreStartPlayTrackCursor(tIdx));
     const octUpBtn = makeCompactBtn('8↑', () => scoreOctaveShift(tIdx, 1));
+    const stopTrackBtn = makeCompactBtn('⏹', () => {
+  if (scorePlayTrackFilter === tIdx) scoreStopPlay();
+}, true);
     const octDownBtn = makeCompactBtn('8↓', () => scoreOctaveShift(tIdx, -1));
     const dupBtn = makeCompactBtn('⧉', () => scoreDuplicateTrack(tIdx));
     const delTrackBtn = tIdx > 0 ? makeCompactBtn('✕', () => { scoreTracks.splice(tIdx,1); scoreRender(); }, true) : null;
@@ -9730,7 +9758,7 @@ scoreTracks.forEach(t => {
     [
   trackLabel, clefSel, keySel, tsGroup, layerSel, voiceSel,
   addVoiceBtn, renameVoiceBtn, delVoiceBtn, addStepBtn,
-  playBtn, playCursorBtn, octUpBtn, octDownBtn, dupBtn, delTrackBtn
+  playBtn, playCursorBtn,stopTrackBtn, octUpBtn, octDownBtn, dupBtn, delTrackBtn
 ].filter(Boolean).forEach(el => hdr.appendChild(el));
     // Editor-Inline-Container (für Step-Bearbeitung, wird bei Klick eingeblendet)
     const editorContainer = document.createElement('div');
@@ -11458,12 +11486,24 @@ function scoreKbNoteInput(noteName) {
 // Jeder Track hat seinen eigenen Timer und Step-Zeiger — vollständig unabhängig.
 
 function scoreStopPlay() {
+  // 1. Haupt-Scheduler canceln
   scoreTrackTimers.forEach(t => { if (t) clearTimeout(t); });
   scoreTrackTimers = [];
   scoreTrackPos    = [];
+
+  // 2. Alle übrigen Timer (noteOff, Sub-Notes, scrollIntoView) killen
+  scoreAllTimers.forEach(t => clearTimeout(t));
+  scoreAllTimers.clear();
+
+  // 3. Alle noch klingenden Noteneditor-Noten hart stoppen
+  //    → verhindert, dass sich über mehrere Play/Stop-Zyklen hunderte
+  //      Voice-Einträge ansammeln und die Wiedergabe stockend wird.
+  if (typeof engine !== 'undefined') engine.stopAll();
+
   scorePlayTimer   = null;
   scorePlayPos     = null;
   scorePlayTrackFilter = null;
+
   const playBtn   = document.getElementById('scorePlayBtn');
   const cursorBtn = document.getElementById('scorePlayCursorBtn');
   const stopBtn   = document.getElementById('scoreStopBtn');
@@ -11471,8 +11511,7 @@ function scoreStopPlay() {
   if (cursorBtn) { cursorBtn.classList.remove('active'); cursorBtn.style.display = ''; }
   if (stopBtn)   stopBtn.style.display = 'none';
   scoreRender();
-}
-
+  }
 function scoreStartPlay(trackFilter, startSIdx) {
   scoreStopPlay();
   scorePlayTrackFilter = trackFilter;
@@ -11529,131 +11568,135 @@ window.scoreTogglePlay = function() {
 function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
   const targetTime  = scorePlayStartTime + elapsedMs;
   const actualDelay = Math.max(0, targetTime - performance.now());
-  scoreTrackTimers[ti] = setTimeout(() => {
+
+  scoreTrackTimers[ti] = scoreSetTimeout(() => {
     if (scorePlayTimer === null) return; // gestoppt
     const sIdx = scoreTrackPos[ti];
     const s    = track.data[sIdx];
 
-    // Cursor-Anzeige: bei Einzel-Track-Wiedergabe nur der; sonst alle spielenden Tracks
+    // ── Playhead-Anzeige (ohne vollen Re-Render) ──────────────────
+    // Statt scoreRender() bei jedem Step nur die eine CSS-Klasse umschalten.
+    // Das war der größte Performance-Killer (8+ DOM-Rebuilds pro Sekunde).
     if (ti === 0 || scorePlayTrackFilter !== null) {
+      document.querySelectorAll('.score-step.playhead').forEach(el => el.classList.remove('playhead'));
+      const unit = document.querySelectorAll('.score-track-unit')[ti];
+      const stepEl = unit?.querySelector(`.score-step[data-sidx="${sIdx}"]`);
+      if (stepEl) stepEl.classList.add('playhead');
       scorePlayPos = { tIdx: ti, sIdx };
-      scoreRender();
     }
-        // Wenn der Velocity-Slider gerade gezogen wird: den aktuellen Wert
-    // auf diesen Step schreiben (Pinsel-Effekt während der Wiedergabe)
-        // Mal-Modus: Solange er aktiv ist, wird jeder durchlaufende Step bemalt —
-    // unabhängig davon, ob der Finger gerade auf dem Slider liegt.
+
+    // ── Velocity-Mal-Modus ────────────────────────────────────────
     if (typeof window._velPaintActive === 'function' && window._velPaintActive()) {
       const step = track.data[sIdx];
       if (step && !step.rest) {
         const newVel = window._velSliderGet();
         step.vel = newVel;
-        const stepEl = document.querySelector(
-          `.score-track-unit:nth-child(${ti+1}) .score-step[data-sidx="${sIdx}"]`
-        );
+        const unit = document.querySelectorAll('.score-track-unit')[ti];
+        const stepEl = unit?.querySelector(`.score-step[data-sidx="${sIdx}"]`);
         if (stepEl) {
           const velLbl = stepEl.querySelector('.score-step-vel');
           if (velLbl) velLbl.textContent = newVel;
         }
       }
-  }
-    // Aktuell klingende Note in Sicht scrollen — für jeden spielenden Track einzeln,
-    // damit beim Abspielen mehrerer/aller Tracks alle gleichzeitig mitscrollen
-    setTimeout(() => {
+    }
+
+    // ── Auto-Scroll zum aktuellen Step ────────────────────────────
+    scoreSetTimeout(() => {
       const units = document.querySelectorAll('.score-track-unit');
       const steps = units[ti]?.querySelectorAll('.score-step');
       steps?.[sIdx]?.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
     }, 0);
 
-    // Note spielen
+    // ── Notendauer berechnen (N-tole: 2/N-Regel) ─────────────────
     let dur = s ? DUR_MAP[s.len] * (s.dot ? 1.5 : 1) : 1;
-// N-tole: 2/N-Regel → die Gesamtdauer ist IMMER 2× die Basisnote
-// (3 Achtel-Triolen = 1 Viertel = 2 × Achtel)
-if (s && s.subdivision && s.subdivision > 1) dur *= 2;
-const thisDurMs = Math.round(dur * msPerBeat);
+    if (s && s.subdivision && s.subdivision > 1) dur *= 2;
+    const thisDurMs = Math.round(dur * msPerBeat);
 
-if (s && !s.rest && typeof engine !== 'undefined' && engine.synths.length) {
-  const lIdx  = track.layerIdx ?? 0;
-  const layer = (typeof layers !== 'undefined') ? layers[lIdx] : null;
-  const sfIdx = layer ? (layer.sfIdx     ?? 0) : 0;
-  const pIdx  = layer ? (layer.presetIdx ?? 0) : 0;
-  const vol   = layer ? (layer.vol       ?? 1) : 1;
+    // ── Note(n) spielen ──────────────────────────────────────────
+    if (s && !s.rest && typeof engine !== 'undefined' && engine.synths.length) {
+      const lIdx  = track.layerIdx ?? 0;
+      const layer = (typeof layers !== 'undefined') ? layers[lIdx] : null;
+      const sfIdx = layer ? (layer.sfIdx     ?? 0) : 0;
+      const pIdx  = layer ? (layer.presetIdx ?? 0) : 0;
+      const vol   = layer ? (layer.vol       ?? 1) : 1;
 
-  if (engine.synths[sfIdx]) {
-    const layerId = `score_${ti}`;
-    const stepVel = s.vel ?? 90;
+      if (engine.synths[sfIdx]) {
+        const layerId = `score_${ti}`;
+        const stepVel = s.vel ?? 90;
 
-    if (s.subdivision && s.subdivision > 1 && s.subNotes && s.subNotes.length) {
-      // ── N-tole: Sub-Noten zeitversetzt ──────────────────
-      const subDurMs = thisDurMs / s.subdivision;
-      const subNoteDurMs = Math.max(30, subDurMs * 0.85);
+        if (s.subdivision && s.subdivision > 1 && s.subNotes && s.subNotes.length) {
+          // ── N-tole: Sub-Noten zeitversetzt ─────────────────────
+          const subDurMs     = thisDurMs / s.subdivision;
+          const subNoteDurMs = Math.max(30, subDurMs * 0.85);
 
-      engine.ensureCtx().then(() => {
-        if (scorePlayTimer === null) return;
-        engine.ensureChannel(layerId, sfIdx, pIdx);
-
-        s.subNotes.forEach((sub, i) => {
-          const offsetMs = i * subDurMs;
-          const midi = noteToMidi(sub.p, sub.a);
-          if (midi < 0 || midi > 127) return;
-
-          setTimeout(() => {
+          engine.ensureCtx().then(() => {
             if (scorePlayTimer === null) return;
-            const tAbs = engine.ctx.currentTime + 0.012;
-            try {
-              engine.playSync(midi, layerId, sfIdx, pIdx, stepVel, vol, tAbs, layer?.envOverride ?? {});
-            } catch(e) {}
-          }, offsetMs);
+            engine.ensureChannel(layerId, sfIdx, pIdx);
 
-          setTimeout(() => {
-            engine.stop(midi, layerId);
-          }, offsetMs + subNoteDurMs);
-        });
-      });
+            s.subNotes.forEach((sub, i) => {
+              const offsetMs = i * subDurMs;
+              const midi = noteToMidi(sub.p, sub.a);
+              if (midi < 0 || midi > 127) return;
 
-    } else {
-      // ── Normale Note oder Akkord (bestehende Logik) ─────
-      const prevS     = sIdx > 0 ? track.data[sIdx - 1] : null;
-      const isTiedTo  = prevS && prevS.tie;
-      const nextS     = track.data[sIdx + 1];
-      const noteOffMs = (s.tie && nextS)
-        ? thisDurMs + Math.round(DUR_MAP[nextS.len] * (nextS.dot ? 1.5 : 1) * msPerBeat) - 40
-        : Math.max(50, thisDurMs - 40);
+              scoreSetTimeout(() => {
+                if (scorePlayTimer === null) return;
+                const tAbs = engine.ctx.currentTime + 0.012;
+                try {
+                  engine.playSync(midi, layerId, sfIdx, pIdx, stepVel, vol, tAbs, layer?.envOverride ?? {});
+                } catch(e) {}
+              }, offsetMs);
 
-      if (!isTiedTo) {
-        const noteOffDelay = noteOffMs;
-        engine.ensureCtx().then(() => {
-          if (scorePlayTimer === null) return;
-          const tAbs = engine.ctx.currentTime + 0.012;
-          engine.ensureChannel(layerId, sfIdx, pIdx);
-          s.notes.forEach(n => {
-            const midi = noteToMidi(n.p, n.a);
-            try {
-              engine.playSync(midi, layerId, sfIdx, pIdx, stepVel, vol, tAbs, layer?.envOverride ?? {});
-            } catch(e) {}
-          });
-        });
-        setTimeout(() => {
-          if (s.tie) return;
-          s.notes.forEach(n => {
-            const midi = noteToMidi(n.p, n.a);
-            engine.stop(midi, layerId);
-          });
-        }, noteOffDelay);
-
-        if (s.tie && nextS) {
-          setTimeout(() => {
-            s.notes.forEach(n => {
-              const midi = noteToMidi(n.p, n.a);
-              engine.stop(midi, layerId);
+              scoreSetTimeout(() => {
+                engine.stop(midi, layerId);
+              }, offsetMs + subNoteDurMs);
             });
-          }, noteOffMs);
+          });
+
+        } else {
+          // ── Normale Note oder Akkord ────────────────────────────
+          const prevS     = sIdx > 0 ? track.data[sIdx - 1] : null;
+          const isTiedTo  = prevS && prevS.tie;
+          const nextS     = track.data[sIdx + 1];
+          const noteOffMs = (s.tie && nextS)
+            ? thisDurMs + Math.round(DUR_MAP[nextS.len] * (nextS.dot ? 1.5 : 1) * msPerBeat) - 40
+            : Math.max(50, thisDurMs - 40);
+
+          if (!isTiedTo) {
+            const noteOffDelay = noteOffMs;
+            engine.ensureCtx().then(() => {
+              if (scorePlayTimer === null) return;
+              const tAbs = engine.ctx.currentTime + 0.012;
+              engine.ensureChannel(layerId, sfIdx, pIdx);
+              s.notes.forEach(n => {
+                const midi = noteToMidi(n.p, n.a);
+                try {
+                  engine.playSync(midi, layerId, sfIdx, pIdx, stepVel, vol, tAbs, layer?.envOverride ?? {});
+                } catch(e) {}
+              });
+            });
+
+            scoreSetTimeout(() => {
+              if (s.tie) return;
+              s.notes.forEach(n => {
+                const midi = noteToMidi(n.p, n.a);
+                engine.stop(midi, layerId);
+              });
+            }, noteOffDelay);
+
+            if (s.tie && nextS) {
+              scoreSetTimeout(() => {
+                s.notes.forEach(n => {
+                  const midi = noteToMidi(n.p, n.a);
+                  engine.stop(midi, layerId);
+                });
+              }, noteOffMs);
+            }
+          }
         }
       }
     }
-  }
-  }
-    // Nächsten Step planen
+
+    // ── Nächsten Step planen ─────────────────────────────────────
     const nextSIdx = sIdx + 1;
     scoreTrackPos[ti] = nextSIdx;
 
@@ -11663,19 +11706,28 @@ if (s && !s.rest && typeof engine !== 'undefined' && engine.synths.length) {
       scoreTrackTimers[ti] = null;
       // Alle Tracks fertig? → Stop
       const allDone = scoreTrackTimers.every(t => t === null);
-      if (allDone) setTimeout(() => scoreStopPlay(), thisDurMs);
+      if (allDone) scoreSetTimeout(() => scoreStopPlay(), thisDurMs);
     }
   }, actualDelay);
-}
-
+  }
 // ── Export / Import ───────────────────────────────────────────
 const SCORE_AUTOSAVE_KEY = 'ensemble_score_autosave';
 
+let _scoreAutoSaveTimer = null;
+let _lastScoreJson = null;
+
 function scoreAutoSave() {
-  try {
-    localStorage.setItem(SCORE_AUTOSAVE_KEY, JSON.stringify(scoreTracks));
-  } catch(e) {}
-}
+  clearTimeout(_scoreAutoSaveTimer);
+  _scoreAutoSaveTimer = setTimeout(() => {
+    try {
+      const json = JSON.stringify(scoreTracks);
+      // Nur schreiben, wenn sich wirklich etwas geändert hat
+      if (json === _lastScoreJson) return;
+      _lastScoreJson = json;
+      localStorage.setItem(SCORE_AUTOSAVE_KEY, json);
+    } catch(e) {}
+  }, 800);
+  }
 
 function scoreAutoRestore() {
   try {
@@ -12495,6 +12547,44 @@ function updateScorePianoInfo() {
     el.textContent = 'Klaviatur-Eingabe aktivieren um Noten einzufügen';
   }
 }
+window.scoreSelExplodeTuplet = function() {
+  // Nur genau eine N-tole selektieren
+  if (scoreSelection.size !== 1) return;
+
+  const [ti, si] = [...scoreSelection][0].split('_').map(Number);
+  const track = scoreTracks[ti];
+  if (!track) return;
+
+  const s = track.data[si];
+  if (!s || !s.subdivision || s.subdivision < 2) return;
+
+  const subCount = s.subdivision;
+
+  // Aus den Sub-Noten einzelne Steps bauen — gleicher Notenwert wie die
+  // Original-Gruppe, damit späteres Wieder-Zusammenbauen exakt das
+  // Original ergibt. Ohne `subdivision`-Feld → normale Note.
+  const explodedSteps = s.subNotes.map(sub => ({
+    notes: [{ p: sub.p, a: sub.a }],
+    len:   s.len,
+    dot:   s.dot,
+    rest:  false,
+    vel:   s.vel ?? 90,
+  }));
+
+  // Original-Step an derselben Position durch die N neuen ersetzen
+  track.data.splice(si, 1, ...explodedSteps);
+
+  // Auswahl auf die N neuen Steps setzen — der Workflow: nach dem Sprengen
+  // sind die neu erzeugten Steps sofort markiert, sodass man direkt über
+  // die Toolbar Pitch/Vorzeichen ändern kann und dann ÷N drückt.
+  scoreSelClear();
+  for (let i = 0; i < subCount; i++) {
+    scoreSelAdd(ti, si + i);
+  }
+
+  scoreSelUpdateToolbar();
+  scoreRender();
+};
 window.scoreSelMakeTuplet = function() {
   const n = scoreSelection.size;
   if (n < 2) return;
