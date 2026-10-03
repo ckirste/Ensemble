@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v117</title>
+<title>Ensemble v118</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1199,9 +1199,10 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 /* ══ Noten-Editor Panel ══════════════════════════════════════ */
 /* Vorzeichen (♯/♭/♮) links vom Notenkopf positionieren */
 /* Global: Alle Noten-SVGs linksbündig im Step ausrichten (überschreibt left:18px) */
-.score-step svg,.score-voice-step svg {
+.score-step > svg:not(.score-gate-svg),
+.score-voice-step > svg:not(.score-gate-svg) {
     left: 6px !important;
-    }
+        }
 .score-step .score-acc,
 .score-voice-step .score-acc {
     left: 1px !important;   /* Abstand nach links, damit es nicht den Kopf überlappt */
@@ -1383,7 +1384,87 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   /*overflow-x: auto;*/
   /* oder eine andere feste Höhe für das Notensystem, die zur Skalierung passt */
            /*}*/
+.gate-sidebar {
+  flex-shrink: 0;
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  background: #0a0e18;
+  border-right: 1px solid var(--border);
+  padding: 8px 4px;
+  user-select: none;
+  -webkit-user-select: none;
+  box-sizing: border-box;
+}
 
+.gate-label {
+  font-family: 'Orbitron', monospace;
+  font-size: .55rem;
+  letter-spacing: .12em;
+  color: var(--accent2);
+  text-transform: uppercase;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.gate-btn-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  align-items: center;
+}
+
+.gate-btn {
+  width: 46px;
+  height: 42px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #07070f;
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: all .12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.gate-btn:hover:not(:disabled) {
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+
+.gate-btn.active {
+  border-color: var(--accent2);
+  background: rgba(255,64,96,.12);
+  color: var(--accent2);
+  box-shadow: 0 0 8px rgba(255,64,96,.25);
+}
+
+.gate-btn:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+.gate-value {
+  font-family: 'Orbitron', monospace;
+  font-size: .62rem;
+  color: var(--accent2);
+  text-align: center;
+  min-width: 36px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+  width: 100%;
+  flex-shrink: 0;
+  }
 /* Velocity-Sidebar */
 .vel-sidebar {
   flex-shrink: 0;
@@ -1907,6 +1988,32 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   font-family: 'Share Tech Mono', monospace; color: var(--dim);
   pointer-events: none; white-space: nowrap; z-index: 10; line-height: 1;
 }
+.score-gate-dot {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: #000;
+  border-radius: 50%;
+  left: 18px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 12;
+}
+
+/* .score-gate-line wird nicht mehr benötigt — kann entfernt werden.
+   Die Bögen werden als SVG gerendert. */
+/*
+.score-gate-line {
+  position: absolute;
+  width: 12px;
+  height: 2px;
+  background: #000;
+  border-radius: 1px;
+  left: 18px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 12;
+           }*/
 .score-step-vel {
   position: absolute;
   top: 2px;
@@ -2006,7 +2113,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
     <h1>Ensemble</h1>
-    <h3>v117</h3>
+    <h3>v118</h3>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -2555,6 +2662,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
         title="Klaviatur-Eingabe: Taste drücken = Note setzen + nächster Step">🎹 Eingabe</button>
       <button class="score-btn" id="velToggleBtn" onclick="window.toggleVelSidebar()" title="Velocity-Slider ein/aus">🎚 VEL</button>
       <button class="score-btn" id="velPaintBtn" onclick="window.toggleVelPaint()" title="Malen während Wiedergabe">✎ Malen: AUS</button>
+      <button class="score-btn" id="gateToggleBtn" onclick="window.toggleGateSidebar()" title="Gate-Werkzeug ein/aus">🎚 GATE</button>
       <button class="score-btn active" id="scorePlayBtn"       onclick="scoreStartPlay(null,0)"   title="Alle Tracks von Anfang">▶ Alle</button>
       <button class="score-btn"        id="scorePlayCursorBtn" onclick="scoreStartPlayCursor()"   title="Alle Tracks ab Cursor">▶ Ab ✦</button>
       <button class="score-btn"        id="scoreStopBtn"       onclick="scoreStopPlay()"          title="Stop" style="display:none">■ Stop</button>
@@ -2604,22 +2712,29 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
     <label><input type="checkbox" id="scoreToolRest"> P</label>
     <label><input type="checkbox" id="scoreToolDot"> .</label>
   </div>
-  <button id="tupletTestBtn" style="background:#ff4060;color:#fff;padding:6px;margin-top:8px;font-size:.6rem;border-radius:4px;border:none;cursor:pointer">
+  <button id="tupletTestBtn" style="display: none;background:#ff4060;color:#fff;padding:6px;margin-top:8px;font-size:.6rem;border-radius:4px;border:none;cursor:pointer">
   🧪 Tuplet-Test
   </button>
 
   <!-- Tonart -->
-  <span style="font-size:.5rem;color:var(--dim);text-align:center">Tonart</span>
+  <span style="font-size:1.0rem;color:var(--dim);text-align:center">Tonart</span>
   <select id="scoreToolKey">…</select>
 
   <!-- Tonhöhe (Selektion) -->
-  <span style="font-size:.5rem;color:var(--dim);text-align:center">Pitch</span>
-  <select id="scoreSelPitch"><option value="">—</option></select>
+  <span style="font-size:1.0rem;color:var(--dim);text-align:center">Pitch</span>
+  <select style="height: 40px;" id="scoreSelPitch"><option value="">—</option></select>
 
   <!-- Vorzeichen -->
-  <span style="font-size:.5rem;color:var(--dim);text-align:center">Acc</span>
+  <span style="font-size:1.0rem;color:var(--dim);text-align:center">Acc</span>
   <span id="scoreSelAccBtns" style="display:none;gap:2px;flex-wrap:wrap;justify-content:center;"></span>
   <button class="score-ctrl-btn" id="scoreSelAddChordBtn" onclick="scoreSelAddChordNote()" style="display:none">+ Akkord</button>
+      </div>
+      <div class="gate-sidebar" id="gateSidebar" style="display:none">
+  <div class="gate-label">GATE</div>
+  <div class="gate-btn-col" id="gateBtnCol">
+    <!-- wird von JS aufgebaut -->
+  </div>
+  <div class="gate-value" id="gateValue">—</div>
       </div>
             <div class="vel-sidebar" id="velSidebar" style="display:none">
         <div class="vel-label">VEL</div>
@@ -9409,7 +9524,152 @@ function resizeScorePaper() {
   scaleWrap.style.width  = (paperW * scale) + 'px';
   scaleWrap.style.height = (naturalH * scale) + 'px';
       }
+// ── Gate-Sidebar ─────────────────────────────────────────────
+(function initGateSidebar() {
+  const sidebar  = document.getElementById('gateSidebar');
+  const btnCol   = document.getElementById('gateBtnCol');
+  const valEl    = document.getElementById('gateValue');
+  const toggle   = document.getElementById('gateToggleBtn');
+  if (!sidebar || !btnCol || !valEl) return;
 
+  const GATE_VALS = [
+    { v: 0.5,  label: '▪',   title: 'Staccato' },
+    { v: 0.75, label: '·',   title: 'Kurz'     },
+    { v: 1.0,  label: '—',   title: 'Normal'   },
+    { v: 1.15, label: '⌒',   title: 'Legato'   },
+    { v: 1.3,  label: '⌒⌒', title: 'Sehr legato' },
+  ];
+
+  // Sichtbarkeit initial aus localStorage
+  try {
+    const show = localStorage.getItem('ensemble_gate_sidebar') === '1';
+    sidebar.style.display = show ? 'flex' : 'none';
+    toggle?.classList.toggle('active', show);
+  } catch(e) {}
+
+  // Buttons erzeugen
+  const buttons = [];
+  GATE_VALS.forEach(({ v, label, title }) => {
+    const b = document.createElement('button');
+    b.className = 'gate-btn';
+    b.textContent = label;
+    b.title = `${title} (${v.toFixed(2)})`;
+    b.dataset.gateVal = String(v);
+    b.addEventListener('click', () => {
+      const sel = [...scoreSelection];
+
+      if (sel.length === 0) {
+        // Nichts selektiert → nur den Slider-Zustand merken,
+        // damit neue Steps diesen Wert bekommen.
+        // (Spart einen extra "Default-Wert"-State.)
+        lastGateValue = v;
+        updateGateUI();
+        return;
+      }
+
+      // Alle markierten Steps auf diesen Wert setzen
+      sel.forEach(key => {
+        const [ti, si] = key.split('_').map(Number);
+        const step = scoreTracks[ti]?.data[si];
+        if (step && !step.rest) step.gate = v;
+      });
+      lastGateValue = v;
+      scoreRender();
+    });
+    btnCol.appendChild(b);
+    buttons.push(b);
+  });
+
+  // Der zuletzt vom Nutzer gewählte Wert. Wird beim Erstellen neuer
+  // Steps (scoreAddStep, scoreKbNoteInput, scoreInsertStep) angewendet.
+  // Global exponieren, damit die anderen Stellen ihn kennen.
+  let lastGateValue = 1.0;
+  window._gateLastValue = () => lastGateValue;
+  window._gateSetLastValue = (v) => { lastGateValue = v; };
+
+  // UI-Zustand je nach aktueller Selektion
+  function updateGateUI() {
+    const sel = [...scoreSelection];
+    let currentVal = lastGateValue;
+
+    if (sel.length === 1) {
+      const [ti, si] = sel[0].split('_').map(Number);
+      const s = scoreTracks[ti]?.data[si];
+      if (s && !s.rest) currentVal = (s.gate != null) ? s.gate : 1.0;
+    } else if (sel.length > 1) {
+      // Wenn alle selektierten denselben Gate haben → diesen zeigen,
+      // sonst neutral (—)
+      const vals = sel.map(key => {
+        const [ti, si] = key.split('_').map(Number);
+        const s = scoreTracks[ti]?.data[si];
+        return (s && !s.rest) ? ((s.gate != null) ? s.gate : 1.0) : 1.0;
+      });
+      if (vals.every(v => Math.abs(v - vals[0]) < 0.01)) {
+        currentVal = vals[0];
+      } else {
+        currentVal = -1; // gemischt
+      }
+    }
+
+        // Erst ALLE Buttons deaktivieren, dann nur den passenden aktivieren.
+    // So bleiben keine alten "active"-Klassen hängen, wenn der Nutzer
+    // schnell zwischen Werten wechselt.
+    buttons.forEach(b => b.classList.remove('active'));
+
+    if (currentVal >= 0) {
+      buttons.forEach(b => {
+        const bv = parseFloat(b.dataset.gateVal);
+        if (Math.abs(currentVal - bv) < 0.01) {
+          b.classList.add('active');
+        }
+      });
+    }
+    // Wenn currentVal < 0 (gemischt): kein Button aktiv — das ist gewollt.
+
+    if (currentVal < 0) {
+      valEl.textContent = '—';
+    } else if (Math.abs(currentVal - 1.0) < 0.01) {
+      valEl.textContent = '1.0';
+    } else {
+      valEl.textContent = currentVal.toFixed(2);
+    }
+
+    if (currentVal < 0) {
+      valEl.textContent = '—';
+    } else if (Math.abs(currentVal - 1.0) < 0.01) {
+      valEl.textContent = '1.0';
+    } else {
+      valEl.textContent = currentVal.toFixed(2);
+    }
+    window._gateUpdateUI = updateGateUI;
+  }
+
+  // Bei jeder Auswahländerung die UI aktualisieren
+  // (scoreSelUpdateToolbar wird bei jeder Änderung aufgerufen)
+  /*
+  const _origScoreSelUpdateToolbar = scoreSelUpdateToolbar;
+  window.scoreSelUpdateToolbar = function() {
+    _origScoreSelUpdateToolbar();
+    updateGateUI();
+  };*/
+  // Die IIFE-lokale Referenz ersetzt der Aufrufer selbst — das reicht,
+  // weil alle internen Stellen scoreSelUpdateToolbar() direkt aufrufen
+  // (und das ist jetzt der Wrapper).
+
+  // Öffentlicher Toggle für den Header-Button
+  window.toggleGateSidebar = function() {
+    const show = sidebar.style.display === 'none';
+    sidebar.style.display = show ? 'flex' : 'none';
+    toggle?.classList.toggle('active', show);
+    try { localStorage.setItem('ensemble_gate_sidebar', show ? '1' : '0'); } catch(e) {}
+    if (typeof resizeScorePaper === 'function') {
+      requestAnimationFrame(() => resizeScorePaper());
+    }
+  };
+
+  // Initialer UI-Zustand
+  updateGateUI();
+})();
 // ── Velocity-Sidebar ─────────────────────────────────────────
 (function initVelSidebar() {
   const sidebar = document.getElementById('velSidebar');
@@ -9893,13 +10153,70 @@ step.style.width = stepW + 'px';
       
       }
       if (!s.rest) {
-        const stepVel = s.vel ?? 110;
+        const stepVel = s.vel ?? 127;
         const velLbl = document.createElement('div');
         velLbl.className = 'score-step-vel';
         velLbl.textContent = stepVel;
         step.appendChild(velLbl);
-    }
 
+            // ── Gate-Zeichen (klassisch, unter/über dem Notenkopf) ────────
+            // ── Gate-Zeichen (klassisch, unter/über dem Notenkopf) ────────
+      const gateVal = (s.gate != null) ? s.gate : 1.0;
+      if (Math.abs(gateVal - 1.0) > 0.01) {
+        const yArr = s.notes.map(n => pMap[n.p] ?? 70);
+        const avgY = yArr.reduce((a, b) => a + b, 0) / yArr.length;
+        const stemDown = scoreStemIsDown(track, track.activeVoiceIdx ?? 0, avgY);
+
+        const refY = stemDown ? Math.max(...yArr) : Math.min(...yArr);
+        const headCenterY = 170 - refY;
+        const gateY = stemDown ? headCenterY - 12 : headCenterY + 12;
+
+        if (gateVal < 1.0) {
+          // ── Staccato/Kurz: Punkt ─────────────────────────────
+          const dot = document.createElement('div');
+          dot.className = 'score-gate-dot';
+          dot.style.top = gateY + 'px';
+          step.appendChild(dot);
+        } else {
+          // ── Legato/Tenuto: Bogen (einfach oder doppelt) ─────
+          const svgNS = 'http://www.w3.org/2000/svg';
+          const svg = document.createElementNS(svgNS, 'svg');
+          svg.setAttribute('class', 'score-gate-svg');
+          svg.setAttribute('width', '16');
+          svg.setAttribute('height', '12');
+          // Inline-Style explizit mit !important, damit keine globale
+          // .score-step-svg-Regel dazwischenfunkt.
+          svg.style.cssText =
+            `position:absolute;left:18px !important;top:${gateY - 6}px;` +
+            `transform:translateX(-50%);pointer-events:none;z-index:12;overflow:visible`;
+
+          const makeArc = (offsetY) => {
+            const p = document.createElementNS(svgNS, 'path');
+            if (stemDown) {
+              // Über der Note: Bogen mit Öffnung nach unten
+              p.setAttribute('d',
+                `M 2,${6 + offsetY} Q 8,${-1 + offsetY} 14,${6 + offsetY}`);
+            } else {
+              // Unter der Note: Bogen mit Öffnung nach oben
+              p.setAttribute('d',
+                `M 2,${6 + offsetY} Q 8,${13 + offsetY} 14,${6 + offsetY}`);
+            }
+            p.setAttribute('fill', 'none');
+            p.setAttribute('stroke', '#000');
+            p.setAttribute('stroke-width', '1.6');
+            p.setAttribute('stroke-linecap', 'round');
+            return p;
+          };
+
+          svg.appendChild(makeArc(0));
+          if (gateVal >= 1.25) {
+            svg.appendChild(makeArc(stemDown ? -3 : 3));
+          }
+
+          step.appendChild(svg);
+        }
+  }
+    }
       // Klick-Event für Editor
       step.addEventListener('click', (e) => {
         if (e.shiftKey) { return; }
@@ -10214,6 +10531,8 @@ totalX += stepW;
   if (typeof scorePianoHighlightNext === 'function') scorePianoHighlightNext();
   if (typeof scoreAutoSave === 'function') scoreAutoSave();
   scoreRenderToolbar();
+    // Gate-Toolbar an den aktuellen Auswahl-Zustand angleichen
+  if (typeof window._gateUpdateUI === 'function') window._gateUpdateUI();
   //neu zu #1
   resizeScorePaper();
 
@@ -11366,7 +11685,8 @@ function scoreLastNote(tIdx) {
 window.scoreAddStep = function(tIdx) {
   const prev = scoreLastNote(tIdx);
   scoreTracks[tIdx].data.push({
-    notes:[{p: prev.p, a: prev.a}], len:scoreTool.len, rest:scoreTool.rest, dot:scoreTool.dot
+    notes:[{p: prev.p, a: prev.a}], len:scoreTool.len, rest:scoreTool.rest, dot:scoreTool.dot,
+    gate: typeof window._gateLastValue === 'function' ? window._gateLastValue() : 1.0
   });
   scoreRender();
 };
@@ -11378,7 +11698,8 @@ window.scoreInsertStep = function(tIdx, pos) {
     if (!data[i].rest && data[i].notes?.length) { prev = data[i].notes[0]; break; }
   }
   scoreTracks[tIdx].data.splice(pos, 0, {
-    notes:[{p: prev.p, a: prev.a}], len:scoreTool.len, rest:scoreTool.rest, dot:scoreTool.dot
+    notes:[{p: prev.p, a: prev.a}], len:scoreTool.len, rest:scoreTool.rest, dot:scoreTool.dot,
+  gate: typeof window._gateLastValue === 'function' ? window._gateLastValue() : 1.0,
   });
   scoreActive = {tIdx, sIdx: pos};
   scoreRender();
@@ -11459,7 +11780,8 @@ function scoreKbNoteInput(noteName) {
     notes: [{p, a}],
     len:  scoreTool.len,
     rest: false,
-    dot:  scoreTool.dot
+    dot:  scoreTool.dot,
+  gate: typeof window._gateLastValue === 'function' ? window._gateLastValue() : 1.0
   };
   track.data.splice(sIdx, 0, newStep);
 
