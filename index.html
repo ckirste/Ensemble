@@ -1999,7 +1999,16 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   pointer-events: none;
   z-index: 12;
 }
-
+.score-gate-wedge {
+  position: absolute;
+  font-size: 10px;
+  line-height: 1;
+  color: #000;
+  left: 18px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 12;
+                 }
 /* .score-gate-line wird nicht mehr benötigt — kann entfernt werden.
    Die Bögen werden als SVG gerendert. */
 /*
@@ -9532,7 +9541,8 @@ function resizeScorePaper() {
   const toggle   = document.getElementById('gateToggleBtn');
   if (!sidebar || !btnCol || !valEl) return;
 
-  const GATE_VALS = [
+    const GATE_VALS = [
+    { v: 0.25, label: '▼',   title: 'Staccatissimo (sehr kurz)' },
     { v: 0.5,  label: '▪',   title: 'Staccato' },
     { v: 0.75, label: '·',   title: 'Kurz'     },
     { v: 1.0,  label: '—',   title: 'Normal'   },
@@ -10090,7 +10100,9 @@ scoreTracks.forEach(t => {
     { let measure = 1, noteInBar = 1, acc = 0;
       track.data.forEach((s, sIdx) => {
         stepIdxInfo[sIdx] = { measure, noteInBar };
-        acc += (DUR_MAP[s.len] || 1) * (s.dot ? 1.5 : 1);
+        let stepDur = (DUR_MAP[s.len] || 1) * (s.dot ? 1.5 : 1);
+if (s.subdivision > 1) stepDur *= 2;
+acc += stepDur;
         noteInBar++;
         if (acc >= beatsPerBar - 1e-6) { measure++; noteInBar = 1; acc = 0; }
       });
@@ -10171,12 +10183,20 @@ step.style.width = stepW + 'px';
         const headCenterY = 170 - refY;
         const gateY = stemDown ? headCenterY - 12 : headCenterY + 12;
 
-        if (gateVal < 1.0) {
+                if (gateVal < 0.4) {
+          // ── Staccatissimo: Keil (Dreieck) ────────────────────
+          const wedge = document.createElement('div');
+          wedge.className = 'score-gate-wedge';
+          wedge.textContent = stemDown ? '▼' : '▲';
+          wedge.style.top = gateY + 'px';
+          step.appendChild(wedge);
+        } else if (gateVal < 1.0) {
           // ── Staccato/Kurz: Punkt ─────────────────────────────
           const dot = document.createElement('div');
           dot.className = 'score-gate-dot';
           dot.style.top = gateY + 'px';
           step.appendChild(dot);
+        
         } else {
           // ── Legato/Tenuto: Bogen (einfach oder doppelt) ─────
           const svgNS = 'http://www.w3.org/2000/svg';
@@ -11950,7 +11970,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
           // ── N-tole: Sub-Noten zeitversetzt ─────────────────────
                     const gate         = (s.gate != null) ? s.gate : 1.0;
           const subDurMs     = thisDurMs / s.subdivision;
-          const subNoteDurMs = Math.max(30, subDurMs * gate * 0.95);
+                    const subNoteDurMs = Math.max(40, subDurMs * gate);
 
           engine.ensureCtx().then(() => {
             if (scorePlayTimer === null) return;
@@ -11988,7 +12008,9 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
           }
           // Gate auf die Gesamtdauer anwenden. Bei 1.0 → identisch zum bisherigen
           // Verhalten. Bei 0.5 → halb so lang (Staccato). Bei 1.15 → 15% länger.
-          const noteOffMs = Math.max(30, Math.round(baseDurMs * gate) - 40);
+                    // Untergrenze 40 ms — bei 0.25 und kurzen Notenwerten wäre die
+          // Note sonst nur noch ein Klick statt eines hörbaren Tones.
+          const noteOffMs = Math.max(40, Math.round(baseDurMs * gate));
 
           if (!isTiedTo) {
             const noteOffDelay = noteOffMs;
