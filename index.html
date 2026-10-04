@@ -11948,8 +11948,9 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
 
         if (s.subdivision && s.subdivision > 1 && s.subNotes && s.subNotes.length) {
           // ── N-tole: Sub-Noten zeitversetzt ─────────────────────
+                    const gate         = (s.gate != null) ? s.gate : 1.0;
           const subDurMs     = thisDurMs / s.subdivision;
-          const subNoteDurMs = Math.max(30, subDurMs * 0.85);
+          const subNoteDurMs = Math.max(30, subDurMs * gate * 0.95);
 
           engine.ensureCtx().then(() => {
             if (scorePlayTimer === null) return;
@@ -11976,12 +11977,18 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
 
         } else {
           // ── Normale Note oder Akkord ────────────────────────────
-          const prevS     = sIdx > 0 ? track.data[sIdx - 1] : null;
+                    const prevS     = sIdx > 0 ? track.data[sIdx - 1] : null;
           const isTiedTo  = prevS && prevS.tie;
           const nextS     = track.data[sIdx + 1];
-          const noteOffMs = (s.tie && nextS)
-            ? thisDurMs + Math.round(DUR_MAP[nextS.len] * (nextS.dot ? 1.5 : 1) * msPerBeat) - 40
-            : Math.max(50, thisDurMs - 40);
+          const gate      = (s.gate != null) ? s.gate : 1.0;
+
+          let baseDurMs = thisDurMs;
+          if (s.tie && nextS) {
+            baseDurMs = thisDurMs + Math.round(DUR_MAP[nextS.len] * (nextS.dot ? 1.5 : 1) * msPerBeat);
+          }
+          // Gate auf die Gesamtdauer anwenden. Bei 1.0 → identisch zum bisherigen
+          // Verhalten. Bei 0.5 → halb so lang (Staccato). Bei 1.15 → 15% länger.
+          const noteOffMs = Math.max(30, Math.round(baseDurMs * gate) - 40);
 
           if (!isTiedTo) {
             const noteOffDelay = noteOffMs;
