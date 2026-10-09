@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v118</title>
+<title>Ensemble v119</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -2103,6 +2103,10 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   <!-- Jump Navigation -->
   <nav class="jump-nav" id="jumpNav">
     <button class="jnav-btn jnav-fullscreen" id="fsNavBtn" title="Vollbild ein/aus" onclick="window.toggleFullscreen()"><span class="jnav-icon" id="fsNavIcon">⛶</span><span class="jnav-lbl">Vollbild</span></button>
+        <button class="jnav-btn" id="projSaveBtn" title="Projekt speichern (Noten + Layer + Effekte)" onclick="window.projectSave()"><span class="jnav-icon">💾</span><span class="jnav-lbl">Save</span></button>
+    <label  class="jnav-btn" id="projLoadBtn" title="Projekt laden" style="cursor:pointer"><span class="jnav-icon">📂</span><span class="jnav-lbl">Load</span>
+      <input type="file" id="projLoadInput" accept=".json" style="display:none">
+    </label>
     <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('ancSF2');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🗂</span><span class="jnav-lbl">SF2</span></button>
     <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('midiPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🎹</span><span class="jnav-lbl">MIDI</span></button>
     <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('ancFX');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🎛</span><span class="jnav-lbl">FX</span></button>
@@ -2122,7 +2126,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
     <h1>Ensemble</h1>
-    <h3>v118</h3>
+    <h3>v119</h3>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -16924,6 +16928,228 @@ document.getElementById('tupletTestBtn')?.addEventListener('click', () => {
   ];
   s.notes = [{ p: 'C4', a: null }]; // Fallback für Code, der s.notes liest
   scoreRender();
+});
+
+// ══════════════════════════════════════════════════════════════
+//  KOMBINIERTER PROJEKT-SPEICHER (Noten + Layer + alles)
+// ══════════════════════════════════════════════════════════════
+window.projectSave = function() {
+  try {
+    const fxState = (typeof sessionCollectFx === 'function') ? sessionCollectFx() : null;
+    const masterVol = parseInt(document.getElementById('volSlider')?.value ?? 75);
+
+    const data = {
+      kind: 'ensemble_project',
+      version: 1,
+      savedAt: new Date().toISOString(),
+
+      // SF2-Hinweis: damit der Nutzer beim Laden weiß, was er braucht
+      sf2hint: engine.soundfonts.map(sf => sf.name),
+
+      // Master / Transport
+      master: {
+        vol: masterVol,
+        transpose: globalTranspose,
+        octaveBase: octaveBase,
+      },
+
+      // FX + globale Hüllkurve
+      fx: fxState,
+
+      // Metronom
+      metro: {
+        bpm: metro.bpm,
+        beats: metro.beats,
+        vol: Math.round(metro.vol * 100),
+      },
+
+      // Layer (vollständig, inkl. transpose + alle Parameter)
+      layers: layers.map(l => ({
+        sfName:        engine.soundfonts[l.sfIdx]?.name ?? null,
+        sfIdx:         l.sfIdx,
+        presetIdx:     l.presetIdx,
+        presetName:    engine.soundfonts[l.sfIdx]?.presets[l.presetIdx]?.name ?? null,
+        program:       engine.soundfonts[l.sfIdx]?.presets[l.presetIdx]?.program ?? 0,
+        bank:          engine.soundfonts[l.sfIdx]?.presets[l.presetIdx]?.bank ?? 0,
+        vol:           l.vol,
+        muted:         l.muted,
+        transpose:     l.transpose    ?? 0,
+        keyLo:         l.keyLo        ?? 0,
+        keyHi:         l.keyHi        ?? 127,
+        melody:        l.melody       ?? false,
+        bass:          l.bass         ?? false,
+        midiCh:        l.midiCh       ?? null,
+        midiDeviceId:  l.midiDeviceId ?? null,
+        sources:       l.sources      ?? ['screen','keys','midi','player'],
+        label:         l.label        ?? null,
+        velMode:       l.velMode      ?? 'free',
+        velOverride:   l.velOverride  ?? 0,
+        saturation:    l.saturation   ?? 0,
+        buzzEnabled:   l.buzzEnabled  ?? false,
+        buzzThreshold: l.buzzThreshold ?? 127,
+        buzzIntensity: l.buzzIntensity ?? 70,
+        compEnabled:   l.compEnabled  ?? false,
+        compThreshold: l.compThreshold ?? -24,
+        compRatio:     l.compRatio    ?? 3,
+        envOverride:   l.envOverride  ? {...l.envOverride} : {},
+        delayWet:      l.delayWet     ?? 0,
+        delayTime:     l.delayTime    ?? 37,
+      })),
+
+      // Noteneditor — komplett
+      scoreTracks: JSON.parse(JSON.stringify(scoreTracks)),
+      scoreTool:   typeof scoreTool !== 'undefined' ? { ...scoreTool } : null,
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'ensemble_projekt_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch(e) {
+    alert('Fehler beim Speichern: ' + e.message);
+    console.error(e);
+  }
+};
+
+window.projectLoad = function(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      if (d.kind !== 'ensemble_project') throw new Error('Keine gültige Ensemble-Projektdatei.');
+      if (d.version !== 1) throw new Error('Unbekannte Projektversion: ' + d.version);
+
+      // ── SF2-Verfügbarkeit prüfen ─────────────────────────────
+      const needed = d.sf2hint ?? [];
+      const missing = needed.filter(n =>
+        !engine.soundfonts.some(sf => sf.name === n)
+      );
+
+      if (missing.length) {
+        const proceed = confirm(
+          'Folgende SF2-Dateien sind nicht geladen:\n\n' +
+          missing.map(n => '  • ' + n).join('\n') +
+          '\n\nOhne diese klingen die betroffenen Layer stumm oder falsch.\n' +
+          'Trotzdem laden? (Du kannst die SF2 danach manuell nachladen.)'
+        );
+        if (!proceed) return;
+      }
+
+      // ── Master / Transport ───────────────────────────────────
+      if (d.master) {
+        if (d.master.vol != null) {
+          const vs = document.getElementById('volSlider');
+          if (vs) {
+            vs.value = d.master.vol;
+            vs.style.setProperty('--val', d.master.vol + '%');
+            engine.setVol(d.master.vol / 100);
+          }
+        }
+        if (d.master.transpose != null) {
+          globalTranspose = d.master.transpose;
+          if (typeof updateTrGlobDisp === 'function') updateTrGlobDisp();
+        }
+        if (d.master.octaveBase != null) {
+          octaveBase = d.master.octaveBase;
+          const od = document.getElementById('octDisp');
+          if (od) od.textContent = octaveBase;
+          if (typeof buildKb === 'function') buildKb();
+        }
+      }
+
+      // ── Metronom ─────────────────────────────────────────────
+      if (d.metro) {
+        if (d.metro.bpm) metroSetBpm(d.metro.bpm);
+        if (d.metro.beats) {
+          metro.beats = d.metro.beats;
+          const ms = document.getElementById('metroSigSel');
+          if (ms) ms.value = d.metro.beats;
+          if (typeof metroBuildBeats === 'function') metroBuildBeats();
+        }
+        if (d.metro.vol != null) {
+          metro.vol = d.metro.vol / 100;
+          const mvs = document.getElementById('metroVolSlider');
+          if (mvs) {
+            mvs.value = d.metro.vol;
+            mvs.style.background =
+              `linear-gradient(to right,var(--accent) ${d.metro.vol}%,var(--border) ${d.metro.vol}%)`;
+          }
+        }
+      }
+
+      // ── FX ───────────────────────────────────────────────────
+      if (d.fx && d.fx.sliders) {
+        const applyAllFx = () => {
+          const sliders = document.querySelectorAll('#fxSliders input[type=range]');
+          FX_DEFS.forEach((def, i) => {
+            const val = d.fx.sliders[def.id];
+            if (val == null || !isFinite(parseFloat(val))) return;
+            if (!sliders[i]) return;
+            sliders[i].value = val;
+            const pct = ((val - def.min) / (def.max - def.min) * 100).toFixed(1) + '%';
+            sliders[i].style.setProperty('--val', pct);
+            const lbl = sliders[i].closest('.fx-item')?.querySelector('.fx-value');
+            if (lbl) lbl.textContent = def.fmt(val);
+            applyFx(def.id, val);
+          });
+          if (d.fx.filterType) {
+            const map = { off:'OFF', lowpass:'LP', highpass:'HP' };
+            const btnId = map[d.fx.filterType];
+            if (btnId) document.getElementById('ft' + btnId)?.click();
+          }
+        };
+        if (engine.ctx) applyAllFx();
+        else window._pendingFxApply = applyAllFx;
+      }
+
+      // ── Layer ────────────────────────────────────────────────
+      // Wir bauen einen `d`-ähnlichen Wrapper, damit applySessionLayers
+      // unverändert genutzt werden kann. applySessionLayers erwartet
+      // { layers: [...], fx: {...} }
+      if (Array.isArray(d.layers)) {
+        const wrapped = { layers: d.layers, fx: d.fx };
+        if (typeof applySessionLayers === 'function') {
+          applySessionLayers(wrapped);
+        }
+      }
+
+      // ── Score ────────────────────────────────────────────────
+      if (Array.isArray(d.scoreTracks)) {
+        // Setter des window-Proxys verwendet, damit der interne IIFE-Wert
+        // aktualisiert wird
+        window.scoreTracks = d.scoreTracks;
+        if (d.scoreTool && typeof scoreTool !== 'undefined') {
+          Object.assign(scoreTool, d.scoreTool);
+          const restCb = document.getElementById('scoreToolRest');
+          const dotCb  = document.getElementById('scoreToolDot');
+          if (restCb) restCb.checked = scoreTool.rest;
+          if (dotCb)  dotCb.checked  = scoreTool.dot;
+        }
+        if (typeof window.scoreRender === 'function') window.scoreRender();
+      }
+
+      setStatus('ready', 'Projekt geladen ✓');
+      setTimeout(() => setStatus('ready', 'Bereit'), 2000);
+
+    } catch(err) {
+      alert('Fehler beim Laden: ' + err.message);
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
+};
+
+// Wires up the file input
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('projLoadInput');
+  if (inp) {
+    inp.addEventListener('change', e => {
+      if (e.target.files[0]) window.projectLoad(e.target.files[0]);
+      e.target.value = '';
+    });
+  }
 });
 (function initPanelToggles() {
   addPanelToggle('ancKeys',      '🎹 Klaviatur',          'keys1',   true);
