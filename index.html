@@ -11967,8 +11967,11 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
       const vol   = layer ? (layer.vol       ?? 1) : 1;
 
       if (engine.synths[sfIdx]) {
-        const layerId = `score_${ti}`;
-        const stepVel = s.vel ?? 90;
+                // Statt einer synthetischen Score-ID die echte Layer-ID verwenden.
+        // Damit teilt sich die Noteneditor-Wiedergabe die Channels mit dem
+        // Live-Spiel — alle Layer-Effekte, Mute, Volume greifen automatisch.
+        const layerId = layer ? String(layer.id) : `score_${ti}`;
+        const stepVel = s.vel ?? 127;
 
         if (s.subdivision && s.subdivision > 1 && s.subNotes && s.subNotes.length) {
           // ── N-tole: Sub-Noten zeitversetzt ─────────────────────
