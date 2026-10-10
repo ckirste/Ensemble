@@ -12026,7 +12026,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
               const tAbs = engine.ctx.currentTime + 0.012;
               engine.ensureChannel(layerId, sfIdx, pIdx);
               s.notes.forEach(n => {
-                const midi = noteToMidi(n.p, n.a);
+                const midi = noteToMidi(n.p, n.a)+ globalTranspose + (layer?.transpose ?? 0);
                 try {
                   engine.playSync(midi, layerId, sfIdx, pIdx, stepVel, vol, tAbs, layer?.envOverride ?? {});
                 } catch(e) {}
@@ -12036,7 +12036,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
             scoreSetTimeout(() => {
               if (s.tie) return;
               s.notes.forEach(n => {
-                const midi = noteToMidi(n.p, n.a);
+                const midi = noteToMidi(n.p, n.a)+ globalTranspose + (layer?.transpose ?? 0);
                 engine.stop(midi, layerId);
               });
             }, noteOffDelay);
