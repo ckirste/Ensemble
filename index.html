@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v119</title>
+<title>Ensemble v120</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -2126,7 +2126,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   <div class="header">
     <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
     <h1>Ensemble</h1>
-    <h3>v119</h3>
+    <h3>v120</h3>
     <div class="sub">by c. kirste</div>
     <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
   </div>
@@ -3382,7 +3382,12 @@ class AudioEngine {
     if (this.ctx && this._workletReady) return;
 
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'balanced' });
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)({
+              // Latenz-Modus aus localStorage; Default 'interactive' (minimale Latenz).
+      // Änderung erfordert Reload — AudioContext-Hint ist unveränderlich.
+      const _latHint = (() => { try { return localStorage.getItem('ensemble_latency_hint') || 'interactive'; } catch(e) { return 'interactive'; } })();
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: _latHint });
+      });
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = 1.0;
 
@@ -6403,6 +6408,59 @@ function initSettingsPanel() {
     sizesEl.appendChild(row);
   });
 
+    // ── Audio-Latenz-Modus ────────────────────────────────────────
+  (function initLatencySection() {
+    const parent = document.getElementById('settingsSizes')?.parentNode;
+    if (!parent) return;
+
+    const secLbl = document.createElement('div');
+    secLbl.className = 'settings-section-lbl';
+    secLbl.textContent = 'Audio-Latenz';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'settings-sizes';
+    wrap.innerHTML = `
+      <div class="size-row">
+        <div class="size-lbl">Modus</div>
+        <button class="theme-btn" id="latencyModeBtn" style="flex:1"></button>
+      </div>
+      <div style="font-size:.55rem;color:var(--dim);line-height:1.6;padding:2px 4px">
+        ⚡ <b style="color:var(--accent)">Interaktiv</b> = minimale Latenz (Standard)<br>
+        ⚖ <b style="color:var(--accent3)">Ausgeglichen</b> = stabiler bei Aussetzern / Knacksen<br>
+        <span style="opacity:.65">Ein Wechsel lädt die Seite neu. SF2s werden automatisch aus dem Browser-Speicher wiederhergestellt.</span>
+      </div>
+    `;
+
+    const sizesEl = document.getElementById('settingsSizes');
+    sizesEl.parentNode.insertBefore(secLbl, sizesEl.nextSibling);
+    secLbl.parentNode.insertBefore(wrap, secLbl.nextSibling);
+
+    const btn = wrap.querySelector('#latencyModeBtn');
+    function render() {
+      const cur = localStorage.getItem('ensemble_latency_hint') || 'interactive';
+      btn.textContent = cur === 'interactive' ? '⚡ Interaktiv (Standard)' : '⚖ Ausgeglichen';
+      btn.style.borderColor = cur === 'interactive' ? 'var(--accent)' : 'var(--accent3)';
+      btn.style.color       = cur === 'interactive' ? 'var(--accent)' : 'var(--accent3)';
+    }
+    render();
+
+    btn.addEventListener('click', () => {
+      const cur  = localStorage.getItem('ensemble_latency_hint') || 'interactive';
+      const next = cur === 'interactive' ? 'balanced' : 'interactive';
+      const label = next === 'interactive' ? 'Interaktiv (minimale Latenz)' : 'Ausgeglichen (stabiler)';
+      if (!confirm(`Audio-Modus wechseln auf:\n\n${label}\n\nDie Seite wird neu geladen. SF2s und Layer kommen automatisch zurück.`)) return;
+      localStorage.setItem('ensemble_latency_hint', next);
+      // Aktuelle SF2-Liste für Auto-Reload merken
+      try {
+        if (typeof engine !== 'undefined' && engine.soundfonts.length) {
+          localStorage.setItem('ensemble_last_sfs',
+            JSON.stringify(engine.soundfonts.map(sf => sf.name)));
+        }
+      } catch(e) {}
+      location.reload();
+    });
+  })();
+
   // ── Reset ─────────────────────────────────────────────────────
   // ── Label Helligkeit ─────────────────────────────────────────
   const labelsEl = document.getElementById('settingsLabels');
@@ -6578,6 +6636,32 @@ setTimeout(() => { if(typeof buildCinematicBtns==='function') buildCinematicBtns
 // Show cached SF2s on startup
 renderCachedSF2s();
 
+// Auto-Reload der zuletzt verwendeten SF2s (z.B. nach Latenz-Modus-Wechsel).
+// Wartet kurz, damit der IndexedDB-Cache-Index bereit ist.
+(async function autoReloadLastSF2s() {
+  const lastSFs = (() => {
+    try { return JSON.parse(localStorage.getItem('ensemble_last_sfs') || '[]'); }
+    catch(e) { return []; }
+  })();
+  if (!lastSFs.length) return;
+  // Kleiner Delay — gibt loadFile/sfDB Zeit, sich zu initialisieren
+  await new Promise(r => setTimeout(r, 150));
+  for (const name of lastSFs) {
+    if (engine.soundfonts.some(sf => sf.name === name)) continue;
+    try {
+      const ab = await sfDB.load(name);
+      if (!ab) continue;
+      const fakeFile = new File([ab], name + '.sf2');
+      await window.loadFile(fakeFile);
+    } catch(e) {
+      console.warn('Auto-Reload SF2 fehlgeschlagen:', name, e);
+    }
+  }
+  // Nach dem Laden aller SF2s: vorhandene Auto-Save-Session anwenden
+  if (typeof autoRestoreSession === 'function') {
+    setTimeout(autoRestoreSession, 100);
+  }
+})();
 document.getElementById('addLayerBtn').addEventListener('click', () => addLayer(0, 0));
 const sfAddBtn = document.getElementById('sfAddBtn');
 const fi = document.getElementById('fileInput');
