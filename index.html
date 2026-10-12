@@ -3382,9 +3382,7 @@ class AudioEngine {
     if (this.ctx && this._workletReady) return;
 
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)({
-              // Latenz-Modus aus localStorage; Default 'interactive' (minimale Latenz).
-      // Änderung erfordert Reload — AudioContext-Hint ist unveränderlich.
+      
       const _latHint = (() => { try { return localStorage.getItem('ensemble_latency_hint') || 'interactive'; } catch(e) { return 'interactive'; } })();
       this.ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: _latHint });
       });
