@@ -581,13 +581,38 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .layer-bottom{display:flex;align-items:center;gap:14px;padding:8px 12px 10px;flex-wrap:wrap}
 
 /* Volume */
-.layer-vol-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.layer-vol-lbl{font-size:.55rem;color:var(--text);opacity:.45;letter-spacing:.12em;white-space:nowrap}
-.layer-vol{-webkit-appearance:none;height:5px;width:110px;flex-shrink:0;padding:0;
+.layer-vol-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.layer-vol-lbl{min-width:22px;text-align:left;font-size:.55rem;color:var(--text);opacity:.45;letter-spacing:.12em;white-space:nowrap}
+/* Der Input selbst ist transparent und hoch genug für den Thumb.
+   Die sichtbare Spur wird über ::-webkit-slider-runnable-track gezeichnet,
+   damit Thumb-Weg und sichtbare Spur exakt übereinstimmen. */
+.layer-vol{-webkit-appearance:none;appearance:none;height:14px;width:110px;flex-shrink:0;
+  padding:0;background:transparent;border:none;outline:none;cursor:pointer}
+.layer-vol::-webkit-slider-runnable-track{
+  height:5px;border-radius:3px;
   background:linear-gradient(to right,var(--accent) var(--lv,75%),var(--border) var(--lv,75%));
-  border:none;border-radius:3px;outline:none;cursor:pointer}
-.layer-vol::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;
-  background:var(--accent);border-radius:50%;cursor:pointer;box-shadow:0 0 4px currentColor}
+}
+.layer-vol::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;
+  background:var(--accent);border-radius:50%;cursor:pointer;
+  box-shadow:0 0 4px currentColor;
+  margin-top:-4.5px;   /* (14px Thumb - 5px Track) / 2 → zentriert */
+}
+/* Firefox: eigener Track + Progress */
+.layer-vol::-moz-range-track{
+  height:5px;border-radius:3px;background:var(--border);
+}
+.layer-vol::-moz-range-progress{
+  height:5px;border-radius:3px;background:var(--accent);
+}
+.layer-vol::-moz-range-thumb{
+  width:14px;height:14px;background:var(--accent);border-radius:50%;
+  cursor:pointer;border:none;
+}
+.layer-vol-val{
+  font-size:.55rem;color:var(--accent);font-family:'Orbitron',monospace;
+  min-width:26px;text-align:right;flex-shrink:0;
+                                     }
 
 /* Transpose */
 .layer-transpose{display:flex;align-items:center;gap:4px}
@@ -1801,7 +1826,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 2px 10px;
+  gap: 1px 5px;
   padding: 0px 0px;
   background: #ffffff;
   border-bottom: 1px solid var(--border);
@@ -1902,7 +1927,25 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .score-timeline{display:flex;position:relative;height:100%;z-index:50;min-width: max-content;
 
                }
-
+/* Layer-Wasserzeichen: großer grauer Schriftzug am unteren Rand der
+   Track-Zeile. Zeigt Track-Nummer, Layer-Position und Preset-Namen.
+   Liegt hinter Notensystem/Noten (z-index:0) und reagiert nicht auf
+   Klicks (pointer-events:none). */
+.score-layer-watermark{
+  position:absolute;
+  left:90px;                 /* nach der Clef-Area (~80px) */
+  bottom:4px;
+  font-family:'Orbitron',monospace;
+  font-size:2rem;
+  font-weight:900;
+  letter-spacing:.12em;
+  color:rgba(0,0,0,.07);     /* sehr dezent, wird auf Weiß kaum sichtbar */
+  text-transform:uppercase;
+  white-space:nowrap;
+  pointer-events:none;
+  user-select:none;
+  z-index:0;
+}
 /* ── Druckvorschau: Seitenformat per CSS-Variablen (wählbar), im Browser auf Bildschirmbreite skaliert ── */
 .score-print-page {
   background:#fff; color:#000; margin:0 auto 20px; position:relative;
@@ -2712,6 +2755,15 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
         onclick="scoreSelExplodeTuplet()"
         title="N-tole in einzelne Steps auflösen (behält Auswahl)"
         style="display:none">✂</button>
+        <button class="score-ctrl-btn" id="scoreSelAddStepAfterBtn"
+        onclick="scoreSelInsertStepAfter()"
+        title="Einen Step nach der Auswahl einfügen"
+        style="display:none">+S▸</button>
+        <button class="score-ctrl-btn" id="scoreSelAddStepBeforeBtn"
+        onclick="scoreSelInsertStepBefore()"
+        title="Einen Step vor der Auswahl einfügen"
+        style="display:none">◂S+</button>
+    
   </div>
 
   <div class="score-sep"></div>
@@ -4823,13 +4875,34 @@ function renderLayers() {
     vol.min=0; vol.max=100; vol.value = Math.round(layer.vol * 100);
     vol.style.setProperty('--lv', vol.value+'%');
     vol.style.setProperty('--accent', color);
+        // Live-Anzeige: während des Ziehens zeigt das VOL-Label den Wert,
+    // danach fällt es nach kurzer Pause auf "VOL" zurück. So sparen wir
+    // den zusätzlichen Span und halten die Zeile kompakt.
+    let volRevertTimer = null;
+    const revertVolLbl = () => {
+      clearTimeout(volRevertTimer);
+      volRevertTimer = setTimeout(() => {
+        volLbl.textContent = 'VOL';
+        volLbl.style.color = '';
+        volLbl.style.opacity = '';
+      }, 700);
+    };
+
     vol.addEventListener('input', function() {
       this.style.setProperty('--lv', this.value+'%');
       layer.vol = parseInt(this.value) / 100;
+      volLbl.textContent = this.value;
+      volLbl.style.color = color;
+      volLbl.style.opacity = '1';
+      revertVolLbl();
     });
+    // Beim Loslassen sofort zurück auf "VOL" wenn kein weiterer Input kommt
+    vol.addEventListener('change', revertVolLbl);
+    vol.addEventListener('pointerup', revertVolLbl);
+    vol.addEventListener('touchend', revertVolLbl);
+
     volWrap.appendChild(volLbl);
     volWrap.appendChild(vol);
-
     // Per-layer octave (±12 semitones)
     const octWrap = document.createElement('div');
     octWrap.style.cssText = 'display:flex;align-items:center;gap:3px;flex-shrink:0';
@@ -9230,8 +9303,43 @@ if (explodeBtn) {
         b.onclick = () => scoreSelSetAcc(val);
         accWrap.appendChild(b);
       });
-    } else {
+        } else {
       pitchSel.style.display = accWrap.style.display = chordBtn.style.display = 'none';
+    }
+  }
+
+  // "+Step danach" — nur sichtbar wenn ≥1 Step markiert.
+  // Zeigt bei track-übergreifender Auswahl die Track-Anzahl an,
+  // damit man sieht, dass in mehreren Tracks gleichzeitig eingefügt wird.
+  const addStepAfterBtn = document.getElementById('scoreSelAddStepAfterBtn');
+  if (addStepAfterBtn) {
+    if (n >= 1) {
+      const tracksWithSel = new Set(
+        [...scoreSelection].map(k => k.split('_')[0])
+      ).size;
+      addStepAfterBtn.style.display = '';
+      addStepAfterBtn.textContent = tracksWithSel > 1 ? `+${tracksWithSel}×S` : '+S▸';
+      addStepAfterBtn.title = tracksWithSel > 1
+        ? `In ${tracksWithSel} Tracks je einen Step nach der Auswahl einfügen`
+        : 'Einen Step nach der Auswahl einfügen';
+    } else {
+      addStepAfterBtn.style.display = 'none';
+    }
+    
+  }
+  const addStepBeforeBtn = document.getElementById('scoreSelAddStepBeforeBtn');
+  if (addStepBeforeBtn) {
+    if (n >= 1) {
+      const tracksWithSel = new Set(
+        [...scoreSelection].map(k => k.split('_')[0])
+      ).size;
+      addStepBeforeBtn.style.display = '';
+      addStepBeforeBtn.textContent = tracksWithSel > 1 ? `${tracksWithSel}×S◂` : '◂S+';
+      addStepBeforeBtn.title = tracksWithSel > 1
+        ? `In ${tracksWithSel} Tracks je einen Step vor der Auswahl einfügen`
+        : 'Einen Step vor der Auswahl einfügen';
+    } else {
+      addStepBeforeBtn.style.display = 'none';
     }
   }
 }
@@ -9275,6 +9383,124 @@ window.scoreSelSetLen = function(len) {
   scoreRender();
 };
 
+// Fügt in JEDEM Track, in dem Steps selektiert sind, einen neuen Step
+// NACH dem jeweils letzten selektierten Step ein. Funktioniert damit
+// track-übergreifend — z.B. Sopran T1 + Bass T2 selektiert → beide
+// bekommen an ihrer jeweiligen Position einen Step dazu.
+// Nach dem Einfügen wird die Auswahl auf die neuen Steps gesetzt,
+// sodass wiederholtes Klicken weitere Steps in denselben Tracks anlegt.
+window.scoreSelInsertStepAfter = function() {
+  if (!scoreSelection.size) return;
+
+  // Gruppiere Selektion nach Track
+  const byTrack = {};
+  scoreSelection.forEach(key => {
+    const [ti, si] = key.split('_').map(Number);
+    if (!byTrack[ti]) byTrack[ti] = [];
+    byTrack[ti].push(si);
+  });
+
+  const newSelection = new Set();
+
+  // Tracks absteigend nach tIdx verarbeiten ist NICHT nötig (jeder Track hat
+  // eigene data). Innerhalb eines Tracks wird nur EINMAL eingefügt (nach dem
+  // Maximum der selektierten sIdxs) — mehrfaches Einfügen würde die Auswahl-
+  // Semantik verwirren.
+  Object.entries(byTrack).forEach(([tiStr, sIdxArr]) => {
+    const ti = Number(tiStr);
+    const track = scoreTracks[ti];
+    if (!track || !track.data.length) return;
+
+    const maxSi    = Math.max(...sIdxArr);
+    const insertAt = maxSi + 1;
+
+    // Note vom "letzten Vorgänger" übernehmen (letzte nicht-Pause-Note vor insertAt)
+    let prev = { p: 'C4', a: null };
+    for (let i = insertAt - 1; i >= 0; i--) {
+      const s = track.data[i];
+      if (s && !s.rest && s.notes?.length) { prev = s.notes[0]; break; }
+    }
+
+    const newStep = {
+      notes: [{ p: prev.p, a: prev.a }],
+      len:   scoreTool.len,
+      rest:  scoreTool.rest,
+      dot:   scoreTool.dot,
+      gate:  typeof window._gateLastValue === 'function' ? window._gateLastValue() : 1.0,
+    };
+
+    track.data.splice(insertAt, 0, newStep);
+    newSelection.add(`${ti}_${insertAt}`);
+  });
+
+  // Alte Auswahl verwerfen, neue Steps selektieren
+  scoreSelClear();
+  newSelection.forEach(k => scoreSelection.add(k));
+  scoreSelUpdateToolbar();
+  scoreRender();
+};
+
+// Pendant zu scoreSelInsertStepAfter — fügt in jedem Track mit Selektion
+// einen Step VOR dem jeweils ersten selektierten Step ein.
+// Gleiche Track-übergreifende Semantik: 2 Tracks markiert → 2 Steps,
+// je an der richtigen Stelle. Zweimal klicken fügt bei beiden nochmals
+// einen davor ein (weil die neuen Steps die neue Auswahl bilden).
+window.scoreSelInsertStepBefore = function() {
+  if (!scoreSelection.size) return;
+
+  const byTrack = {};
+  scoreSelection.forEach(key => {
+    const [ti, si] = key.split('_').map(Number);
+    if (!byTrack[ti]) byTrack[ti] = [];
+    byTrack[ti].push(si);
+  });
+
+  const newSelection = new Set();
+
+  Object.entries(byTrack).forEach(([tiStr, sIdxArr]) => {
+    const ti = Number(tiStr);
+    const track = scoreTracks[ti];
+    if (!track || !track.data.length) return;
+
+    const minSi    = Math.min(...sIdxArr);
+    const insertAt = minSi;
+
+    // Note für den neuen Step:
+    // 1. Wenn es einen Step vor insertAt gibt → dessen Note übernehmen
+    // 2. Sonst → Note des ersten selektierten Steps (identisch zum Folgestep)
+    // 3. Fallback → C4
+    let prev = null;
+    if (insertAt > 0) {
+      for (let i = insertAt - 1; i >= 0; i--) {
+        const s = track.data[i];
+        if (s && !s.rest && s.notes?.length) { prev = s.notes[0]; break; }
+      }
+    }
+    if (!prev) {
+      const firstSel = track.data[minSi];
+      if (firstSel && !firstSel.rest && firstSel.notes?.length) {
+        prev = firstSel.notes[0];
+      }
+    }
+    if (!prev) prev = { p: 'C4', a: null };
+
+    const newStep = {
+      notes: [{ p: prev.p, a: prev.a }],
+      len:   scoreTool.len,
+      rest:  scoreTool.rest,
+      dot:   scoreTool.dot,
+      gate:  typeof window._gateLastValue === 'function' ? window._gateLastValue() : 1.0,
+    };
+
+    track.data.splice(insertAt, 0, newStep);
+    newSelection.add(`${ti}_${insertAt}`);
+  });
+
+  scoreSelClear();
+  newSelection.forEach(k => scoreSelection.add(k));
+  scoreSelUpdateToolbar();
+  scoreRender();
+};
 // Prüft, ob die aktuelle Selektion balkenfähig ist: ≥2 Steps, selber Track,
 // lückenlos aufeinanderfolgend, keine Pausen, alle Notenwerte 8tel/16tel/32tel.
 // Gibt bei Erfolg die Step-Objekte in Reihenfolge zurück, sonst null.
@@ -10174,7 +10400,19 @@ scoreTracks.forEach(t => {
       <text x="14" y="24" text-anchor="middle" font-family="serif" font-size="22" font-weight="bold" fill="#000">${tsNum}</text>
       <text x="14" y="46" text-anchor="middle" font-family="serif" font-size="22" font-weight="bold" fill="#000">${tsDen}</text>
     </svg>`;
-    row.appendChild(tsArea);
+        row.appendChild(tsArea);
+
+    // ---- Layer-Wasserzeichen (großer grauer Schriftzug unten) ----
+    {
+      const _wmLayerIdx = track.layerIdx ?? 0;
+      const _wmLayer    = (typeof layers !== 'undefined') ? layers[_wmLayerIdx] : null;
+      const _wmSf       = _wmLayer ? engine.soundfonts[_wmLayer.sfIdx] : null;
+      const _wmPreset   = _wmSf?.presets[_wmLayer.presetIdx]?.name ?? '—';
+      const wm = document.createElement('div');
+      wm.className = 'score-layer-watermark';
+      wm.textContent = `T${tIdx+1} · L${_wmLayerIdx+1} · ${_wmPreset}`;
+      row.appendChild(wm);
+    }
 
     // Timeline
     const timeline = document.createElement('div');
@@ -12067,7 +12305,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
 
             s.subNotes.forEach((sub, i) => {
               const offsetMs = i * subDurMs;
-              const midi = noteToMidi(sub.p, sub.a);
+              const midi = noteToMidi(sub.p, sub.a) + globalTranspose + (layer?.transpose ?? 0) + (track.pitchOffset ?? 0);
               if (midi < 0 || midi > 127) return;
 
               scoreSetTimeout(() => {
