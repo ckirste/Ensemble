@@ -10464,11 +10464,14 @@ step.style.width = stepW + 'px';
       const selbox = document.createElement('div');
       selbox.className = 'score-step-selbox' + (isMarked ? ' checked' : '');
       selbox.title = isMarked ? 'Auswahl aufheben' : 'Step markieren';
-      selbox.addEventListener('click', e => {
+            selbox.addEventListener('click', e => {
         e.stopPropagation();
         scoreSelToggle(tIdx, sIdx);
         scoreSelUpdateToolbar();
-        scoreRender();
+        // Nur das betroffene Element + Toolbar aktualisieren — kein Rebuild.
+        const on = scoreSelHas(tIdx, sIdx);
+        selbox.classList.toggle('checked', on);
+        step.classList.toggle('sel-marked', on);
       });
       step.appendChild(selbox);
 
@@ -10570,7 +10573,7 @@ step.style.width = stepW + 'px';
   scoreRender();
   return;
   }
-        if (scoreActive && scoreActive.tIdx === tIdx && scoreActive.sIdx === sIdx) {
+        /*if (scoreActive && scoreActive.tIdx === tIdx && scoreActive.sIdx === sIdx) {
           scoreActive = null;
         } else {
           scoreActive = {tIdx, sIdx};
@@ -10578,6 +10581,21 @@ step.style.width = stepW + 'px';
         scoreRender();
         if (scoreActive) {
           setTimeout(() => scoreRenderEditor(scoreActive.tIdx, scoreActive.sIdx), 0);
+        }*/
+                // Alten aktiven Step visuell abwählen, ohne Rebuild
+        const prev = scoreActive;
+        const wasOpen = prev && prev.tIdx === tIdx && prev.sIdx === sIdx;
+        scoreActive = wasOpen ? null : {tIdx, sIdx};
+        if (prev && (prev.tIdx !== tIdx || prev.sIdx !== sIdx)) {
+          const prevEl = container.querySelector(
+            `.score-step[data-sidx="${prev.sIdx}"]` /* container ist hier die aktive timeline */
+          );
+          if (prevEl) prevEl.classList.remove('selected');
+        }
+        step.classList.toggle('selected', !wasOpen);
+        if (scoreActive) {
+          setTimeout(() => scoreRenderEditor(scoreActive.tIdx, scoreActive.sIdx), 0);
+  
         }
       });
 
