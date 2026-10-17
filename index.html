@@ -1253,15 +1253,15 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   overflow: visible;    /* nichts verstecken */
   }
 .score-header .score-btn {
-  min-height: 34px;
-  min-width: 34px;
-  padding: 4px 10px;
+  min-height: 26px;
+  min-width: 26px;
+  padding: 2px 6px;
   font-size: .78rem;
-  line-height: 1.1;
+  line-height: 1.0;
   border-radius: 5px;
   }
 .score-header{display:flex;gap:2px;align-items:center;flex-wrap:wrap;
-  padding:0px 0px 0px 0px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--panel)}
+  padding:2px 4px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--panel)}
 .score-body{display:flex;flex-direction:row;align-items:stretch;flex:1;min-height:0;width:100%;overflow:hidden}
 /*vielleich brauchen wir es nochmal
 .score-toolbar {
@@ -1390,8 +1390,8 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 }
 
 .score-metro-ctrl .score-btn {
-  min-height: 34px;
-  min-width: 34px;
+  min-height: 26px;
+  min-width: 26px;
   padding: 4px 8px;
   font-size: .9rem;
   line-height: 1;
@@ -2746,7 +2746,8 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
     <button class="score-ctrl-btn" id="scoreTieBtn" onclick="scoreToggleTie()" style="display:none">⌒</button>
     <button class="score-ctrl-btn" id="scoreRangeBtn" onclick="scoreSelFillRange()" style="display:none">↔</button>
     <button class="score-ctrl-btn" id="scoreBeamBtn" onclick="scoreSelToggleBeam()" style="display:none">🎵</button>
-    <button class="score-ctrl-btn" onclick="scoreSelCopyPaste()">📋</button>
+        <button class="score-ctrl-btn" id="scoreCopyBtn" onclick="scoreSelCopy()" title="Auswahl in Zwischenablage kopieren">📋</button>
+    <button class="score-ctrl-btn" id="scorePasteBtn" onclick="scoreSelPaste()" title="Zwischenablage an der aktiven Stelle einfügen" disabled>📥</button>
     <button class="score-ctrl-btn" onclick="scoreSelDelete()">🗑</button>
     <button class="score-ctrl-btn score-sel-clear" onclick="scoreSelClearAll()">✕</button>
     <button class="score-ctrl-btn" id="scoreTupletBtn" onclick="scoreSelMakeTuplet()" 
@@ -9183,9 +9184,25 @@ function scoreSelUpdateToolbar() {
   const count = document.getElementById('scoreSelCount');
   const tieBtn = document.getElementById('scoreTieBtn');
   if (!tb) return;
-  const n = scoreSelection.size;
-  tb.style.display = n > 0 ? '' : 'none';
-  if (count) count.textContent = `${n} markiert`;
+    const n = scoreSelection.size;
+  const hasClip = scoreClipboard.length > 0;
+
+  // Toolbar sichtbar halten, solange entweder markierte Steps da sind ODER
+  // die Zwischenablage Inhalt hat — sonst könnte man Paste nicht mehr erreichen,
+  // sobald die Auswahl (z.B. nach einem Klick in einen anderen Track) leer ist.
+  tb.style.display = (n > 0 || hasClip) ? '' : 'none';
+  if (count) count.textContent = n > 0 ? `${n} markiert` : '';
+
+  // Paste-Button: aktiv nur wenn Zwischenablage Inhalt hat
+  const pasteBtn = document.getElementById('scorePasteBtn');
+  if (pasteBtn) {
+    pasteBtn.disabled = !hasClip;
+    pasteBtn.style.opacity = hasClip ? '1' : '0.35';
+    pasteBtn.style.cursor  = hasClip ? 'pointer' : 'default';
+    pasteBtn.title = hasClip
+      ? `Einfügen (${scoreClipboard.length} Step${scoreClipboard.length>1?'s':''}) — an aktiver Stelle, auch in anderem Track`
+      : 'Zwischenablage leer';
+  }
 
   // Tie-Button nur wenn genau 1 Step selektiert und dieser einen Nachfolger hat
   if (tieBtn) {
@@ -9695,38 +9712,94 @@ window.scoreSelClearAll = function() {
 };
 
 // Kopieren: alle markierten Steps geordnet sammeln und nach Cursor einfügen
-window.scoreSelCopyPaste = function() {
+// ── Zwischenablage ────────────────────────────────────────────
+// Speichert reine Step-Daten (deep-copy) — unabhängig vom Quell-Track.
+// Dadurch kann in JEDEN Track eingefügt werden, nicht nur in den Quell-Track.
+let scoreClipboard = [];
+
+// Copy: markierte Steps in die Zwischenablage legen.
+// Sortierung nach (tIdx, sIdx) erhält die musikalische Reihenfolge auch bei
+// track-übergreifender Auswahl (z.B. 2 Steps aus T1 + 3 Steps aus T2 werden
+// zu einer 5-Step-Sequenz in der Reihenfolge, in der sie im Score stehen).
+window.scoreSelCopy = function() {
   if (!scoreSelection.size) return;
 
-  // Gruppiere nach Track
-  const byTrack = {};
-  scoreSelection.forEach(key => {
-    const [ti, si] = key.split('_').map(Number);
-    if (!byTrack[ti]) byTrack[ti] = [];
-    byTrack[ti].push(si);
-  });
+  const keys = [...scoreSelection].map(k => k.split('_').map(Number));
+  keys.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
 
-  Object.entries(byTrack).forEach(([tiStr, sIdxArr]) => {
-    const ti    = Number(tiStr);
-    const track = scoreTracks[ti];
-    if (!track) return;
-    // Sortiert nach Position
-    sIdxArr.sort((a, b) => a - b);
-    // Deep-Copy der Steps
-    const copies = sIdxArr.map(si => JSON.parse(JSON.stringify(track.data[si])));
-    // Einfügeposition: nach Cursor (scoreActive) wenn im selben Track, sonst am Ende
-    let insertAt = track.data.length;
-    if (scoreActive && scoreActive.tIdx === ti) {
-      insertAt = scoreActive.sIdx + 1;
-    }
-    track.data.splice(insertAt, 0, ...copies);
-  });
+  scoreClipboard = keys
+    .map(([ti, si]) => {
+      const s = scoreTracks[ti]?.data[si];
+      return s ? JSON.parse(JSON.stringify(s)) : null;
+    })
+    .filter(Boolean);
 
+  scoreSelUpdateToolbar();
+
+  // Kurzes visuelles Feedback direkt auf dem Button
+  const btn = document.getElementById('scoreCopyBtn');
+  if (btn) {
+    const orig = btn.textContent;
+    btn.textContent = '✓';
+    btn.style.color = '#69ff47';
+    btn.style.borderColor = '#69ff47';
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 400);
+  }
+};
+
+// Paste: Zwischenablage an der aktiven Stelle einfügen.
+// Ziel-Position wird in dieser Reihenfolge bestimmt:
+//   1. Klaviatur-Eingabe aktiv + Cursor gesetzt  → am Cursor
+//   2. Ein Step ist angeklickt (scoreActive)     → NACH diesem Step
+//      (funktioniert in jedem Track — auch in einem anderen als dem Quell-Track)
+//   3. Fallback                                   → ans Ende von Track 1
+window.scoreSelPaste = function() {
+  if (!scoreClipboard.length) return;
+
+  let targetTIdx, targetSIdx;
+  if (scoreKbInput && scoreCursor) {
+    targetTIdx = scoreCursor.tIdx;
+    targetSIdx = scoreCursor.sIdx;
+  } else if (scoreActive) {
+    targetTIdx = scoreActive.tIdx;
+    targetSIdx = scoreActive.sIdx + 1;
+  } else {
+    targetTIdx = 0;
+    targetSIdx = scoreTracks[0]?.data.length ?? 0;
+  }
+
+  const track = scoreTracks[targetTIdx];
+  if (!track) return;
+
+  // Erneut deep-copy pro Einfügevorgang: mehrfaches Einfügen derselben
+  // Zwischenablage darf keine gemeinsamen Objekt-Referenzen erzeugen —
+  // sonst würde eine spätere Bearbeitung der einen Kopie die andere mitverändern.
+  const copies = scoreClipboard.map(s => JSON.parse(JSON.stringify(s)));
+  track.data.splice(targetSIdx, 0, ...copies);
+
+  // Eingefügte Steps direkt markieren → man kann sofort weiterarbeiten
+  // (z.B. Vorzeichen setzen, ÷N-Toole bilden, nochmal kopieren)
   scoreSelClear();
+  for (let i = 0; i < copies.length; i++) {
+    scoreSelAdd(targetTIdx, targetSIdx + i);
+  }
+
+  // In der Klaviatur-Eingabe den Cursor hinter das eingefügte Material ziehen,
+  // damit die nächste gedrückte Taste an der richtigen Stelle landet
+  if (scoreKbInput && scoreCursor) {
+    scoreCursor = { tIdx: targetTIdx, sIdx: targetSIdx + copies.length };
+  }
+  // Letzten eingefügten Step als aktiven Step setzen → der Inline-Editor
+  // springt automatisch dorthin, sodass man die eingefügten Noten direkt sieht
+  scoreActive = { tIdx: targetTIdx, sIdx: targetSIdx + copies.length - 1 };
+
   scoreSelUpdateToolbar();
   scoreRender();
 };
-
 window.scoreSelDelete = function() {
   if (!scoreSelection.size) return;
   // Gruppiere nach Track, lösche von hinten nach vorne (Index-Shift vermeiden)
