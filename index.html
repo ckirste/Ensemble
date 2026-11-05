@@ -7381,8 +7381,16 @@ vs.addEventListener('input',function(){this.style.setProperty('--val',this.value
 const vsLearn = makeLearnBtn('master-vol', 'master-vol', mmMakeApplyFn('master-vol','master-vol'));
 vs.parentNode.insertBefore(vsLearn, vs.nextSibling);
 
-[['A','C'],['W','C#'],['S','D'],['E','D#'],['D','E'],['F','F'],['T','F#'],['G','G'],['Z','G#'],['H','A'],['U','A#'],['J','B'],['K','C+1']]
-.forEach(([k,n])=>{const c=document.createElement('div');c.className='kchip';c.innerHTML=`<span>${k}</span> ${n}`;document.getElementById('shortcuts').appendChild(c);});
+const shortcutsEl = document.getElementById('shortcuts');
+if (shortcutsEl) {
+  [['A','C'],['W','C#'],['S','D'],['E','D#'],['D','E'],['F','F'],['T','F#'],['G','G'],['Z','G#'],['H','A'],['U','A#'],['J','B'],['K','C+1']]
+    .forEach(([k,n])=>{
+      const c=document.createElement('div');
+      c.className='kchip';
+      c.innerHTML=`<span>${k}</span> ${n}`;
+      shortcutsEl.appendChild(c);
+    });
+}
 
 buildKb();
 setStatus('idle','Bereit — SF2 laden');
