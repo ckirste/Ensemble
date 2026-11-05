@@ -2139,783 +2139,827 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   font-size: 11px;
   fill: #000;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   NEUES APP-LAYOUT (Tabs oben, Mixer rechts)
+   ══════════════════════════════════════════════════════════════ */
+
+/* Alte Navigation und Header unsichtbar machen, aber im DOM lassen! */
+.jump-nav, .header { display: none !important; }
+
+/* Grundgerüst: Kein Scrollen der ganzen Seite */
+html, body {
+  margin: 0; padding: 0; height: 100vh; height: 100dvh; width: 100vw;
+  overflow: hidden !important; background: var(--bg);
+}
+
+#app-grid {
+  display: grid;
+  grid-template-columns: 1fr 220px; /* Mitte | Rechts */
+  grid-template-rows: 45px 1fr;     /* Tabs oben | Rest */
+  height: 100vh; height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* ── Tabs oben ── */
+#app-tabs {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 0 10px;
+  gap: 5px;
+  z-index: 100;
+}
+.tab-btn {
+  background: transparent; border: none; border-bottom: 2px solid transparent;
+  color: var(--dim); font-size: 0.75rem; font-family: 'Share Tech Mono', monospace;
+  padding: 10px 15px; cursor: pointer; transition: all 0.15s; height: 100%;
+  display: flex; align-items: center; gap: 5px;
+}
+.tab-btn:hover { color: var(--textbright); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: bold; }
+
+/* ── Mittlerer Bereich ── */
+#app-main {
+  position: relative; overflow-y: auto; overflow-x: hidden;
+  padding: 10px; box-sizing: border-box; background: var(--bg);
+}
+.app-view { display: none; flex-direction: column; gap: 10px; width: 100%; height: 100%; }
+.app-view.active { display: flex; animation: fadeIn .15s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Rechte Mixer-Leiste ── */
+#app-mixer {
+  background: var(--panel); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow-y: auto; padding: 10px; box-sizing: border-box; gap: 6px; z-index: 100;
+}
+.mixer-header { display: flex; justify-content: space-between; align-items: center; font-size: .65rem; color: var(--accent); font-weight: bold; letter-spacing: .1em; margin-bottom: 5px; }
+
+/* ── Mixer: Original Layer-Liste überschreiben ── */
+#layerList { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+
+#layerList .layer-row {
+  background: #0d0d1a !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  padding: 6px 8px !important;
+  margin: 0 !important;
+  position: relative !important;
+  cursor: pointer;
+}
+#layerList .layer-row.active { border-color: var(--accent) !important; box-shadow: 0 0 8px rgba(0,229,255,.2) !important; }
+#layerList .layer-legend { position: static !important; background: transparent !important; padding: 0 !important; border: none !important; max-width: 100% !important; display: flex !important; }
+#layerList .layer-legend-dot { width: 8px !important; height: 8px !important; }
+#layerList .layer-legend-name { font-size: 0.7rem !important; background: transparent !important; padding: 0 5px !important; }
+#layerList .layer-compact { padding: 0 !important; min-height: auto !important; margin-top: 5px !important; flex-wrap: wrap !important; gap: 5px !important; }
+#layerList .layer-compact > * { flex: 1 1 100%; }
+#layerList .layer-vol-wrap { order: -1; width: 100%; }
+#layerList .layer-mute-btn { width: 100% !important; height: 24px !important; font-size: 0.7rem !important; margin-top: 4px; }
+#layerList .layer-expand-btn { display: none !important; }
+#layerList .layer-details { display: none !important; }
+
+/* ── Layer Details im Hauptfenster ── */
+#layerDetailContainer { display: none; flex-direction: column; width: 100%; margin-bottom: 15px; }
+#layerDetailContainer.active { display: flex; }
+#layerDetailContainer .layer-details {
+  display: flex !important;
+  background: var(--panel2) !important;
+  border: 1px solid var(--accent) !important;
+  border-radius: 12px !important;
+  padding: 15px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+#layerDetailContainer .layer-compact { display: none !important; }
+
+/* Vollbild-Modus für den Noteneditor */
+body.score-focus #app-tabs, body.score-focus #app-mixer { display: none; }
+body.score-focus #app-grid { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+body.score-focus #app-main { padding: 0; }
+  
+
+
+
+
 </style>
 </head>
 <body>
-<div class="container">
-  <!-- Jump Navigation -->
-  <nav class="jump-nav" id="jumpNav">
-    <button class="jnav-btn jnav-fullscreen" id="fsNavBtn" title="Vollbild ein/aus" onclick="window.toggleFullscreen()"><span class="jnav-icon" id="fsNavIcon">⛶</span><span class="jnav-lbl">Vollbild</span></button>
-        <button class="jnav-btn" id="projSaveBtn" title="Projekt speichern (Noten + Layer + Effekte)" onclick="window.projectSave()"><span class="jnav-icon">💾</span><span class="jnav-lbl">Save</span></button>
-    <label  class="jnav-btn" id="projLoadBtn" title="Projekt laden" style="cursor:pointer"><span class="jnav-icon">📂</span><span class="jnav-lbl">Load</span>
-      <input type="file" id="projLoadInput" accept=".json" style="display:none">
-    </label>
-    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('ancSF2');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🗂</span><span class="jnav-lbl">SF2</span></button>
-    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('midiPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🎹</span><span class="jnav-lbl">MIDI</span></button>
-    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('ancFX');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🎛</span><span class="jnav-lbl">FX</span></button>
-    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('jamPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🌐</span><span class="jnav-lbl">Jam</span></button>
-    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('ancLayer');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🎵</span><span class="jnav-lbl">Layer</span></button>
-    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('ancKeys');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">⌨</span><span class="jnav-lbl">Keys</span></button>
-    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('metroPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">♩</span><span class="jnav-lbl">Metro</span></button>
-    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('recPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">⏺</span><span class="jnav-lbl">Rec</span></button>
-    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('tbonePanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🎺</span><span class="jnav-lbl">Posaune</span></button>
-    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('drumPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🥁</span><span class="jnav-lbl">Drums</span></button>
-    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('seqPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">⏏</span><span class="jnav-lbl">Seq</span></button>
-    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('pdfPanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🎼</span><span class="jnav-lbl">PDF</span></button>
-    <button class="jnav-btn" onclick="(()=>{const e=document.getElementById('scorePanel');if(!e)return;const nav=document.getElementById('jumpNav');const off=nav?nav.offsetHeight+4:40;window.scrollTo({top:e.getBoundingClientRect().top+scrollY-off,behavior:'smooth'})})()"><span class="jnav-icon">🎵</span><span class="jnav-lbl">Noten</span></button>
-    <button id="panicNavBtn" title="Alle Töne sofort stoppen (Leertaste)" style="flex-shrink:0;margin-left:auto;background:#1a0505;border:1.5px solid #ff3a3a;border-radius:8px;color:#ff3a3a;font-family:'Share Tech Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:.08em;padding:7px 13px;cursor:pointer;transition:all .12s;white-space:nowrap;min-height:36px;display:flex;align-items:center;-webkit-tap-highlight-color:transparent">■ PANIC</button>
+<!-- UNSICHTBARE ELEMENTE (Damit das alte JS nicht crasht) -->
+<nav class="jump-nav" id="jumpNav" style="display:none !important;">
+  <button class="jnav-btn" id="fsNavBtn"><span id="fsNavIcon"></span></button>
+  <button class="jnav-btn" id="projSaveBtn"></button>
+  <label class="jnav-btn" id="projLoadBtn"><input type="file" id="projLoadInput"></label>
+  <button id="panicNavBtn"></button>
+</nav>
+<div class="header" id="appHeader" style="display:none !important;">
+  <button class="fs-toggle" id="fsToggleBtn"></button>
+  <button class="settings-toggle" id="settingsToggle"></button>
+</div>
+
+<div id="app-grid">
+  <!-- TABS (Oben) -->
+  <nav id="app-tabs">
+    <button class="tab-btn active" data-target="view-setup">⚙️ Setup</button>
+    <button class="tab-btn" data-target="view-play">🎹 Spielen</button>
+    <button class="tab-btn" data-target="view-seq">🥁 Aufnahme</button>
+    <button class="tab-btn" data-target="view-fx">🎛 Effekte</button>
+    <button class="tab-btn" data-target="view-notes">🎼 Noten</button>
+    <div style="flex:1"></div>
+    <button class="tab-btn" id="forceLandscapeBtn" style="color:var(--accent2); border:1px solid var(--accent2); border-radius:5px; margin: 5px 0; padding: 0 10px; height: 30px;">📱 Querformat</button>
   </nav>
 
-  <div class="header">
-    <button class="fs-toggle" id="fsToggleBtn" title="Vollbild ein/aus">⛶</button>
-    <h1>Ensemble</h1>
-    <h3>v120</h3>
-    <div class="sub">by c. kirste</div>
-    <button class="settings-toggle" id="settingsToggle" title="Erscheinungsbild anpassen">⚙</button>
-  </div>
-
-  <!-- Settings Panel -->
-  <div class="settings-panel" id="settingsPanel" style="display:none">
-    <div class="settings-title">⚙ Erscheinungsbild</div>
-    <div class="settings-body">
-      <div class="settings-section-lbl">Themes</div>
-      <div class="settings-themes" id="settingsThemes"></div>
-      <div class="settings-section-lbl">Farben</div>
-      <div class="settings-colors" id="settingsColors"></div>
-      <div class="settings-section-lbl">Textgröße</div>
-      <div class="settings-sizes" id="settingsSizes"></div>
-      <div class="settings-section-lbl">Labels &amp; Lesbarkeit</div>
-      <div class="settings-sizes" id="settingsLabels"></div>
-
-      <div class="settings-footer">
-        <button class="settings-reset-btn" id="debugToggleBtn" style="margin-right:auto">🐛 Debug: AUS</button>
-        <button class="settings-reset-btn" id="settingsResetBtn">↺ Zurücksetzen</button>
-      </div>
-    </div>
-  </div>
-
-
-  <div class="sf-loader-panel" id="ancSF2">
-      <div class="sf-loader-header">
-        <div class="sf-loader-title">🗂 Soundfonts</div>
-        <div class="mem-display" id="memDisplay" style="display:none"></div>
-        <button class="sf-add-btn" id="sfAddBtn">＋ SF2 laden</button>
-        <input type="file" id="fileInput" accept=".sf2" multiple style="display:none">
-      </div>
-      <div class="sf-list" id="sfList">
-        <div class="sf-empty" id="sfEmpty">Noch kein Soundfont geladen — „＋ SF2 laden" klicken oder Datei hierher ziehen</div>
-      </div>
-    </div>
-  
-  <div class="progress-wrap" id="progressWrap">
-      <div class="prog-label" id="progLabel">Parsing…</div>
-      <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
-    </div>
-  
-  <!-- Session -->
-    <div class="session-panel" id="sessionPanel">
-      <div class="session-title">💾 Session</div>
-      <div class="session-controls">
-        <button class="session-btn" id="sessionSaveBtn">💾 Speichern</button>
-        <label  class="session-btn session-load-lbl">📂 Laden<input type="file" id="sessionLoadInput" accept=".json" style="display:none"></label>
-        <span class="session-info" id="sessionInfo">Layer-Konfiguration, Effekte &amp; Metronom werden gespeichert (ohne SF2-Dateien)</span>
-      </div>
-    </div>
-  
-  <!-- MIDI Panel -->
-    <div class="midi-panel" id="midiPanel">
-      <div class="midi-section-label">🎹 MIDI Input</div>
-      <button class="midi-connect-btn" id="midiConnectBtn">Zugriff anfragen</button>
-      <div class="midi-device-list" id="midiDeviceList">
-        <div class="midi-badge" id="midiStatusBadge"><div class="mdot"></div><span id="midiStatusText">Nicht verbunden</span></div>
-      </div>
-      <div class="pitch-section" id="pitchSection" style="display:none">
-        Pitch
-        <div class="pitchbar-wrap"><div class="pitchcenter"></div><div class="pitchbar" id="pitchBar"></div></div>
-      </div>
-      <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <button id="blockPCBtn" style="background:#07070f;border:1px solid var(--border);border-radius:7px;color:var(--dim);font-size:.65rem;font-family:'Share Tech Mono',monospace;padding:5px 10px;cursor:pointer;transition:all .15s"
-          title="MIDI Program-Change-Nachrichten ignorieren (verhindert ungewollte Instrument-Wechsel durch E-Piano-Tasten)">
-          🚫 Program Change: AN
-        </button>
-      </div>
-    </div>
-  
-  <!-- Favorites Panel -->
-    <div class="fav-panel" id="favPanel">
-      <div class="fav-header">
-        <span class="fav-title">⭐ Favoriten</span>
-        <span class="fav-hint" id="favHint">Stern an einem Layer klicken zum Speichern</span>
-      </div>
-      <div class="fav-list" id="favList"></div>
-    </div>
-  
-  <!-- Register Panel -->
-    <div class="reg-panel" id="regPanel">
-      <div class="reg-header">
-        <span class="reg-title">🔵 Register</span>
-        <span class="reg-hint">Tippen = Laden &nbsp;·&nbsp; Lang halten = Speichern</span>
-      </div>
-      <div class="reg-row" id="regRow"></div>
-      <div class="reg-nav-row">
-        <button class="reg-nav-btn" id="regPrevBtn" title="Vorheriger Register">◀</button>
-        <div class="reg-nav-disp" id="regNavDisp">—</div>
-        <button class="reg-nav-btn" id="regNextBtn" title="Nächster Register">▶</button>
-        <div class="reg-nav-learn" id="regNavLearnWrap"></div>
-      </div>
-    </div>
-  
-  <!-- Layer List -->
-    <div class="layers-panel" id="ancLayer">
-      <div class="layers-header">
-        <div class="layers-title">🎵 Preset-Layer</div>
-        <button class="add-layer-btn" id="addLayerBtn" disabled>＋ Layer hinzufügen</button>
-      </div>
-      <div class="layer-list" id="layerList">
-        <div class="layer-empty" id="layerEmpty">Lade eine SF2-Datei um Layer hinzuzufügen</div>
-      </div>
-    </div>
-  
-  <!-- Effects Panel -->
-    <div class="drawbar-panel" id="drawbarPanel">
-      <div class="drawbar-header" id="drawbarHeader">
-        <span class="drawbar-title">🎛 Zugriegel</span>
-        <span class="drawbar-hint" id="drawbarHint">Tippen zum Stumm/Laut schalten</span>
-        <button class="drawbar-toggle" id="drawbarToggle">▾</button>
-      </div>
-      <div class="drawbar-body" id="drawbarBody">
-        <div class="drawbar-row" id="drawbarRow"></div>
-      </div>
-    </div>
-  
-  <div class="viz" id="viz"></div>
-
-  <!-- Quintenzirkel Panel -->
-  <div class="qz-panel" id="qzPanel">
-    <div class="qz-header">
-      <span class="qz-title">🎸 Quintenzirkel</span>
-      <span style="font-size:.55rem;color:var(--dim);font-family:'Share Tech Mono',monospace">Klick auf Dur oder Moll → Griffe &amp; Klaviatur</span>
-    </div>
-    <div id="qz-circle-wrapper">
-      <div id="qz-circle-container"></div>
-      <div id="qz-chord-overlay">
-        <button class="qz-close-btn" id="qz-close-overlay">✕</button>
-        <div id="qz-overlay-content"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Chord Panel -->
-  <div class="chord-panel" id="chordPanel">
-    <div class="chord-header" id="chordHeader">
-      <span class="chord-title">🎼 Akkorde</span>
-      <span class="chord-hint" id="chordHint">Tippen zum Anzeigen auf der Klaviatur</span>
-      <button class="chord-toggle" id="chordToggle">▾</button>
-    </div>
-    <div class="chord-body" id="chordBody">
-      <div class="chord-root-row" id="chordRootRow"></div>
-      <div class="chord-type-row" id="chordTypeRow"></div>
-      <div style="display:flex;justify-content:flex-end">
-        <button class="chord-sel-btn" id="chordClearBtn" style="color:#ff4060;border-color:#ff406055">✕ Auswahl löschen</button>
-      </div>
-      <div class="chord-display" id="chordDisplay"></div>
-      <!-- Arpeggiator -->
-      <div class="arp-panel" id="arpPanel">
-        <!-- Zeile 1: Richtung + Notenwert -->
-        <div class="arp-row">
-          <span class="arp-lbl">Richtung</span>
-          <button class="arp-btn active" id="arpDirUp">↑ Auf</button>
-          <button class="arp-btn" id="arpDirDown">↓ Ab</button>
-          <button class="arp-btn" id="arpDirUpDown">↑↓ Auf/Ab</button>
-          <span class="arp-lbl" style="margin-left:6px">Wert</span>
-          <button class="arp-btn active" id="arpVal8">♪ 8tel</button>
-          <button class="arp-btn" id="arpVal16">♬ 16tel</button>
-          <button class="arp-btn" id="arpVal8t">♪³ 8tel-Triole</button>
-          <button class="arp-btn" id="arpVal16t">♬³ 16tel-Triole</button>
-        </div>
-        <!-- Zeile 2: Töne + Grundton-Oktave + BPM -->
-        <div class="arp-row">
-          <span class="arp-lbl">Töne</span>
-          <button class="arp-btn" id="arpN3">3</button>
-          <button class="arp-btn active" id="arpN4">4</button>
-          <button class="arp-btn" id="arpN5">5</button>
-          <button class="arp-btn" id="arpN6">6</button>
-          <button class="arp-btn" id="arpN7">7</button>
-          <button class="arp-btn" id="arpN8">8</button>
-          <span class="arp-lbl" style="margin-left:6px">Grundton</span>
-          <div id="arpRootBtns" style="display:flex;flex-wrap:wrap;gap:4px"></div>
-          <button class="arp-btn" id="arpOctDown" style="width:28px;padding:4px 0;text-align:center">−</button>
-          <div id="arpOctDisp" style="font-family:'Orbitron',monospace;font-size:.85rem;color:var(--accent3);min-width:28px;text-align:center">+0</div>
-          <button class="arp-btn" id="arpOctUp" style="width:28px;padding:4px 0;text-align:center">+</button>
-        </div>
-        <!-- Zeile 3: BPM + Vel + Dots + Play -->
-        <div class="arp-row">
-          <span class="arp-lbl">BPM</span>
-          <button class="arp-btn" id="arpBpmDown" style="width:28px;padding:4px 0;text-align:center">−</button>
-          <div id="arpBpmDisplay" style="font-family:'Orbitron',monospace;font-size:.95rem;color:var(--accent3);min-width:36px;text-align:center;line-height:1">120</div>
-          <button class="arp-btn" id="arpBpmUp" style="width:28px;padding:4px 0;text-align:center">+</button>
-          <span class="arp-lbl" style="margin-left:6px">Vel</span>
-          <input type="range" id="arpVelSl" min="20" max="127" value="90"
-            style="-webkit-appearance:none;height:4px;width:65px;accent-color:var(--accent3);border-radius:2px;cursor:pointer">
-          <span id="arpVelVal" style="font-size:.6rem;font-family:'Share Tech Mono',monospace;color:var(--accent3);min-width:24px">90</span>
-          <div class="arp-dots" id="arpDots"></div>
-          <button class="arp-play-btn" id="arpPlayBtn" style="margin-left:auto">▶ Arpeggio</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="kb-wrap" id="ancKeys">
-    <div class="kb-header">
-      <span>Klaviatur</span>
-      <div class="kb-nav">
-        <button class="kb-nav-btn" id="kbLeft" title="Nach links">◀</button>
-        <button class="kb-nav-btn" id="kbRight" title="Nach rechts">▶</button>
-      </div>
-    </div>
-    <div style="display:flex;flex-direction:row;align-items:flex-start">
-      <div class="kb-scroll" id="kbScroll" style="flex:1">
-        <div class="keyboard" id="keyboard"></div>
-      </div>
-      <div id="pitchBendSidebar" style="width:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-left:1px solid var(--border);padding:4px 2px;touch-action:none;user-select:none;background:var(--panel);flex-shrink:0">
-          <label id="pitchBendLabel" style="cursor:pointer;letter-spacing:.06em;font-size:.48rem;color:var(--accent);text-transform:uppercase;writing-mode:horizontal-tb;text-align:center;line-height:1.2" title="Tippen: Ziel wechseln — PITCH · VEL · MOD · VOL">PITCH</label>
-          <div id="pitchBendTrack" style="width:52px;flex:1;min-height:60px;background:var(--border);border-radius:13px;position:relative;cursor:ns-resize;border:1px solid var(--dim)">
-            <div id="pitchBendThumb" style="position:absolute;left:50%;transform:translate(-50%,-50%);top:50%;width:36px;height:36px;background:var(--accent);border-radius:50%;box-shadow:var(--glow)"></div>
-            <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:var(--dim);pointer-events:none"></div>
-          </div>
-          <div id="pitchBendVal" style="font-family:'Share Tech Mono',monospace;font-size:.48rem;color:var(--accent);text-align:center">0</div>
-        </div>
-    </div>
-    </div>
-  
-  <div class="shortcuts" id="shortcuts"></div>
-
-    <div class="fx-panel" id="ancFX">
-      <div class="fx-title-row">
-        <div class="fx-title">🎛 Effekte &amp; EQ</div>
-        <button class="fx-lock-btn" id="fxLockBtn" title="Slider sperren">🔓</button>
-      </div>
-      <div class="fx-slider-row" id="fxSliders"></div>
-      <div class="fx-divider"></div>
-      <div class="fx-row" id="fxToggles"></div>
-      <div class="fx-divider"></div>
-      <div class="fx-row" style="flex-wrap:wrap;gap:6px;align-items:center">
-        <span style="font-size:.55rem;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;flex-shrink:0">🎬 Cinematic:</span>
-        <div id="fxCinematicBtns" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-      </div>
-      <div class="fx-divider"></div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span style="font-size:.55rem;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;flex-shrink:0">🎵 Globale Hüllkurve</span>
-        <button class="fx-adsr-reset" id="fxAdsrResetBtn">↺ Zurücksetzen</button>
-      </div>
-      <div class="fx-adsr-row" id="fxAdsrRow">
-        <div class="fx-adsr-item"><div style="display:flex;justify-content:space-between"><span class="fx-adsr-lbl">Attack</span><span class="fx-adsr-val" id="fxAdsrAttackVal">SF2</span></div><input type="range" class="fx-adsr-sl" id="fxAdsrAttack" min="0" max="1000" value="0"></div>
-        <div class="fx-adsr-item"><div style="display:flex;justify-content:space-between"><span class="fx-adsr-lbl">Sustain</span><span class="fx-adsr-val" id="fxAdsrSustainVal">SF2</span></div><input type="range" class="fx-adsr-sl" id="fxAdsrSustain" min="0" max="1000" value="1000"></div>
-        <div class="fx-adsr-item"><div style="display:flex;justify-content:space-between"><span class="fx-adsr-lbl">Release</span><span class="fx-adsr-val" id="fxAdsrReleaseVal">SF2</span></div><input type="range" class="fx-adsr-sl" id="fxAdsrRelease" min="0" max="1000" value="0"></div>
-      </div>
-    </div>
-  
-  <!-- Drawbar Panel -->
-  
-  <div class="panel" id="masterPanel">
-      <div class="ps" style="max-width:180px">
-        <label>Master-Lautstärke</label>
-        <input type="range" id="volSlider" min="0" max="100" value="75">
-      </div>
-      <div class="ps" style="max-width:160px">
-        <label>Oktave</label>
-        <div class="octave-ctrl">
-          <button class="oct-btn" id="octDown">−</button>
-          <div class="oct-disp" id="octDisp">4</div>
-          <button class="oct-btn" id="octUp">+</button>
-        </div>
-      </div>
-      <div class="ps" style="max-width:160px">
-        <label>Transpose</label>
-        <div class="octave-ctrl">
-          <button class="oct-btn" id="trGlobDown">−</button>
-          <div class="oct-disp" id="trGlobDisp">+0</div>
-          <button class="oct-btn" id="trGlobUp">+</button>
-        </div>
-      </div>
-      <div class="ps" style="max-width:100px">
-        <label>&nbsp;</label>
-        <button id="panicBtn" title="Alle Töne sofort stoppen (Leertaste)">■ PANIC</button>
-      </div>
-
-      <div class="ps" style="max-width:160px">
-        <label>Alle Layer Velocity</label>
-        <div style="display:flex;gap:4px">
-          <button id="globalVelSoftBtn" title="Alle Layer: Soft Velocity (50)" style="flex:1;padding:5px 0;background:#07070f;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:.7rem;font-family:'Share Tech Mono',monospace;font-weight:700;color:var(--dim);transition:all .15s">p</button>
-          <button id="globalVelHardBtn" title="Alle Layer: Hard Velocity (127)" style="flex:1;padding:5px 0;background:#07070f;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:.7rem;font-family:'Share Tech Mono',monospace;font-weight:700;color:var(--dim);transition:all .15s">ff</button>
-        </div>
-      </div>
-      <div class="ps" style="max-width:220px">
-        <label>Status</label>
-        <div class="status-bar"><div class="sdot" id="sdot"></div><span id="stext">Bereit</span></div>
-      </div>
-    </div>
-  
-  <!-- Metronome Panel -->
-    <div class="metro-panel" id="metroPanel" data-anc="ancMetro">
-      <div class="metro-header">
-        <div class="metro-title">♩ Metronom</div>
-        <div class="metro-controls">
-          <button class="metro-btn metro-start" id="metroStartBtn">▶ START</button>
-          <input type="range" class="metro-bpm-slider" id="metroBpmSlider" min="30" max="300" value="120">
-          <div class="metro-sep"></div>
-          <div class="metro-bpm-wrap">
-            <button class="metro-tap" id="metroTapBtn" title="Tap Tempo">TAP</button>
-            <button class="metro-nudge" id="metroBpmDown">−</button>
-            <div class="metro-bpm-display">
-              <div class="metro-bpm-val" id="metroBpmVal">120</div>
-              <div class="metro-bpm-lbl">BPM</div>
-            </div>
-            <button class="metro-nudge" id="metroBpmUp">+</button>
-          </div>
-          <div class="metro-sep"></div>
-          <div class="metro-sig-wrap">
-            <span class="metro-sig-lbl">Takt</span>
-            <select class="metro-sig-sel" id="metroSigSel">
-              <option value="2">2/4</option>
-              <option value="3">3/4</option>
-              <option value="4" selected>4/4</option>
-              <option value="6">6/8</option>
-              <option value="5">5/4</option>
-              <option value="7">7/8</option>
-            </select>
-          </div>
-          <div class="metro-sep"></div>
-          <div class="metro-vol-wrap">
-            <span class="metro-sig-lbl">Laut.</span>
-            <input type="range" class="metro-vol-slider" id="metroVolSlider" min="0" max="100" value="80">
-          </div>
-          <button class="metro-btn" id="metroMuteBtn" title="Ton stummschalten">🔊</button>
-        </div>
-      </div>
-      <div class="metro-beat-row" id="metroBeatRow"></div>
-    </div>
-  
-  <!-- Recorder Panel -->
-  <!-- Beat Sequencer -->
-    <div class="seq-panel" id="seqPanel">
-      <div class="seq-header">
-        <div class="seq-title">🥁 Beat Sequencer</div>
-        <div class="seq-header-controls">
-          <button class="seq-btn seq-start-btn" id="seqStartBtn">▶ START</button>
-          <button class="seq-btn" id="seqAddRowBtn" disabled>＋ Zeile</button>
-          <div class="seq-sep"></div>
-          <label class="seq-lbl">Steps</label>
-          <select class="seq-sel" id="seqStepsSel">
-            <option value="8">8</option>
-            <option value="16" selected>16</option>
-            <option value="32">32</option>
-          </select>
-          <label class="seq-lbl">Swing</label>
-          <input type="range" class="seq-swing-sl" id="seqSwingSl" min="0" max="100" value="0">
-          <span class="seq-swing-val" id="seqSwingVal">0%</span>
-          <div class="seq-sep"></div>
-          <label class="seq-lbl" title="BPM mit Metronom synchronisieren">
-            <input type="checkbox" id="seqSyncChk" checked> Sync
-          </label>
-          <button class="seq-btn seq-clear-all" id="seqClearAllBtn">✕ Alles</button>
-        </div>
-      </div>
-      <div class="seq-step-indicator" id="seqStepIndicator"></div>
-      <div class="seq-rows" id="seqRows">
-        <div class="seq-empty" id="seqEmpty">SF2 laden und „＋ Zeile" klicken</div>
-      </div>
-    </div>
-    <div class="rec-panel" id="recPanel" data-anc="ancRec">
-      <div class="rec-header">
-        <div class="rec-title">⏺ Aufnahme</div>
-        <div class="rec-controls">
-          <button class="rec-btn rec-record" id="recRecordBtn" title="Aufnahme starten/stoppen">⏺ REC</button>
-          <button class="rec-btn rec-overdub" id="recOverdubBtn" title="Overdub: neue Noten über bestehende aufnehmen" disabled>⊕ OVERDUB</button>
-          <button class="rec-btn rec-play"   id="recPlayBtn"   title="Abspielen" disabled>▶ PLAY</button>
-          <button class="rec-btn rec-stop"   id="recStopBtn"   title="Stoppen"   disabled>■ STOP</button>
-          <button class="rec-btn rec-loop"   id="recLoopBtn"   title="Loop">↻ LOOP</button>
-          <div class="rec-sep"></div>
-          <button class="rec-btn rec-save"   id="recSaveBtn"   title="Aufnahme als JSON speichern" disabled>💾 JSON</button>
-          <button class="rec-btn rec-midi"   id="recMidiBtn"   title="Als MIDI-Datei exportieren"  disabled>🎼 MIDI</button>
-          <button class="rec-btn" id="recWavBtn" title="Als WAV-Datei rendern und herunterladen" disabled style="color:#69ff47;border-color:#69ff4755">🔊 WAV</button>
-          <label class="rec-btn rec-load-lbl" title="Aufnahme laden">📂 JSON<input type="file" id="recLoadInput" accept=".json" style="display:none"></label>
-          <label class="rec-btn rec-load-lbl" title="MIDI-Datei laden" style="color:#9b7fe8;border-color:#9b7fe8">🎼 MIDI laden<input type="file" id="recMidiLoadInput" accept=".mid,.midi" style="display:none"></label>
-          <button class="rec-btn rec-clear"  id="recClearBtn"  title="Aufnahme löschen" disabled>✕ Löschen</button>
-        </div>
-      </div>
-      <div class="rec-status-row">
-        <div class="rec-indicator" id="recIndicator"></div>
-        <div class="rec-time"      id="recTime">0:00.0</div>
-        <div class="rec-info"      id="recInfo">Keine Aufnahme</div>
-        <div class="rec-progress-wrap"><div class="rec-progress-bar" id="recProgressBar" style="width:0%"></div></div>
-      </div>
-      <div class="rec-tracks" id="recTrackList"></div>
-    </div>
-  
-  <!-- Beat Sequencer -->
-  <!-- Looper Keyboard -->
-  <!-- Looper Zugriegel -->
-  <div class="drawbar-panel" id="drawbarPanel2">
-    <div class="drawbar-header" id="drawbarHeader2">
-      <span class="drawbar-title">🎛 Zugriegel</span>
-      <span class="drawbar-hint">Tippen zum Stumm/Laut schalten</span>
-      <button class="drawbar-toggle" id="drawbarToggle2">▾</button>
-    </div>
-    <div class="drawbar-body" id="drawbarBody2">
-      <div class="drawbar-row" id="drawbarRow2"></div>
-    </div>
-  </div>
-
-  <!-- Looper Keyboard -->
-  <div class="kb-wrap" id="kbWrap2">
-    <div class="kb-header">
-      <span>Klaviatur</span>
-      <div class="kb-nav">
-        <button class="kb-nav-btn" id="kbLeft2" title="Nach links">◀</button>
-        <button class="kb-nav-btn" id="kbRight2" title="Nach rechts">▶</button>
-        <button class="kb-nav-btn" id="kbFullscreen2" title="Manual-Modus: Klaviatur füllt Display" style="font-size:.65rem;width:auto;padding:0 8px;white-space:nowrap">⛶ Manual</button>
-        <button class="kb-drawer-toggle" id="kbDrawerToggleBtn" style="display:none" title="Zugriegel / Layer ein-/ausblenden">▲ Mehr</button>
-      </div>
-    </div>
-    <div style="display:flex;flex-direction:row;align-items:stretch;flex:1;min-height:0">
-      <div class="kb-scroll" id="kbScroll2" style="flex:1">
-        <div class="keyboard" id="keyboard2"></div>
-      </div>
-      <div id="pitchBendSidebar2" style="width:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-left:1px solid var(--border);padding:4px 2px;touch-action:none;user-select:none;background:var(--panel);flex-shrink:0">
-          <label id="pitchBendLabel2" style="cursor:pointer;letter-spacing:.06em;font-size:.48rem;color:var(--accent);text-transform:uppercase;writing-mode:horizontal-tb;text-align:center;line-height:1.2" title="Tippen: Ziel wechseln — PITCH · VEL · MOD · VOL">PITCH</label>
-          <div id="pitchBendTrack2" style="width:52px;flex:1;min-height:60px;background:var(--border);border-radius:13px;position:relative;cursor:ns-resize;border:1px solid var(--dim)">
-            <div id="pitchBendThumb2" style="position:absolute;left:50%;transform:translate(-50%,-50%);top:50%;width:36px;height:36px;background:var(--accent);border-radius:50%;box-shadow:var(--glow)"></div>
-            <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:var(--dim);pointer-events:none"></div>
-          </div>
-          <div id="pitchBendVal2" style="font-family:'Share Tech Mono',monospace;font-size:.48rem;color:var(--accent);text-align:center">0</div>
-        </div>
-    </div>
-    <!-- Ausklappbare Drawer-Leiste (nur im Manual/Landscape-Modus sichtbar) -->
-    <div class="kb-landscape-drawer" id="kbLandscapeDrawer">
-      <div class="kb-landscape-drawer-inner" id="kbLandscapeDrawerInner">
-        <!-- Zugriegel-Zeile wird hier hineingeklappt via JS -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Beat Sequencer -->
-  <!-- Trombone Panel -->
-  <div id="tboneWrap">
-  <div class="tbone-panel" id="tbonePanel">
-    <div class="tbone-header" id="tboneHeader">
-      <span class="tbone-title">🎺 Zugposaune</span>
-      <div class="tbone-header-controls">
-        <select class="tbone-layer-sel" id="tboneLayerSel" title="Layer für Posaune"></select>
-        <button class="tbone-gyro-btn" id="tboneGyroBtn" title="Gyroscope für Naturtonreihe">🔄 Gyro</button>
-        <button class="tbone-gyro-btn" id="tboneBuzzBtn" title="Lip Buzz — velocity-abhängige Lippenverzerrung">🎺 Buzz</button>
-        <button class="tbone-gyro-btn" id="tboneFullscreenBtn" title="Vollbild">⛶</button>
-
-        <button class="tbone-toggle" id="tboneToggle">▾</button>
-      </div>
-    </div>
-    <div class="tbone-body open" id="tboneBody">
-      <!-- hidden input kept so tboneGetHandleW() doesn't break -->
-      <input type="range" id="tboneHandleW" min="30" max="140" value="56" style="display:none">
-      <!-- Blow area removed — mega-blow below is the only blow zone -->
-      <!-- Full play area -->
-      
-
-<div class="tbone-full-area" id="tboneFullArea">
-  <!-- Scroll strips: touch here to scroll the page even when trombone is open -->
-  <div class="tbone-scroll-strip left"  id="tboneScrollL"></div>
-  <div class="tbone-scroll-strip right" id="tboneScrollR"></div>
-  <div class="tbone-base-unit">
-    <div class="tbone-pos-labels">
-      <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
-    </div>
-    <div class="tbone-base-brass-cover"></div>
-    <div class="tbone-inner-tubes"></div>
-    <div class="tbone-handle-col tbone-outer-slide" id="tboneHandleCol">
-      <div class="tbone-handle-new"></div>
-      <div class="tbone-u-pipe"></div>
-    </div>
-  </div>
-
-  <div class="tbone-inline-display">
-    <div class="tbone-note-display" id="tboneNoteDisplay">—</div>
-    <div class="tbone-partial-display" id="tbonePartialDisplay">—</div>
-  </div>
-</div><!-- /tboneFullArea -->
-</div><!-- /tboneBody -->
-</div><!-- /tbonePanel -->
-</div><!-- /tboneWrap -->
-
-  <!-- Mega blow area — fills landscape gap, invisible on portrait -->
-  <div class="tbone-mega-blow" id="tbone-megaBlow">
-    <div class="tbone-mega-blow-inner">💨 BLASEN</div>
-  </div>
-
-  <!-- Drum Pads -->
-  <div class="drum-panel" id="drumPanel">
-    <div class="drum-header" id="drumHeader">
-      <span class="drum-title">🥁 Drum Pads</span>
-      <div class="drum-header-controls">
-        <select class="drum-sf-sel" id="drumSfSel" title="SF2 für Drums"></select>
-        <button class="drum-toggle" id="drumToggle">▾</button>
-      </div>
-    </div>
-    <div class="drum-body" id="drumBody">
-      <div class="drum-grid" id="drumGrid"></div>
-    </div>
-  </div>
-
-  
-  <!-- PDF Panel -->
-    <div class="pdf-panel" id="pdfPanel">
-      <div class="pdf-header">
-        <div class="pdf-title">🎼 Noten (PDF)</div>
-        <div class="pdf-controls">
-          <span class="pdf-info" id="pdfInfo">Kein PDF geladen</span>
-          <button class="pdf-btn" id="pdfLoadBtn">📂 PDF laden</button>
-          <button class="pdf-btn" id="pdfFullBtn" disabled>⛶ Vollbild</button>
-          <button class="pdf-btn danger" id="pdfClearBtn" style="display:none">✕ Entfernen</button>
-          <input type="file" id="pdfInput" accept=".pdf" style="display:none">
-        </div>
-      </div>
-      <div class="pdf-drop-hint" id="pdfDropHint">PDF hierher ziehen oder „PDF laden" klicken</div>
-    </div>
-  
-  <!-- PDF Fullscreen Overlay -->
-    <div class="pdf-overlay" id="pdfOverlay">
-      <div class="pdf-overlay-bar">
-        <div class="pdf-overlay-title" id="pdfOverlayTitle">—</div>
-        <div class="pdf-overlay-nav">
-          <button class="pdf-nav-btn" id="pdfPrevBtn">◀</button>
-          <div class="pdf-page-display" id="pdfPageDisplay">— / —</div>
-          <button class="pdf-nav-btn" id="pdfNextBtn">▶</button>
-        </div>
-        <!-- NEU: Recorder-Buttons -->
-  <div class="pdf-rec-controls" style="display:flex; gap:6px; margin-left:auto; margin-right:auto">
-    <button class="pdf-rec-btn" id="pdfRecBtn" style="background:#07070f;border:1px solid var(--accent2);color:var(--accent2);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.7rem;font-family:'Share Tech Mono',monospace">⏺ REC</button>
-    <button class="pdf-rec-btn" id="pdfPlayBtn" style="background:#07070f;border:1px solid var(--accent);color:var(--accent);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.7rem;font-family:'Share Tech Mono',monospace" disabled>▶ PLAY</button>
-    <button class="pdf-rec-btn" id="pdfStopBtn" style="background:#07070f;border:1px solid var(--border);color:var(--dim);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.7rem;font-family:'Share Tech Mono',monospace" disabled>■ STOP</button>
-  </div>
-        <div class="pdf-zoom-ctrl">
-          <button class="pdf-nav-btn" id="pdfZoomOut">－</button>
-          <span style="font-family:'Orbitron',monospace;font-size:.6rem;color:var(--accent3);min-width:40px;text-align:center" id="pdfZoomLbl">100%</span>
-          <button class="pdf-nav-btn" id="pdfZoomIn">＋</button>
-          <button class="pdf-nav-btn" id="pdfZoomFit">⊡ Fit</button>
-        </div>
-        <button class="pdf-close-btn" id="pdfCloseBtn">✕ Schließen</button>
-      </div>
-      <div class="pdf-canvas-wrap" id="pdfCanvasWrap">
-        <canvas id="pdfCanvas"></canvas>
-      </div>
-    </div>
-
-  <!-- ══ Noten-Editor Panel ══ -->
-  <div class="score-panel panel" id="scorePanel">
-    <div class="score-header">
-      <span style="display: none;font-size:1.0rem;letter-spacing:.14em;color:var(--accent);text-transform:uppercase">🎵 Noten-Editor</span>
-      <button class="score-btn" onclick="scoreAddTrack()">+ Track</button>
-      <button class="score-btn" id="scoreKbInputBtn" onclick="scoreToggleKbInput()"
-        title="Klaviatur-Eingabe: Taste drücken = Note setzen + nächster Step">🎹 Eingabe</button>
-      <button class="score-btn" id="velToggleBtn" onclick="window.toggleVelSidebar()" title="Velocity-Slider ein/aus">🎚 VEL</button>
-      <button class="score-btn" id="velPaintBtn" onclick="window.toggleVelPaint()" title="Malen während Wiedergabe">✎ Malen: AUS</button>
-      <button class="score-btn" id="gateToggleBtn" onclick="window.toggleGateSidebar()" title="Gate-Werkzeug ein/aus">🎚 GATE</button>
-      <button class="score-btn active" id="scorePlayBtn"       onclick="scoreStartPlay(null,0)"   title="Alle Tracks von Anfang">▶ Alle</button>
-      <button class="score-btn"        id="scorePlayCursorBtn" onclick="scoreStartPlayCursor()"   title="Alle Tracks ab Cursor">▶ Ab ✦</button>
-      <button class="score-btn"        id="scoreStopBtn"       onclick="scoreStopPlay()"          title="Stop" style="display:none">■ Stop</button>
-      <button class="score-btn" onclick="scoreExportJSON()">⬇ JSON</button>
-      <button class="score-btn" onclick="scoreImportJSON()">⬆ JSON laden</button>
-      <input type="file" id="scoreImportInput" accept=".json" style="display:none">
-      <button class="score-btn" onclick="scoreOpenPrintPreview()" title="Druckvorschau: A4-Querformat mit einstellbaren Takten pro Zeile">🖨 Vorschau</button>
-      <button class="score-btn" onclick="scoreQuickPrint()" title="Baut die Druckvorschau im Hintergrund auf und druckt sofort — ohne manuell in die Vorschau wechseln zu müssen">🖨⚡ Drucken</button>
-            <div class="score-metro-ctrl">
-        <span class="score-metro-lbl">♩</span>
-        <button class="score-btn" id="scoreMetroDown" title="BPM −1">−</button>
-        <span class="score-metro-val" id="scoreMetroDisp">120</span>
-        <button class="score-btn" id="scoreMetroUp" title="BPM +1">+</button>
-            </div>
-    </div>
-
-    <!-- score-body: toolbar links | content rechts -->
-    <div class="score-body">
-      <div class="score-toolbar" id="scoreToolbar">
-  
-
-  <!-- Auswahl-Toolbar (kontextabhängig) -->
-  <div class="score-sel-toolbar" id="scoreSelToolbar" style="display:none">
-    <span id="scoreSelCount" style="font-size:.5rem;color:var(--accent);text-align:center">0</span>
-    <button class="score-ctrl-btn" id="scoreTieBtn" onclick="scoreToggleTie()" style="display:none">⌒</button>
-    <button class="score-ctrl-btn" id="scoreRangeBtn" onclick="scoreSelFillRange()" style="display:none">↔</button>
-    <button class="score-ctrl-btn" id="scoreBeamBtn" onclick="scoreSelToggleBeam()" style="display:none">🎵</button>
-        <button class="score-ctrl-btn" id="scoreCopyBtn" onclick="scoreSelCopy()" title="Auswahl in Zwischenablage kopieren">📋</button>
-    <button class="score-ctrl-btn" id="scorePasteBtn" onclick="scoreSelPaste()" title="Zwischenablage an der aktiven Stelle einfügen" disabled>📥</button>
-    <button class="score-ctrl-btn" onclick="scoreSelDelete()">🗑</button>
-    <button class="score-ctrl-btn score-sel-clear" onclick="scoreSelClearAll()">✕</button>
-    <button class="score-ctrl-btn" id="scoreTupletBtn" onclick="scoreSelMakeTuplet()" 
-        title="Auswahl zu N-tole zusammenfassen" style="display:none">÷n</button>
-    <button class="score-ctrl-btn" id="scoreExplodeBtn"
-        onclick="scoreSelExplodeTuplet()"
-        title="N-tole in einzelne Steps auflösen (behält Auswahl)"
-        style="display:none">✂</button>
-        <button class="score-ctrl-btn" id="scoreSelAddStepAfterBtn"
-        onclick="scoreSelInsertStepAfter()"
-        title="Einen Step nach der Auswahl einfügen"
-        style="display:none">+S▸</button>
-        <button class="score-ctrl-btn" id="scoreSelAddStepBeforeBtn"
-        onclick="scoreSelInsertStepBefore()"
-        title="Einen Step vor der Auswahl einfügen"
-        style="display:none">◂S+</button>
+  <!-- MITTLERER BEREICH (Arbeitsfläche) -->
+  <main id="app-main">
     
-  </div>
-
-  <div class="score-sep"></div>
-
-  <!-- Notenwert-Buttons -->
-  <span style="display: none;font-size:.5rem;color:var(--dim);text-align:center">Wert</span>
-  <div class="score-noteval-row" id="scoreNoteValBtns"></div>
-
-    <!-- Pause, Punkt — nebeneinander in einer Zeile -->
-  <div class="score-pp-row">
-    <label><input type="checkbox" id="scoreToolRest"> P</label>
-    <label><input type="checkbox" id="scoreToolDot"> .</label>
-  </div>
-  <button id="tupletTestBtn" style="display: none;background:#ff4060;color:#fff;padding:6px;margin-top:8px;font-size:.6rem;border-radius:4px;border:none;cursor:pointer">
-  🧪 Tuplet-Test
-  </button>
-
-  <!-- Tonart -->
-  <span style="font-size:1.0rem;color:var(--dim);text-align:center">Tonart</span>
-  <select id="scoreToolKey">…</select>
-
-  <!-- Tonhöhe (Selektion) -->
-  <span style="font-size:1.0rem;color:var(--dim);text-align:center">Pitch</span>
-  <select style="height: 40px;" id="scoreSelPitch"><option value="">—</option></select>
-
-  <!-- Vorzeichen -->
-  <span style="font-size:1.0rem;color:var(--dim);text-align:center">Acc</span>
-  <span id="scoreSelAccBtns" style="display:none;gap:2px;flex-wrap:wrap;justify-content:center;"></span>
-  <button class="score-ctrl-btn" id="scoreSelAddChordBtn" onclick="scoreSelAddChordNote()" style="display:none">+ Akkord</button>
-      </div>
-      <div class="gate-sidebar" id="gateSidebar" style="display:none">
-  <div class="gate-label">GATE</div>
-  <div class="gate-btn-col" id="gateBtnCol">
-    <!-- wird von JS aufgebaut -->
-  </div>
-  <div class="gate-value" id="gateValue">—</div>
-      </div>
-            <div class="vel-sidebar" id="velSidebar" style="display:none">
-        <div class="vel-label">VEL</div>
-        <div class="vel-track" id="velTrack">
-          <div class="vel-thumb" id="velThumb"></div>
+    <!-- VIEW 1: SETUP & JAM -->
+    <div id="view-setup" class="app-view active">
+      
+      <!-- Settings Panel -->
+      <div class="settings-panel" id="settingsPanel" style="display:none">
+        <div class="settings-title">⚙ Erscheinungsbild</div>
+        <div class="settings-body">
+          <div class="settings-section-lbl">Themes</div>
+          <div class="settings-themes" id="settingsThemes"></div>
+          <div class="settings-section-lbl">Farben</div>
+          <div class="settings-colors" id="settingsColors"></div>
+          <div class="settings-section-lbl">Textgröße</div>
+          <div class="settings-sizes" id="settingsSizes"></div>
+          <div class="settings-section-lbl">Labels &amp; Lesbarkeit</div>
+          <div class="settings-sizes" id="settingsLabels"></div>
+          <div class="settings-footer">
+            <button class="settings-reset-btn" id="debugToggleBtn" style="margin-right:auto">🐛 Debug: AUS</button>
+            <button class="settings-reset-btn" id="settingsResetBtn">↺ Zurücksetzen</button>
+          </div>
         </div>
-        <div class="vel-value" id="velValue">90</div>
-            </div>
-            <div class="score-content-wrap">
-        <div class="score-scroll-area">
-          <div class="score-paper-scale-wrap">
-            <div id="scorePaper">
-              <div id="scoreTracksContainer"></div>
+      </div>
+
+      <!-- SF2 Loader -->
+      <div class="sf-loader-panel" id="ancSF2">
+        <div class="sf-loader-header">
+          <div class="sf-loader-title">🗂 Soundfonts</div>
+          <div class="mem-display" id="memDisplay" style="display:none"></div>
+          <button class="sf-add-btn" id="sfAddBtn">＋ SF2 laden</button>
+          <input type="file" id="fileInput" accept=".sf2" multiple style="display:none">
+        </div>
+        <div class="sf-list" id="sfList">
+          <div class="sf-empty" id="sfEmpty">Noch kein Soundfont geladen — „＋ SF2 laden" klicken oder Datei hierher ziehen</div>
+        </div>
+      </div>
+      
+      <div class="progress-wrap" id="progressWrap">
+        <div class="prog-label" id="progLabel">Parsing…</div>
+        <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+      </div>
+      
+      <!-- Session -->
+      <div class="session-panel" id="sessionPanel">
+        <div class="session-title">💾 Session</div>
+        <div class="session-controls">
+          <button class="session-btn" id="sessionSaveBtn">💾 Speichern</button>
+          <label  class="session-btn session-load-lbl">📂 Laden<input type="file" id="sessionLoadInput" accept=".json" style="display:none"></label>
+          <span class="session-info" id="sessionInfo">Layer-Konfiguration, Effekte &amp; Metronom werden gespeichert</span>
+        </div>
+      </div>
+
+      <!-- MIDI Panel -->
+      <div class="midi-panel" id="midiPanel">
+        <div class="midi-section-label">🎹 MIDI Input</div>
+        <button class="midi-connect-btn" id="midiConnectBtn">Zugriff anfragen</button>
+        <div class="midi-device-list" id="midiDeviceList">
+          <div class="midi-badge" id="midiStatusBadge"><div class="mdot"></div><span id="midiStatusText">Nicht verbunden</span></div>
+        </div>
+        <div class="pitch-section" id="pitchSection" style="display:none">
+          Pitch
+          <div class="pitchbar-wrap"><div class="pitchcenter"></div><div class="pitchbar" id="pitchBar"></div></div>
+        </div>
+        <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <button id="blockPCBtn" style="background:#07070f;border:1px solid var(--border);border-radius:7px;color:var(--dim);font-size:.65rem;font-family:'Share Tech Mono',monospace;padding:5px 10px;cursor:pointer;transition:all .15s">🚫 Program Change: AN</button>
+        </div>
+      </div>
+
+      <!-- Jam Panel -->
+      <div class="jam-panel" id="jamPanel">
+        <div class="jam-header">
+          <span class="jam-title">🌐 Live Jam</span>
+          <div class="jam-status-wrap">
+            <div class="jam-dot" id="jamDot"></div>
+            <span class="jam-status-txt" id="jamStatusTxt">Nicht verbunden</span>
+            <span class="jam-ping" id="jamPing"></span>
+          </div>
+        </div>
+        <div class="jam-connect-row" id="jamConnectRow">
+          <input class="jam-input" id="jamName" placeholder="Dein Name" maxlength="24">
+          <input class="jam-input" id="jamServer" placeholder="wss://XXXXX.lhr.life  oder  ws://192.168.X.X:8765" value="wss://">
+          <button class="jam-btn jam-btn-connect" id="jamConnectBtn">🔌 Verbinden</button>
+        </div>
+        <div class="jam-live" id="jamLive" style="display:none">
+          <div class="jam-own-audio" id="jamOwnAudio">
+            <span class="jam-own-audio-title">🎙 Mein Mikrofon</span>
+            <select class="jam-input" id="jamAudioMode" style="flex:0 0 auto;width:auto;padding:4px 8px;font-size:.65rem">
+              <option value="voice">🎤 Gesang/Headset</option>
+              <option value="instrument">🎸 Instrument/Line-In</option>
+            </select>
+            <button class="jam-mic-btn" id="jamMicBtn" title="Mikrofon einschalten">🎙</button>
+            <div class="jam-vu-wrap"><div class="jam-vu-bar" id="jamVuBar"></div></div>
+            <button class="jam-mic-btn" id="jamMicMuteBtn" disabled title="Mikrofon stummschalten">🔇</button>
+          </div>
+          <div class="jam-mixer">
+            <div class="jam-mixer-title">🎛 Mitspieler-Mixer</div>
+            <div id="jamMixer"></div>
+          </div>
+          <div class="jam-chat-wrap">
+            <div class="jam-chat-log" id="jamChatLog"></div>
+            <div class="jam-chat-input-row">
+              <input class="jam-input jam-chat-input" id="jamChatInput" placeholder="Nachricht…" maxlength="200">
+              <button class="jam-btn" id="jamChatSendBtn">➤</button>
+              <button class="jam-btn jam-btn-disconnect" id="jamDisconnectBtn">✕ Trennen</button>
             </div>
           </div>
         </div>
-        <div class="score-piano-wrap" id="scorePianoWrap">
-          <div class="score-piano-header">
-            <span class="score-piano-lbl">🎹 Noten-Eingabe</span>
-            <button class="score-btn" id="scorePianoOctDown" style="width:26px;padding:2px 0;text-align:center">−</button>
-            <span class="score-piano-oct" id="scorePianoOctDisp">4</span>
-            <button class="score-btn" id="scorePianoOctUp" style="width:26px;padding:2px 0;text-align:center">+</button>
-            <span class="score-piano-info" id="scorePianoInfo">Klaviatur-Eingabe aktivieren</span>
-          </div>
-          <div class="kb-scroll" style="width:100%;overflow-x:auto">
-            <div class="keyboard" id="scoreKb" style="position:relative;height:130px"></div>
+      </div>
+
+      <div class="info-box">
+        <b>Tipp:</b> Lade eine lokale <b>.sf2-Datei</b> – alles läuft im Browser, nichts wird hochgeladen.<br>
+        Kostenlose SF2: <b>FluidR3_GM</b>, <b>GeneralUser GS</b>
+      </div>
+    </div>
+
+    <!-- VIEW 2: SPIELEN (Klaviaturen, Posaune, Drums) -->
+    <div id="view-play" class="app-view">
+      
+      <!-- Klaviatur 1 -->
+      <div class="kb-wrap" id="ancKeys">
+        <div class="kb-header">
+          <span>Klaviatur</span>
+          <div class="kb-nav">
+            <button class="kb-nav-btn" id="kbLeft" title="Nach links">◀</button>
+            <button class="kb-nav-btn" id="kbRight" title="Nach rechts">▶</button>
           </div>
         </div>
+        <div style="display:flex;flex-direction:row;align-items:flex-start">
+          <div class="kb-scroll" id="kbScroll" style="flex:1">
+            <div class="keyboard" id="keyboard"></div>
+          </div>
+          <div id="pitchBendSidebar" style="width:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-left:1px solid var(--border);padding:4px 2px;touch-action:none;user-select:none;background:var(--panel);flex-shrink:0">
+              <label id="pitchBendLabel" style="cursor:pointer;letter-spacing:.06em;font-size:.48rem;color:var(--accent);text-transform:uppercase;writing-mode:horizontal-tb;text-align:center;line-height:1.2">PITCH</label>
+              <div id="pitchBendTrack" style="width:52px;flex:1;min-height:60px;background:var(--border);border-radius:13px;position:relative;cursor:ns-resize;border:1px solid var(--dim)">
+                <div id="pitchBendThumb" style="position:absolute;left:50%;transform:translate(-50%,-50%);top:50%;width:36px;height:36px;background:var(--accent);border-radius:50%;box-shadow:var(--glow)"></div>
+                <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:var(--dim);pointer-events:none"></div>
+              </div>
+              <div id="pitchBendVal" style="font-family:'Share Tech Mono',monospace;font-size:.48rem;color:var(--accent);text-align:center">0</div>
             </div>
-    </div>
-  </div>
-
-  <!-- ══ Druckvorschau-Overlay ══ -->
-  <div id="scorePrintOverlay" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.85);overflow-y:auto;padding:16px">
-    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:#0d1220;border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:14px;position:sticky;top:0;z-index:10">
-      <button class="score-btn" onclick="scoreClosePrintPreview()">✕ Schließen</button>
-      <button class="score-btn" onclick="scorePrintNow()">🖨 Drucken</button>
-      <span style="font-size:.55rem;color:var(--dim);max-width:200px">Falls der Button nicht sauber druckt: über das Browser-Menü (Teilen/Drucken) direkt auf dieser Vorschau drucken — funktioniert zuverlässig.</span>
-      <button class="score-btn" onclick="scoreExportPagesAsImages()" title="Umgeht die fehleranfällige Android-Druckpipeline: jede Seite wird als Bild gespeichert, das sich zuverlässig über die normale Foto-/Galerie-App zu PDF drucken lässt">🖼 Als Bild speichern</button>
-      <span style="font-size:.6rem;color:var(--dim)">Seitenformat</span>
-      <select id="scorePrintFormatSel" onchange="scorePrintSetFormat(this.value)">
-        <option value="a4-landscape">A4 Querformat</option>
-        <option value="a4-portrait">A4 Hochformat</option>
-        <option value="letter-landscape">Letter Querformat</option>
-        <option value="letter-portrait">Letter Hochformat</option>
-      </select>
-      <span style="font-size:.6rem;color:var(--dim)">Takte/Zeile (global)</span>
-      <button class="score-btn" style="width:26px;padding:2px 0" onclick="scorePrintSetGlobalBars(-1)">−</button>
-      <span id="scorePrintGlobalBarsDisp" style="min-width:16px;text-align:center;font-family:'Share Tech Mono',monospace"></span>
-      <button class="score-btn" style="width:26px;padding:2px 0" onclick="scorePrintSetGlobalBars(1)">+</button>
-      <span style="font-size:.55rem;color:var(--dim);max-width:220px">Alle Tracks bilden ein gemeinsames System (wie Klavier-/Orchesterpartitur) — Takte/Zeile gilt deshalb für alle zusammen.</span>
-      <div id="scorePrintGroupsWrap" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;width:100%;border-top:1px solid var(--border);padding-top:8px;margin-top:4px"></div>
-    </div>
-    <div id="scorePrintPages"></div>
-  </div>
-
-
-
-  <!-- ══ Live Jam Panel — Ensemble Edition ══ -->
-  <div class="jam-panel" id="jamPanel">
-    <div class="jam-header">
-      <span class="jam-title">🌐 Live Jam</span>
-      <div class="jam-status-wrap">
-        <div class="jam-dot" id="jamDot"></div>
-        <span class="jam-status-txt" id="jamStatusTxt">Nicht verbunden</span>
-        <span class="jam-ping" id="jamPing"></span>
-      </div>
-    </div>
-
-    <div class="jam-connect-row" id="jamConnectRow">
-      <input class="jam-input" id="jamName"   placeholder="Dein Name" maxlength="24">
-      <input class="jam-input" id="jamServer" placeholder="wss://XXXXX.lhr.life  oder  ws://192.168.X.X:8765" value="wss://">
-      <button class="jam-btn jam-btn-connect" id="jamConnectBtn">🔌 Verbinden</button>
-    </div>
-    <div style="font-size:.58rem;color:var(--dim);font-family:'Share Tech Mono',monospace;line-height:1.6">
-      🌍 Internet: <code style="color:var(--accent)">ssh -R 80:localhost:8765 <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e58b8a8e809ca5898a8684898d8a9691cb97908b">[email&#160;protected]</a></code>
-      → gibt <code style="color:#69ff47">wss://XXXXX.lhr.life</code> aus
-    </div>
-
-    <div class="jam-live" id="jamLive" style="display:none">
-      <!-- Own microphone controls -->
-      <div class="jam-own-audio" id="jamOwnAudio">
-        <span class="jam-own-audio-title">🎙 Mein Mikrofon</span>
-        <select class="jam-input" id="jamAudioMode" style="flex:0 0 auto;width:auto;padding:4px 8px;font-size:.65rem">
-          <option value="voice">🎤 Gesang/Headset</option>
-          <option value="instrument">🎸 Instrument/Line-In</option>
-        </select>
-        <button class="jam-mic-btn" id="jamMicBtn" title="Mikrofon einschalten">🎙</button>
-        <div class="jam-vu-wrap"><div class="jam-vu-bar" id="jamVuBar"></div></div>
-        <button class="jam-mic-btn" id="jamMicMuteBtn" disabled title="Mikrofon stummschalten">🔇</button>
+        </div>
       </div>
 
-      <!-- Mixer: one row per remote player -->
-      <div class="jam-mixer">
-        <div class="jam-mixer-title">🎛 Mitspieler-Mixer</div>
-        <div id="jamMixer"></div>
+      <!-- Klaviatur 2 -->
+      <div class="kb-wrap" id="kbWrap2">
+        <div class="kb-header">
+          <span>Klaviatur 2</span>
+          <div class="kb-nav">
+            <button class="kb-nav-btn" id="kbLeft2" title="Nach links">◀</button>
+            <button class="kb-nav-btn" id="kbRight2" title="Nach rechts">▶</button>
+            <button class="kb-nav-btn" id="kbFullscreen2" title="Manual-Modus: Klaviatur füllt Display" style="font-size:.65rem;width:auto;padding:0 8px;white-space:nowrap">⛶ Manual</button>
+            <button class="kb-drawer-toggle" id="kbDrawerToggleBtn" style="display:none" title="Zugriegel / Layer ein-/ausblenden">▲ Mehr</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:row;align-items:stretch;flex:1;min-height:0">
+          <div class="kb-scroll" id="kbScroll2" style="flex:1">
+            <div class="keyboard" id="keyboard2"></div>
+          </div>
+          <div id="pitchBendSidebar2" style="width:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-left:1px solid var(--border);padding:4px 2px;touch-action:none;user-select:none;background:var(--panel);flex-shrink:0">
+              <label id="pitchBendLabel2" style="cursor:pointer;letter-spacing:.06em;font-size:.48rem;color:var(--accent);text-transform:uppercase;writing-mode:horizontal-tb;text-align:center;line-height:1.2">PITCH</label>
+              <div id="pitchBendTrack2" style="width:52px;flex:1;min-height:60px;background:var(--border);border-radius:13px;position:relative;cursor:ns-resize;border:1px solid var(--dim)">
+                <div id="pitchBendThumb2" style="position:absolute;left:50%;transform:translate(-50%,-50%);top:50%;width:36px;height:36px;background:var(--accent);border-radius:50%;box-shadow:var(--glow)"></div>
+                <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:var(--dim);pointer-events:none"></div>
+              </div>
+              <div id="pitchBendVal2" style="font-family:'Share Tech Mono',monospace;font-size:.48rem;color:var(--accent);text-align:center">0</div>
+            </div>
+        </div>
+        <div class="kb-landscape-drawer" id="kbLandscapeDrawer">
+          <div class="kb-landscape-drawer-inner" id="kbLandscapeDrawerInner"></div>
+        </div>
       </div>
-      <!-- Chat -->
-      <div class="jam-chat-wrap">
-        <div class="jam-chat-log" id="jamChatLog"></div>
-        <div class="jam-chat-input-row">
-          <input class="jam-input jam-chat-input" id="jamChatInput" placeholder="Nachricht…" maxlength="200">
-          <button class="jam-btn" id="jamChatSendBtn">➤</button>
-          <button class="jam-btn jam-btn-disconnect" id="jamDisconnectBtn">✕ Trennen</button>
+
+      <!-- Chords -->
+      <div class="chord-panel" id="chordPanel">
+        <div class="chord-header" id="chordHeader">
+          <span class="chord-title">🎼 Akkorde</span>
+          <span class="chord-hint" id="chordHint">Tippen zum Anzeigen</span>
+          <button class="chord-toggle" id="chordToggle">▾</button>
+        </div>
+        <div class="chord-body" id="chordBody">
+          <div class="chord-root-row" id="chordRootRow"></div>
+          <div class="chord-type-row" id="chordTypeRow"></div>
+          <div style="display:flex;justify-content:flex-end">
+            <button class="chord-sel-btn" id="chordClearBtn" style="color:#ff4060;border-color:#ff406055">✕ Auswahl löschen</button>
+          </div>
+          <div class="chord-display" id="chordDisplay"></div>
+          <div class="arp-panel" id="arpPanel">
+            <div class="arp-row">
+              <span class="arp-lbl">Richtung</span>
+              <button class="arp-btn active" id="arpDirUp">↑ Auf</button>
+              <button class="arp-btn" id="arpDirDown">↓ Ab</button>
+              <button class="arp-btn" id="arpDirUpDown">↑↓ Auf/Ab</button>
+              <span class="arp-lbl" style="margin-left:6px">Wert</span>
+              <button class="arp-btn active" id="arpVal8">♪ 8tel</button>
+              <button class="arp-btn" id="arpVal16">♬ 16tel</button>
+              <button class="arp-btn" id="arpVal8t">♪³ 8tel-Triole</button>
+              <button class="arp-btn" id="arpVal16t">♬³ 16tel-Triole</button>
+            </div>
+            <div class="arp-row">
+              <span class="arp-lbl">Töne</span>
+              <button class="arp-btn" id="arpN3">3</button>
+              <button class="arp-btn active" id="arpN4">4</button>
+              <button class="arp-btn" id="arpN5">5</button>
+              <button class="arp-btn" id="arpN6">6</button>
+              <button class="arp-btn" id="arpN7">7</button>
+              <button class="arp-btn" id="arpN8">8</button>
+              <span class="arp-lbl" style="margin-left:6px">Grundton</span>
+              <div id="arpRootBtns" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+              <button class="arp-btn" id="arpOctDown" style="width:28px;padding:4px 0;text-align:center">−</button>
+              <div id="arpOctDisp" style="font-family:'Orbitron',monospace;font-size:.85rem;color:var(--accent3);min-width:28px;text-align:center">+0</div>
+              <button class="arp-btn" id="arpOctUp" style="width:28px;padding:4px 0;text-align:center">+</button>
+            </div>
+            <div class="arp-row">
+              <span class="arp-lbl">BPM</span>
+              <button class="arp-btn" id="arpBpmDown" style="width:28px;padding:4px 0;text-align:center">−</button>
+              <div id="arpBpmDisplay" style="font-family:'Orbitron',monospace;font-size:.95rem;color:var(--accent3);min-width:36px;text-align:center;line-height:1">120</div>
+              <button class="arp-btn" id="arpBpmUp" style="width:28px;padding:4px 0;text-align:center">+</button>
+              <span class="arp-lbl" style="margin-left:6px">Vel</span>
+              <input type="range" id="arpVelSl" min="20" max="127" value="90" style="-webkit-appearance:none;height:4px;width:65px;accent-color:var(--accent3);border-radius:2px;cursor:pointer">
+              <span id="arpVelVal" style="font-size:.6rem;font-family:'Share Tech Mono',monospace;color:var(--accent3);min-width:24px">90</span>
+              <div class="arp-dots" id="arpDots"></div>
+              <button class="arp-play-btn" id="arpPlayBtn" style="margin-left:auto">▶ Arpeggio</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Drawbars -->
+      <div class="drawbar-panel" id="drawbarPanel">
+        <div class="drawbar-header" id="drawbarHeader">
+          <span class="drawbar-title">🎛 Zugriegel 1</span>
+          <span class="drawbar-hint" id="drawbarHint">Tippen zum Stumm/Laut schalten</span>
+          <button class="drawbar-toggle" id="drawbarToggle">▾</button>
+        </div>
+        <div class="drawbar-body" id="drawbarBody">
+          <div class="drawbar-row" id="drawbarRow"></div>
+        </div>
+      </div>
+      <div class="drawbar-panel" id="drawbarPanel2">
+        <div class="drawbar-header" id="drawbarHeader2">
+          <span class="drawbar-title">🎛 Zugriegel 2</span>
+          <span class="drawbar-hint">Tippen zum Stumm/Laut schalten</span>
+          <button class="drawbar-toggle" id="drawbarToggle2">▾</button>
+        </div>
+        <div class="drawbar-body" id="drawbarBody2">
+          <div class="drawbar-row" id="drawbarRow2"></div>
+        </div>
+      </div>
+
+      <!-- Trombone -->
+      <div id="tboneWrap">
+        <div class="tbone-panel" id="tbonePanel">
+          <div class="tbone-header" id="tboneHeader">
+            <span class="tbone-title">🎺 Zugposaune</span>
+            <div class="tbone-header-controls">
+              <select class="tbone-layer-sel" id="tboneLayerSel" title="Layer für Posaune"></select>
+              <button class="tbone-gyro-btn" id="tboneGyroBtn" title="Gyroscope für Naturtonreihe">🔄 Gyro</button>
+              <button class="tbone-gyro-btn" id="tboneBuzzBtn" title="Lip Buzz">🎺 Buzz</button>
+              <button class="tbone-gyro-btn" id="tboneFullscreenBtn" title="Vollbild">⛶</button>
+              <button class="tbone-toggle" id="tboneToggle" style="display:none">▾</button>
+            </div>
+          </div>
+          <div class="tbone-body open" id="tboneBody">
+            <input type="range" id="tboneHandleW" min="30" max="140" value="56" style="display:none">
+            <div class="tbone-full-area" id="tboneFullArea">
+              <div class="tbone-scroll-strip left"  id="tboneScrollL"></div>
+              <div class="tbone-scroll-strip right" id="tboneScrollR"></div>
+              <div class="tbone-base-unit">
+                <div class="tbone-pos-labels"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span></div>
+                <div class="tbone-base-brass-cover"></div>
+                <div class="tbone-inner-tubes"></div>
+                <div class="tbone-handle-col tbone-outer-slide" id="tboneHandleCol">
+                  <div class="tbone-handle-new"></div>
+                  <div class="tbone-u-pipe"></div>
+                </div>
+              </div>
+              <div class="tbone-inline-display">
+                <div class="tbone-note-display" id="tboneNoteDisplay">—</div>
+                <div class="tbone-partial-display" id="tbonePartialDisplay">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tbone-mega-blow" id="tbone-megaBlow">
+        <div class="tbone-mega-blow-inner">💨 BLASEN</div>
+      </div>
+
+      <!-- Drums -->
+      <div class="drum-panel" id="drumPanel">
+        <div class="drum-header" id="drumHeader">
+          <span class="drum-title">🥁 Drum Pads</span>
+          <div class="drum-header-controls">
+            <select class="drum-sf-sel" id="drumSfSel" title="SF2 für Drums"></select>
+            <button class="drum-toggle" id="drumToggle">▾</button>
+          </div>
+        </div>
+        <div class="drum-body" id="drumBody">
+          <div class="drum-grid" id="drumGrid"></div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="info-box">
-    <b>Tipp:</b> Lade eine lokale <b>.sf2-Datei</b> – alles läuft im Browser, nichts wird hochgeladen.<br>
-    Kostenlose SF2: <b>FluidR3_GM</b>, <b>GeneralUser GS</b> (Google: "free sf2 soundfont download")
+    <!-- VIEW 3: SEQUENZER & AUFNAHME -->
+    <div id="view-seq" class="app-view">
+      <!-- Metronom -->
+      <div class="metro-panel" id="metroPanel" data-anc="ancMetro">
+        <div class="metro-header">
+          <div class="metro-title">♩ Metronom</div>
+          <div class="metro-controls">
+            <button class="metro-btn metro-start" id="metroStartBtn">▶ START</button>
+            <input type="range" class="metro-bpm-slider" id="metroBpmSlider" min="30" max="300" value="120">
+            <div class="metro-sep"></div>
+            <div class="metro-bpm-wrap">
+              <button class="metro-tap" id="metroTapBtn" title="Tap Tempo">TAP</button>
+              <button class="metro-nudge" id="metroBpmDown">−</button>
+              <div class="metro-bpm-display">
+                <div class="metro-bpm-val" id="metroBpmVal">120</div>
+                <div class="metro-bpm-lbl">BPM</div>
+              </div>
+              <button class="metro-nudge" id="metroBpmUp">+</button>
+            </div>
+            <div class="metro-sep"></div>
+            <div class="metro-sig-wrap">
+              <span class="metro-sig-lbl">Takt</span>
+              <select class="metro-sig-sel" id="metroSigSel">
+                <option value="2">2/4</option>
+                <option value="3">3/4</option>
+                <option value="4" selected>4/4</option>
+                <option value="6">6/8</option>
+                <option value="5">5/4</option>
+                <option value="7">7/8</option>
+              </select>
+            </div>
+            <div class="metro-sep"></div>
+            <div class="metro-vol-wrap">
+              <span class="metro-sig-lbl">Laut.</span>
+              <input type="range" class="metro-vol-slider" id="metroVolSlider" min="0" max="100" value="80">
+            </div>
+            <button class="metro-btn" id="metroMuteBtn" title="Ton stummschalten">🔊</button>
+          </div>
+        </div>
+        <div class="metro-beat-row" id="metroBeatRow"></div>
+      </div>
+
+      <!-- Sequencer -->
+      <div class="seq-panel" id="seqPanel">
+        <div class="seq-header">
+          <div class="seq-title">🥁 Beat Sequencer</div>
+          <div class="seq-header-controls">
+            <button class="seq-btn seq-start-btn" id="seqStartBtn">▶ START</button>
+            <button class="seq-btn" id="seqAddRowBtn" disabled>＋ Zeile</button>
+            <div class="seq-sep"></div>
+            <label class="seq-lbl">Steps</label>
+            <select class="seq-sel" id="seqStepsSel">
+              <option value="8">8</option>
+              <option value="16" selected>16</option>
+              <option value="32">32</option>
+            </select>
+            <label class="seq-lbl">Swing</label>
+            <input type="range" class="seq-swing-sl" id="seqSwingSl" min="0" max="100" value="0">
+            <span class="seq-swing-val" id="seqSwingVal">0%</span>
+            <div class="seq-sep"></div>
+            <label class="seq-lbl" title="BPM mit Metronom synchronisieren">
+              <input type="checkbox" id="seqSyncChk" checked> Sync
+            </label>
+            <button class="seq-btn seq-clear-all" id="seqClearAllBtn">✕ Alles</button>
+          </div>
+        </div>
+        <div class="seq-step-indicator" id="seqStepIndicator"></div>
+        <div class="seq-rows" id="seqRows">
+          <div class="seq-empty" id="seqEmpty">SF2 laden und „＋ Zeile" klicken</div>
+        </div>
+      </div>
+
+      <!-- Recorder -->
+      <div class="rec-panel" id="recPanel" data-anc="ancRec">
+        <div class="rec-header">
+          <div class="rec-title">⏺ Aufnahme</div>
+          <div class="rec-controls">
+            <button class="rec-btn rec-record" id="recRecordBtn" title="Aufnahme starten/stoppen">⏺ REC</button>
+            <button class="rec-btn rec-overdub" id="recOverdubBtn" title="Overdub" disabled>⊕ OVERDUB</button>
+            <button class="rec-btn rec-play"   id="recPlayBtn"   title="Abspielen" disabled>▶ PLAY</button>
+            <button class="rec-btn rec-stop"   id="recStopBtn"   title="Stoppen"   disabled>■ STOP</button>
+            <button class="rec-btn rec-loop"   id="recLoopBtn"   title="Loop">↻ LOOP</button>
+            <div class="rec-sep"></div>
+            <button class="rec-btn rec-save"   id="recSaveBtn"   title="Aufnahme als JSON speichern" disabled>💾 JSON</button>
+            <button class="rec-btn rec-midi"   id="recMidiBtn"   title="Als MIDI-Datei exportieren"  disabled>🎼 MIDI</button>
+            <button class="rec-btn" id="recWavBtn" title="Als WAV-Datei rendern" disabled style="color:#69ff47;border-color:#69ff4755">🔊 WAV</button>
+            <label class="rec-btn rec-load-lbl" title="Aufnahme laden">📂 JSON<input type="file" id="recLoadInput" accept=".json" style="display:none"></label>
+            <label class="rec-btn rec-load-lbl" title="MIDI-Datei laden" style="color:#9b7fe8;border-color:#9b7fe8">🎼 MIDI laden<input type="file" id="recMidiLoadInput" accept=".mid,.midi" style="display:none"></label>
+            <button class="rec-btn rec-clear"  id="recClearBtn"  title="Aufnahme löschen" disabled>✕ Löschen</button>
+          </div>
+        </div>
+        <div class="rec-status-row">
+          <div class="rec-indicator" id="recIndicator"></div>
+          <div class="rec-time"      id="recTime">0:00.0</div>
+          <div class="rec-info"      id="recInfo">Keine Aufnahme</div>
+          <div class="rec-progress-wrap"><div class="rec-progress-bar" id="recProgressBar" style="width:0%"></div></div>
+        </div>
+        <div class="rec-tracks" id="recTrackList"></div>
+      </div>
+    </div>
+
+    <!-- VIEW 4: EFFEKTE & MASTER -->
+    <div id="view-fx" class="app-view">
+      
+      <!-- FX -->
+      <div class="fx-panel" id="ancFX">
+        <div class="fx-title-row">
+          <div class="fx-title">🎛 Effekte &amp; EQ</div>
+          <button class="fx-lock-btn" id="fxLockBtn" title="Slider sperren">🔓</button>
+        </div>
+        <div class="fx-slider-row" id="fxSliders"></div>
+        <div class="fx-divider"></div>
+        <div class="fx-row" id="fxToggles"></div>
+        <div class="fx-divider"></div>
+        <div class="fx-row" style="flex-wrap:wrap;gap:6px;align-items:center">
+          <span style="font-size:.55rem;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;flex-shrink:0">🎬 Cinematic:</span>
+          <div id="fxCinematicBtns" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+        <div class="fx-divider"></div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:.55rem;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;flex-shrink:0">🎵 Globale Hüllkurve</span>
+          <button class="fx-adsr-reset" id="fxAdsrResetBtn">↺ Zurücksetzen</button>
+        </div>
+        <div class="fx-adsr-row" id="fxAdsrRow">
+          <div class="fx-adsr-item"><div style="display:flex;justify-content:space-between"><span class="fx-adsr-lbl">Attack</span><span class="fx-adsr-val" id="fxAdsrAttackVal">SF2</span></div><input type="range" class="fx-adsr-sl" id="fxAdsrAttack" min="0" max="1000" value="0"></div>
+          <div class="fx-adsr-item"><div style="display:flex;justify-content:space-between"><span class="fx-adsr-lbl">Sustain</span><span class="fx-adsr-val" id="fxAdsrSustainVal">SF2</span></div><input type="range" class="fx-adsr-sl" id="fxAdsrSustain" min="0" max="1000" value="1000"></div>
+          <div class="fx-adsr-item"><div style="display:flex;justify-content:space-between"><span class="fx-adsr-lbl">Release</span><span class="fx-adsr-val" id="fxAdsrReleaseVal">SF2</span></div><input type="range" class="fx-adsr-sl" id="fxAdsrRelease" min="0" max="1000" value="0"></div>
+        </div>
+      </div>
+
+      <!-- Master -->
+      <div class="panel" id="masterPanel">
+        <div class="ps" style="max-width:180px">
+          <label>Master-Lautstärke</label>
+          <input type="range" id="volSlider" min="0" max="100" value="75">
+        </div>
+        <div class="ps" style="max-width:160px">
+          <label>Oktave</label>
+          <div class="octave-ctrl">
+            <button class="oct-btn" id="octDown">−</button>
+            <div class="oct-disp" id="octDisp">4</div>
+            <button class="oct-btn" id="octUp">+</button>
+          </div>
+        </div>
+        <div class="ps" style="max-width:160px">
+          <label>Transpose</label>
+          <div class="octave-ctrl">
+            <button class="oct-btn" id="trGlobDown">−</button>
+            <div class="oct-disp" id="trGlobDisp">+0</div>
+            <button class="oct-btn" id="trGlobUp">+</button>
+          </div>
+        </div>
+        <div class="ps" style="max-width:100px">
+          <label>&nbsp;</label>
+          <button id="panicBtn" title="Alle Töne sofort stoppen (Leertaste)">■ PANIC</button>
+        </div>
+        <div class="ps" style="max-width:160px">
+          <label>Alle Layer Velocity</label>
+          <div style="display:flex;gap:4px">
+            <button id="globalVelSoftBtn" title="Alle Layer: Soft Velocity (50)" style="flex:1;padding:5px 0;background:#07070f;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:.7rem;font-family:'Share Tech Mono',monospace;font-weight:700;color:var(--dim);transition:all .15s">p</button>
+            <button id="globalVelHardBtn" title="Alle Layer: Hard Velocity (127)" style="flex:1;padding:5px 0;background:#07070f;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:.7rem;font-family:'Share Tech Mono',monospace;font-weight:700;color:var(--dim);transition:all .15s">ff</button>
+          </div>
+        </div>
+        <div class="ps" style="max-width:220px">
+          <label>Status</label>
+          <div class="status-bar"><div class="sdot" id="sdot"></div><span id="stext">Bereit</span></div>
+        </div>
+      </div>
+
+      <!-- Viz -->
+      <div class="viz" id="viz"></div>
+
+      <!-- Quintenzirkel -->
+      <div class="qz-panel" id="qzPanel">
+        <div class="qz-header">
+          <span class="qz-title">🎸 Quintenzirkel</span>
+          <span style="font-size:.55rem;color:var(--dim);font-family:'Share Tech Mono',monospace">Klick auf Dur oder Moll → Griffe</span>
+        </div>
+        <div id="qz-circle-wrapper">
+          <div id="qz-circle-container"></div>
+          <div id="qz-chord-overlay">
+            <button class="qz-close-btn" id="qz-close-overlay">✕</button>
+            <div id="qz-overlay-content"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Registers & Favs -->
+      <div class="reg-panel" id="regPanel">
+        <div class="reg-header">
+          <span class="reg-title">🔵 Register</span>
+          <span class="reg-hint">Tippen = Laden &nbsp;·&nbsp; Lang halten = Speichern</span>
+        </div>
+        <div class="reg-row" id="regRow"></div>
+        <div class="reg-nav-row">
+          <button class="reg-nav-btn" id="regPrevBtn" title="Vorheriger Register">◀</button>
+          <div class="reg-nav-disp" id="regNavDisp">—</div>
+          <button class="reg-nav-btn" id="regNextBtn" title="Nächster Register">▶</button>
+          <div class="reg-nav-learn" id="regNavLearnWrap"></div>
+        </div>
+      </div>
+      <div class="fav-panel" id="favPanel">
+        <div class="fav-header">
+          <span class="fav-title">⭐ Favoriten</span>
+          <span class="fav-hint" id="favHint">Stern an einem Layer klicken zum Speichern</span>
+        </div>
+        <div class="fav-list" id="favList"></div>
+      </div>
+    </div>
+
+    <!-- VIEW 5: NOTEN & PDF (mit Fokus-Modus) -->
+    <div id="view-notes" class="app-view">
+      
+      <!-- PDF Viewer -->
+      <div class="pdf-panel" id="pdfPanel">
+        <div class="pdf-header">
+          <div class="pdf-title">🎼 Noten (PDF)</div>
+          <div class="pdf-controls">
+            <span class="pdf-info" id="pdfInfo">Kein PDF geladen</span>
+            <button class="pdf-btn" id="pdfLoadBtn">📂 PDF laden</button>
+            <button class="pdf-btn" id="pdfFullBtn" disabled>⛶ Vollbild</button>
+            <button class="pdf-btn danger" id="pdfClearBtn" style="display:none">✕ Entfernen</button>
+            <input type="file" id="pdfInput" accept=".pdf" style="display:none">
+          </div>
+        </div>
+        <div class="pdf-drop-hint" id="pdfDropHint">PDF hierher ziehen oder „PDF laden" klicken</div>
+      </div>
+
+      <!-- Score Editor -->
+      <div class="score-panel panel" id="scorePanel">
+        <div class="score-header">
+          <span style="display: none;font-size:1.0rem;letter-spacing:.14em;color:var(--accent);text-transform:uppercase">🎵 Noten-Editor</span>
+          <button class="score-btn" onclick="scoreAddTrack()">+ Track</button>
+          <button class="score-btn" id="scoreKbInputBtn" onclick="scoreToggleKbInput()" title="Klaviatur-Eingabe">🎹 Eingabe</button>
+          <button class="score-btn" id="velToggleBtn" onclick="window.toggleVelSidebar()" title="Velocity-Slider ein/aus">🎚 VEL</button>
+          <button class="score-btn" id="velPaintBtn" onclick="window.toggleVelPaint()" title="Malen während Wiedergabe">✎ Malen: AUS</button>
+          <button class="score-btn" id="gateToggleBtn" onclick="window.toggleGateSidebar()" title="Gate-Werkzeug ein/aus">🎚 GATE</button>
+          <button class="score-btn active" id="scorePlayBtn"       onclick="scoreStartPlay(null,0)"   title="Alle Tracks von Anfang">▶ Alle</button>
+          <button class="score-btn"        id="scorePlayCursorBtn" onclick="scoreStartPlayCursor()"   title="Alle Tracks ab Cursor">▶ Ab ✦</button>
+          <button class="score-btn"        id="scoreStopBtn"       onclick="scoreStopPlay()"          title="Stop" style="display:none">■ Stop</button>
+          <button class="score-btn" onclick="scoreExportJSON()">⬇ JSON</button>
+          <button class="score-btn" onclick="scoreImportJSON()">⬆ JSON laden</button>
+          <input type="file" id="scoreImportInput" accept=".json" style="display:none">
+          <button class="score-btn" onclick="scoreOpenPrintPreview()" title="Druckvorschau">🖨 Vorschau</button>
+          <button class="score-btn" onclick="scoreQuickPrint()" title="Sofort drucken">🖨⚡ Drucken</button>
+          <div class="score-metro-ctrl">
+            <span class="score-metro-lbl">♩</span>
+            <button class="score-btn" id="scoreMetroDown" title="BPM −1">−</button>
+            <span class="score-metro-val" id="scoreMetroDisp">120</span>
+            <button class="score-btn" id="scoreMetroUp" title="BPM +1">+</button>
+          </div>
+        </div>
+
+        <div class="score-body">
+          <div class="score-toolbar" id="scoreToolbar">
+            <div class="score-sel-toolbar" id="scoreSelToolbar" style="display:none">
+              <span id="scoreSelCount" style="font-size:.5rem;color:var(--accent);text-align:center">0</span>
+              <button class="score-ctrl-btn" id="scoreTieBtn" onclick="scoreToggleTie()" style="display:none">⌒</button>
+              <button class="score-ctrl-btn" id="scoreRangeBtn" onclick="scoreSelFillRange()" style="display:none">↔</button>
+              <button class="score-ctrl-btn" id="scoreBeamBtn" onclick="scoreSelToggleBeam()" style="display:none">🎵</button>
+              <button class="score-ctrl-btn" onclick="scoreSelCopyPaste()">📋</button>
+              <button class="score-ctrl-btn" onclick="scoreSelDelete()">🗑</button>
+              <button class="score-ctrl-btn score-sel-clear" onclick="scoreSelClearAll()">✕</button>
+              <button class="score-ctrl-btn" id="scoreTupletBtn" onclick="scoreSelMakeTuplet()" title="Auswahl zu N-tole zusammenfassen" style="display:none">÷n</button>
+              <button class="score-ctrl-btn" id="scoreExplodeBtn" onclick="scoreSelExplodeTuplet()" title="N-tole auflösen" style="display:none">✂</button>
+              <button class="score-ctrl-btn" id="scoreSelAddStepAfterBtn" onclick="scoreSelInsertStepAfter()" title="Einen Step nach der Auswahl einfügen" style="display:none">+S▸</button>
+              <button class="score-ctrl-btn" id="scoreSelAddStepBeforeBtn" onclick="scoreSelInsertStepBefore()" title="Einen Step vor der Auswahl einfügen" style="display:none">◂S+</button>
+            </div>
+            <div class="score-sep"></div>
+            <span style="display: none;font-size:.5rem;color:var(--dim);text-align:center">Wert</span>
+            <div class="score-noteval-row" id="scoreNoteValBtns"></div>
+            <div class="score-pp-row">
+              <label><input type="checkbox" id="scoreToolRest"> P</label>
+              <label><input type="checkbox" id="scoreToolDot"> .</label>
+            </div>
+            <button id="tupletTestBtn" style="display: none;background:#ff4060;color:#fff;padding:6px;margin-top:8px;font-size:.6rem;border-radius:4px;border:none;cursor:pointer">🧪 Tuplet-Test</button>
+            <span style="font-size:1.0rem;color:var(--dim);text-align:center">Tonart</span>
+            <select id="scoreToolKey">…</select>
+            <span style="font-size:1.0rem;color:var(--dim);text-align:center">Pitch</span>
+            <select style="height: 40px;" id="scoreSelPitch"><option value="">—</option></select>
+            <span style="font-size:1.0rem;color:var(--dim);text-align:center">Acc</span>
+            <span id="scoreSelAccBtns" style="display:none;gap:2px;flex-wrap:wrap;justify-content:center;"></span>
+            <button class="score-ctrl-btn" id="scoreSelAddChordBtn" onclick="scoreSelAddChordNote()" style="display:none">+ Akkord</button>
+          </div>
+          <div class="gate-sidebar" id="gateSidebar" style="display:none">
+            <div class="gate-label">GATE</div>
+            <div class="gate-btn-col" id="gateBtnCol"></div>
+            <div class="gate-value" id="gateValue">—</div>
+          </div>
+          <div class="vel-sidebar" id="velSidebar" style="display:none">
+            <div class="vel-label">VEL</div>
+            <div class="vel-track" id="velTrack"><div class="vel-thumb" id="velThumb"></div></div>
+            <div class="vel-value" id="velValue">90</div>
+          </div>
+          <div class="score-content-wrap">
+            <div class="score-scroll-area">
+              <div class="score-paper-scale-wrap">
+                <div id="scorePaper"><div id="scoreTracksContainer"></div></div>
+              </div>
+            </div>
+            <div class="score-piano-wrap" id="scorePianoWrap">
+              <div class="score-piano-header">
+                <span class="score-piano-lbl">🎹 Noten-Eingabe</span>
+                <button class="score-btn" id="scorePianoOctDown" style="width:26px;padding:2px 0;text-align:center">−</button>
+                <span class="score-piano-oct" id="scorePianoOctDisp">4</span>
+                <button class="score-btn" id="scorePianoOctUp" style="width:26px;padding:2px 0;text-align:center">+</button>
+                <span class="score-piano-info" id="scorePianoInfo">Klaviatur-Eingabe aktivieren</span>
+              </div>
+              <div class="kb-scroll" style="width:100%;overflow-x:auto">
+                <div class="keyboard" id="scoreKb" style="position:relative;height:130px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+    <!-- RECHTE MIXER-LEISTE -->
+  <aside id="app-mixer">
+    <div class="mixer-header">
+      <span>🎵 LAYER</span>
+      <button class="mx-add-btn" id="addLayerBtnTop" style="background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:1rem;">+</button>
+    </div>
+    <!-- HIER LEBT DIE ORIGINALE LAYER-LISTE -->
+    <div id="layerList"></div>
+    <!-- Versteckter Original-Button, damit das alte JS nicht meckert -->
+    <button id="addLayerBtn" style="display:none"></button>
+    
+    <!-- Hierhin verschiebt JS die Detail-Ansicht des angeklickten Layers -->
+    <div id="layerDetailContainer" style="flex:1; overflow-y:auto; padding-bottom:20px;"></div>
+  </aside>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- OVERLAYS (PDF Vollbild, Druckvorschau) -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="pdf-overlay" id="pdfOverlay">
+  <div class="pdf-overlay-bar">
+    <div class="pdf-overlay-title" id="pdfOverlayTitle">—</div>
+    <div class="pdf-overlay-nav">
+      <button class="pdf-nav-btn" id="pdfPrevBtn">◀</button>
+      <div class="pdf-page-display" id="pdfPageDisplay">— / —</div>
+      <button class="pdf-nav-btn" id="pdfNextBtn">▶</button>
+    </div>
+    <div class="pdf-rec-controls" style="display:flex; gap:6px; margin-left:auto; margin-right:auto">
+      <button class="pdf-rec-btn" id="pdfRecBtn" style="background:#07070f;border:1px solid var(--accent2);color:var(--accent2);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.7rem;font-family:'Share Tech Mono',monospace">⏺ REC</button>
+      <button class="pdf-rec-btn" id="pdfPlayBtn" style="background:#07070f;border:1px solid var(--accent);color:var(--accent);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.7rem;font-family:'Share Tech Mono',monospace" disabled>▶ PLAY</button>
+      <button class="pdf-rec-btn" id="pdfStopBtn" style="background:#07070f;border:1px solid var(--border);color:var(--dim);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.7rem;font-family:'Share Tech Mono',monospace" disabled>■ STOP</button>
+    </div>
+    <div class="pdf-zoom-ctrl">
+      <button class="pdf-nav-btn" id="pdfZoomOut">－</button>
+      <span style="font-family:'Orbitron',monospace;font-size:.6rem;color:var(--accent3);min-width:40px;text-align:center" id="pdfZoomLbl">100%</span>
+      <button class="pdf-nav-btn" id="pdfZoomIn">＋</button>
+      <button class="pdf-nav-btn" id="pdfZoomFit">⊡ Fit</button>
+    </div>
+    <button class="pdf-close-btn" id="pdfCloseBtn">✕ Schließen</button>
+  </div>
+  <div class="pdf-canvas-wrap" id="pdfCanvasWrap">
+    <canvas id="pdfCanvas"></canvas>
   </div>
 </div>
 
+<div id="scorePrintOverlay" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.85);overflow-y:auto;padding:16px">
+  <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:#0d1220;border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:14px;position:sticky;top:0;z-index:10">
+    <button class="score-btn" onclick="scoreClosePrintPreview()">✕ Schließen</button>
+    <button class="score-btn" onclick="scorePrintNow()">🖨 Drucken</button>
+    <span style="font-size:.55rem;color:var(--dim);max-width:200px">Falls der Button nicht sauber druckt: über das Browser-Menü (Teilen/Drucken) direkt auf dieser Vorschau drucken.</span>
+    <button class="score-btn" onclick="scoreExportPagesAsImages()" title="Als Bild speichern">🖼 Als Bild speichern</button>
+    <span style="font-size:.6rem;color:var(--dim)">Seitenformat</span>
+    <select id="scorePrintFormatSel" onchange="scorePrintSetFormat(this.value)">
+      <option value="a4-landscape">A4 Querformat</option>
+      <option value="a4-portrait">A4 Hochformat</option>
+      <option value="letter-landscape">Letter Querformat</option>
+      <option value="letter-portrait">Letter Hochformat</option>
+    </select>
+    <span style="font-size:.6rem;color:var(--dim)">Takte/Zeile</span>
+    <button class="score-btn" style="width:26px;padding:2px 0" onclick="scorePrintSetGlobalBars(-1)">−</button>
+    <span id="scorePrintGlobalBarsDisp" style="min-width:16px;text-align:center;font-family:'Share Tech Mono',monospace"></span>
+    <button class="score-btn" style="width:26px;padding:2px 0" onclick="scorePrintSetGlobalBars(1)">+</button>
+    <div id="scorePrintGroupsWrap" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;width:100%;border-top:1px solid var(--border);padding-top:8px;margin-top:4px"></div>
+  </div>
+  <div id="scorePrintPages"></div>
+</div>
 <script type="module">
 // SpessaSynth asynchron laden — blockiert NICHT das UI
 let WorkletSynthesizer = null, audioBufferToWav = null;
@@ -17592,6 +17636,112 @@ document.addEventListener('DOMContentLoaded', () => {
   addPanelToggle('jamPanel',     '🌐 Live Jam',           'jam',     false);
 })();
 
+// ══════════════════════════════════════════════════════════════
+// NEUES UI-LAYOUT ENGINE (Tabs oben, Mixer rechts)
+// ══════════════════════════════════════════════════════════════
+
+// 1. Navigation (Tabs oben)
+document.querySelectorAll('.tab-btn[data-target]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+    document.getElementById(btn.dataset.target).classList.add('active');
+    
+    // Wenn wir den Noteneditor verlassen, Vollbild beenden
+    if (btn.dataset.target !== 'view-notes') {
+      document.body.classList.remove('score-focus');
+      const fsBtn = document.getElementById('scoreFullscreenBtn');
+      if (fsBtn) fsBtn.textContent = '⛶ Vollbild';
+    }
+  });
+});
+
+// 2. Noteneditor Vollbild (Ausnahme)
+const scoreHeader = document.querySelector('.score-header');
+if (scoreHeader && !document.getElementById('scoreFullscreenBtn')) {
+  const fsBtn = document.createElement('button');
+  fsBtn.id = 'scoreFullscreenBtn';
+  fsBtn.className = 'score-btn';
+  fsBtn.textContent = '⛶ Vollbild';
+  fsBtn.style.cssText = 'background:var(--accent);color:#000;font-weight:bold;margin-left:auto;';
+  fsBtn.addEventListener('click', () => {
+    document.body.classList.toggle('score-focus');
+    fsBtn.textContent = document.body.classList.contains('score-focus') ? '✕ Verkleinern' : '⛶ Vollbild';
+    setTimeout(() => { if(typeof resizeScorePaper === 'function') resizeScorePaper(); }, 150);
+  });
+  scoreHeader.appendChild(fsBtn);
+}
+
+// 3. Querformat / Fullscreen erzwingen (für Android)
+document.getElementById('forceLandscapeBtn')?.addEventListener('click', async () => {
+  try {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    }
+    if (screen.orientation && screen.orientation.lock) {
+      await screen.orientation.lock('landscape');
+    }
+  } catch(e) {
+    alert('Dein Browser unterstützt das Erzwingen des Querformats leider nicht.');
+  }
+});
+
+// 4. Mixer: Layer-Details per Klick in den Hauptbereich verschieben
+const layerList = document.getElementById('layerList');
+if (layerList) {
+  layerList.addEventListener('click', (e) => {
+    const row = e.target.closest('.layer-row');
+    if (!row || e.target.closest('.layer-mute-btn') || e.target.closest('.layer-vol-wrap')) return;
+    
+    document.querySelectorAll('.layer-row').forEach(r => r.classList.remove('active'));
+    row.classList.add('active');
+
+    const details = row.querySelector('.layer-details');
+    const container = document.getElementById('layerDetailContainer');
+    
+    if (details && container) {
+      if (container.firstChild) {
+        const oldRow = container.firstChild.closest('.layer-row');
+        if (oldRow) {
+          const oldDetails = container.querySelector('.layer-details');
+          if (oldDetails) oldRow.appendChild(oldDetails);
+        }
+        container.innerHTML = '';
+      }
+
+      container.appendChild(details);
+      container.classList.add('active');
+      
+      if (!details.querySelector('.close-detail-btn')) {
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'score-btn danger close-detail-btn';
+        closeBtn.textContent = '✕ Details schließen';
+        closeBtn.style.cssText = 'margin-top:15px; width:100%; padding:10px; font-weight:bold;';
+        closeBtn.onclick = (ev) => {
+          ev.stopPropagation();
+          row.appendChild(details);
+          container.innerHTML = '';
+          container.classList.remove('active');
+          row.classList.remove('active');
+        };
+        details.appendChild(closeBtn);
+      }
+
+      // Wechsle automatisch zum Setup-Tab, damit man die Details sieht
+      const setupTab = document.querySelector('.tab-btn[data-target="view-setup"]');
+      if (setupTab && !setupTab.classList.contains('active')) setupTab.click();
+    }
+  });
+}
+
+// 5. "+"-Button im Mixer mit dem alten Original-Button verbinden
+document.getElementById('addLayerBtnTop')?.addEventListener('click', () => {
+  document.getElementById('addLayerBtn')?.click();
+});
+
+// 6. Original RenderLayers aufrufen, damit deine Layer geladen werden
+setTimeout(() => { if (typeof renderLayers === 'function') renderLayers(); }, 500);
 </script>
 </body>
 </html>
