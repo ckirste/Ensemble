@@ -17,10 +17,10 @@
 }
 .pdf-rec-controls button:active { transform: scale(0.96); }
 .pdf-rec-controls button:disabled { opacity: 0.4; cursor: default; }
-.settings-toggle{position:absolute;top:14px;right:16px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:1.1rem;width:36px;height:36px;cursor:pointer;transition:all .15s}
+/*.settings-toggle{position:absolute;top:14px;right:16px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:1.1rem;width:36px;height:36px;cursor:pointer;transition:all .15s}*/
 .fs-toggle{position:absolute;top:14px;left:16px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:1.1rem;width:36px;height:36px;cursor:pointer;transition:all .15s}
 .fs-toggle:hover,.fs-toggle.active{border-color:var(--accent);color:var(--accent)}
-.settings-toggle:hover,.settings-toggle.open{border-color:var(--accent);color:var(--accent)}
+/*.settings-toggle:hover,.settings-toggle.open{border-color:var(--accent);color:var(--accent)}*/
 .settings-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:4px}
 .settings-title{font-size:.62rem;letter-spacing:.2em;color:var(--accent);text-transform:uppercase;font-weight:700;margin-bottom:12px}
 .settings-body{display:flex;flex-direction:column;gap:12px}
@@ -2155,47 +2155,149 @@ html, body {
 
 #app-grid {
   display: grid;
-  grid-template-columns: 1fr 220px; /* Mitte | Rechts */
-  grid-template-rows: 45px 1fr;     /* Tabs oben | Rest */
+  grid-template-columns: 55px 1fr 220px; /* Links: Icons | Mitte | Rechts: Mixer */
+  grid-template-rows: 45px 1fr;
   height: 100vh; height: 100dvh;
   width: 100vw;
   overflow: hidden;
 }
-
-/* ── Tabs oben ── */
+/* ── NEU: Styling für die obere Tab-Leiste ── */
 #app-tabs {
-  grid-column: 1 / -1;
+  grid-column: 1 / -1; /* GANZ WICHTIG: Leiste über alle 3 Spalten spannen */
+  grid-row: 1;         /* Ganz oben */
   display: flex;
   align-items: center;
+  gap: 4px;
+  padding: 0 10px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
-  padding: 0 10px;
-  gap: 5px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+  z-index: 101;
+}
+#app-tabs::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.8rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.tab-btn:hover {
+  color: var(--text);
+  background: rgba(255,255,255,0.05);
+}
+.tab-btn.active {
+  color: var(--accent);
+  background: rgba(0,229,255,0.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 8px rgba(0,229,255,0.2);
+}
+
+/* ── NEU: Verhindert, dass der mittlere Bereich das Layout sprengt ── */
+#app-main {
+  min-width: 0; /* GANZ WICHTIG: Damit lange Texte umbrechen statt breit zu drücken */
+}
+
+#app-mixer {
+  min-width: 0;
+}
+/* Linke Icon-Leiste */
+#app-rail {
+  grid-column: 1;
+  grid-row: 2;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 6px;
+  overflow-y: auto;
+  scrollbar-width: none;
   z-index: 100;
 }
-.tab-btn {
-  background: transparent; border: none; border-bottom: 2px solid transparent;
-  color: var(--dim); font-size: 0.75rem; font-family: 'Share Tech Mono', monospace;
-  padding: 10px 15px; cursor: pointer; transition: all 0.15s; height: 100%;
-  display: flex; align-items: center; gap: 5px;
-}
-.tab-btn:hover { color: var(--textbright); }
-.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: bold; }
+#app-rail::-webkit-scrollbar { display: none; }
 
-/* ── Mittlerer Bereich ── */
+.rail-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #11111a;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.rail-btn:hover {
+  background: #1a1a28;
+  color: var(--text);
+  border-color: var(--accent3);
+}
+.rail-btn.active {
+  background: rgba(0, 229, 255, 0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+}
+
+/* Mittlerer Bereich */
 #app-main {
+  grid-column: 2;
+  grid-row: 2;
   position: relative; overflow-y: auto; overflow-x: hidden;
   padding: 10px; box-sizing: border-box; background: var(--bg);
+  display: flex; flex-direction: column; gap: 10px;
 }
-.app-view { display: none; flex-direction: column; gap: 10px; width: 100%; height: 100%; }
-.app-view.active { display: flex; animation: fadeIn .15s ease-out; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ── Rechte Mixer-Leiste ── */
+/* Rechte Mixer-Leiste */
 #app-mixer {
+  grid-column: 3;
+  grid-row: 2;
   background: var(--panel); border-left: 1px solid var(--border);
-  display: flex; flex-direction: column; overflow-y: auto; padding: 10px; box-sizing: border-box; gap: 6px; z-index: 100;
+  display: flex; flex-direction: column; overflow-y: auto; padding: 8px; box-sizing: border-box; gap: 5px; z-index: 100;
 }
+
+/* Alte Jalousie-Buttons komplett ausblenden */
+.panel-toggle-btn { display: none !important; }
+
+/* Mixer Layer-Styling (Screenshot-Style) */
+#layerList .layer-row {
+  background: #0d0d1a !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  padding: 6px 8px !important;
+  margin: 0 0 6px 0 !important;
+  position: relative !important;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#layerList .layer-row:hover { filter: brightness(1.2); }
+#layerList .layer-row.active {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 10px rgba(0,229,255,.2) !important;
+}
+
+/* Noten-Editor Vollbild-Modus erweitern */
+body.score-focus #app-rail { display: none !important; }
+body.score-focus #app-grid { grid-template-columns: 1fr; }
+
 .mixer-header { display: flex; justify-content: space-between; align-items: center; font-size: .65rem; color: var(--accent); font-weight: bold; letter-spacing: .1em; margin-bottom: 5px; }
 
 /* ── Mixer: Original Layer-Liste überschreiben ── */
@@ -2241,13 +2343,124 @@ body.score-focus #app-tabs, body.score-focus #app-mixer { display: none; }
 body.score-focus #app-grid { grid-template-columns: 1fr; grid-template-rows: 1fr; }
 body.score-focus #app-main { padding: 0; }
   
+/* ── GANZ WICHTIG: Tabs ausblenden ── */
+.app-view {
+  display: none !important; /* Versteckt alle Tabs standardmäßig */
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
 
+.app-view.active {
+  display: flex !important; /* Zeigt nur den aktiven Tab an */
+}
+/* ── SPLASH SCREEN ── */
+#splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 999999; /* Über allem anderen */
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  cursor: pointer;
+  transition: opacity 0.6s ease, visibility 0.6s;
+}
 
+#splash-screen.fade-out {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.splash-grid {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(0,229,255,.025) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0,229,255,.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+}
+
+.splash-content {
+  position: relative;
+  text-align: center;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: splashFadeIn 1s ease-out;
+}
+
+@keyframes splashFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.splash-title {
+  font-family: 'Orbitron', monospace, sans-serif;
+  font-weight: 900;
+  font-size: clamp(2rem, 8vw, 4.5rem);
+  letter-spacing: 0.15em;
+  background: linear-gradient(120deg, var(--accent), var(--accent3), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 10px 0;
+  filter: drop-shadow(0 0 15px rgba(155,127,232,0.3));
+}
+
+.splash-version {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1.2rem;
+  color: var(--text);
+  letter-spacing: 0.1em;
+  margin-bottom: 5px;
+}
+
+.splash-author {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.9rem;
+  color: var(--accent);
+  letter-spacing: 0.2em;
+  opacity: 0.8;
+}
+
+.splash-hint {
+  margin-top: 50px;
+  font-size: 0.65rem;
+  color: var(--dim);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  animation: pulse 2s infinite;
+}
+
+.splash-top-icons {
+  position: absolute;
+  top: -150px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  pointer-events: none;
+}
 
 
 </style>
 </head>
 <body>
+<!-- ── START-SCREEN ── -->
+<div id="splash-screen" onclick="startApp()">
+  <div class="splash-grid"></div> <!-- Für das Raster im Hintergrund -->
+  <div class="splash-content">
+    
+    <h1 class="splash-title">Ensemble</h1>
+    <div class="splash-version">v120</div>
+    <div class="splash-author">by c. kirste</div>
+    <div class="splash-hint">Tippen zum Starten</div>
+  </div>
+</div>
 <!-- UNSICHTBARE ELEMENTE (Damit das alte JS nicht crasht) -->
 <nav class="jump-nav" id="jumpNav" style="display:none !important;">
   <button class="jnav-btn" id="fsNavBtn"><span id="fsNavIcon"></span></button>
@@ -2255,10 +2468,7 @@ body.score-focus #app-main { padding: 0; }
   <label class="jnav-btn" id="projLoadBtn"><input type="file" id="projLoadInput"></label>
   <button id="panicNavBtn"></button>
 </nav>
-<div class="header" id="appHeader" style="display:none !important;">
-  <button class="fs-toggle" id="fsToggleBtn"></button>
-  <button class="settings-toggle" id="settingsToggle"></button>
-</div>
+
 
 <div id="app-grid">
   <!-- TABS (Oben) -->
@@ -2271,10 +2481,10 @@ body.score-focus #app-main { padding: 0; }
     <div style="flex:1"></div>
     <button class="tab-btn" id="forceLandscapeBtn" style="color:var(--accent2); border:1px solid var(--accent2); border-radius:5px; margin: 5px 0; padding: 0 10px; height: 30px;">📱 Querformat</button>
   </nav>
-
+<aside id="app-rail"></aside>
   <!-- MITTLERER BEREICH (Arbeitsfläche) -->
   <main id="app-main">
-    
+    <div id="layerDetailContainer" style="flex:1; overflow-y:auto; padding-bottom:20px;"></div>
     <!-- VIEW 1: SETUP & JAM -->
     <div id="view-setup" class="app-view active">
       
@@ -2906,7 +3116,7 @@ body.score-focus #app-main { padding: 0; }
     <button id="addLayerBtn" style="display:none"></button>
     
     <!-- Hierhin verschiebt JS die Detail-Ansicht des angeklickten Layers -->
-    <div id="layerDetailContainer" style="flex:1; overflow-y:auto; padding-bottom:20px;"></div>
+    
   </aside>
 </div>
 
@@ -4823,9 +5033,7 @@ function _applyBuzz() {
 
 function renderLayers() {
   renderDrawbars();
-  // Auto-save layer config after every change
   setTimeout(autoSaveSession, 0);
-  // Update trombone layer selector
   if (typeof updateTboneLayerSel === 'function') updateTboneLayerSel();
   const list = document.getElementById('layerList');
   if (!engine.soundfonts.length) return;
@@ -4845,7 +5053,7 @@ function renderLayers() {
     row.className = 'layer-row' + (layer.muted ? ' layer-muted' : '');
     row.dataset.layerId = layer.id;
 
-    // ── Group-box legend: preset name floats in top border ───────
+    // ── Legend ───────────────────────────────────────────────────
     const legend = document.createElement('div');
     legend.className = 'layer-legend';
 
@@ -4860,7 +5068,6 @@ function renderLayers() {
     presetLabel.textContent = sf0?.presets[layer.presetIdx]?.name ?? '—';
     presetLabel.title = 'Klicken zum Aufklappen';
 
-    // Favourite star button — lives in the legend next to preset name
     const favBtn = document.createElement('button');
     favBtn.className = 'layer-fav-btn';
     const isSaved = _layerFavs.some(f => {
@@ -4883,155 +5090,110 @@ function renderLayers() {
     legend.appendChild(favBtn);
     row.style.borderColor = color + '66';
 
-    // ── Compact always-visible bar ────────────────────────────────
-    const compact = document.createElement('div');
-    compact.className = 'layer-compact';
+    // ── Compact: Zeile 1 (Slider) + Zeile 2 (Buttons) ────────────
+    const mixCompact = document.createElement('div');
+    mixCompact.className = 'layer-compact';
 
-    // Expand toggle (sits at right of compact bar)
-    const expandBtn = document.createElement('button');
-    expandBtn.className = 'layer-expand-btn' + (layer._expanded ? ' open' : '');
-    expandBtn.textContent = '▶';
-    expandBtn.title = 'Details ein-/ausklappen';
+    const mixRow1 = document.createElement('div');
+    mixRow1.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px;';
 
-    // Mute button
-    const muteBtn = document.createElement('button');
-    muteBtn.className = 'layer-mute-btn' + (layer.muted ? ' muted' : '');
-    muteBtn.title = layer.muted ? 'Aktivieren' : 'Stummschalten';
-    muteBtn.textContent = layer.muted ? '🔇' : '🔊';
-    muteBtn.style.cssText = 'background:#07070f;border:1px solid var(--border);width:36px;height:36px;border-radius:7px;cursor:pointer;font-size:.9rem;transition:all .12s;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--accent)';
-    muteBtn.addEventListener('click', () => {
-      layer.muted = !layer.muted;
-      if (layer.muted) {
-        [...engine.voices.keys()]
-          .filter(k => k.startsWith(String(layer.id) + '_'))
-          .forEach(k => engine._killVoice(k));
-      }
-      renderLayers();
+    const mixVolWrap = document.createElement('div');
+    mixVolWrap.className = 'layer-vol-wrap';
+    mixVolWrap.style.flex = '1';
+    const mixVol = document.createElement('input');
+    mixVol.type = 'range'; mixVol.className = 'layer-vol';
+    mixVol.min = 0; mixVol.max = 100; mixVol.value = Math.round(layer.vol * 100);
+    mixVol.style.width = '100%';
+    mixVol.style.setProperty('--lv', mixVol.value + '%');
+    mixVol.style.setProperty('--accent', color);
+    mixVol.addEventListener('input', function() {
+      this.style.setProperty('--lv', this.value + '%');
+      layer.vol = parseInt(this.value) / 100;
     });
+    mixVolWrap.appendChild(mixVol);
+    mixRow1.appendChild(mixVolWrap);
 
-    // Volume slider
-    const volWrap = document.createElement('div');
-    volWrap.className = 'layer-vol-wrap';
-    const volLbl = document.createElement('div');
-    volLbl.className = 'layer-vol-lbl';
-    volLbl.textContent = 'VOL';
-    const vol = document.createElement('input');
-    vol.type = 'range'; vol.className = 'layer-vol';
-    vol.min=0; vol.max=100; vol.value = Math.round(layer.vol * 100);
-    vol.style.setProperty('--lv', vol.value+'%');
-    vol.style.setProperty('--accent', color);
-        // Live-Anzeige: während des Ziehens zeigt das VOL-Label den Wert,
-    // danach fällt es nach kurzer Pause auf "VOL" zurück. So sparen wir
-    // den zusätzlichen Span und halten die Zeile kompakt.
-    let volRevertTimer = null;
-    const revertVolLbl = () => {
-      clearTimeout(volRevertTimer);
-      volRevertTimer = setTimeout(() => {
-        volLbl.textContent = 'VOL';
-        volLbl.style.color = '';
-        volLbl.style.opacity = '';
-      }, 700);
+    const mixRow2 = document.createElement('div');
+    mixRow2.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:2px;';
+
+    const mixOctDown = document.createElement('button');
+    mixOctDown.textContent = '−'; mixOctDown.className = 'tr-btn';
+    mixOctDown.onclick = (e) => { e.stopPropagation(); layer.transpose -= 12; renderLayers(); };
+
+    const mixOctDisp = document.createElement('div');
+    mixOctDisp.className = 'tr-val';
+    mixOctDisp.textContent = (layer.transpose||0) >= 0 ? '+' + (layer.transpose||0) : (layer.transpose||0);
+    mixOctDisp.style.minWidth = '22px';
+
+    const mixOctUp = document.createElement('button');
+    mixOctUp.textContent = '+'; mixOctUp.className = 'tr-btn';
+    mixOctUp.onclick = (e) => { e.stopPropagation(); layer.transpose += 12; renderLayers(); };
+
+    const mixMuteBtn = document.createElement('button');
+    mixMuteBtn.textContent = layer.muted ? '🔇' : '🔊';
+    mixMuteBtn.style.cssText = 'background:transparent;border:1px solid var(--border);border-radius:4px;color:' + (layer.muted ? 'var(--dim)' : 'var(--accent)') + ';width:24px;height:24px;cursor:pointer;padding:0;font-size:0.8rem;';
+    mixMuteBtn.onclick = (e) => { e.stopPropagation(); layer.muted = !layer.muted; renderLayers(); };
+
+    const mixCopyBtn = document.createElement('button');
+    mixCopyBtn.textContent = '⧉';
+    mixCopyBtn.style.cssText = 'background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--dim);width:24px;height:24px;cursor:pointer;padding:0;font-size:0.8rem;';
+    mixCopyBtn.onclick = (e) => {
+      e.stopPropagation();
+      const id = nextLayerId++;
+      const clone = Object.assign({}, layer, {
+        id,
+        melodyNote: null,
+        bassNote:   null,
+        _expanded:  false,
+        envOverride: layer.envOverride ? { ...layer.envOverride } : {},
+        sources:     layer.sources     ? [...layer.sources]     : ['screen','keys','midi','player'],
+      });
+      if (clone.saturation    == null) clone.saturation    = 0;
+      if (clone.buzzEnabled   == null) clone.buzzEnabled   = false;
+      if (clone.buzzThreshold == null) clone.buzzThreshold = 127;
+      if (clone.buzzIntensity == null) clone.buzzIntensity = 70;
+      if (clone.compEnabled   == null) clone.compEnabled   = false;
+      if (clone.compThreshold == null) clone.compThreshold = -24;
+      if (clone.compRatio     == null) clone.compRatio     = 3;
+      if (clone.velMode       == null) clone.velMode       = 'free';
+      if (clone.velOverride   == null) clone.velOverride   = 0;
+      if (clone.delayWet      == null) clone.delayWet      = 0;
+      if (clone.delayTime     == null) clone.delayTime     = 37;
+      const idx = layers.indexOf(layer);
+      layers.splice(idx + 1, 0, clone);
+      renderLayers();
+      ['fxAdsrAttack','fxAdsrSustain','fxAdsrRelease'].forEach(sid => {
+        document.getElementById(sid)?.dispatchEvent(new Event('input'));
+      });
+      engine.ensureAndGetStartT().then(() => engine.prewarmPreset(clone.sfIdx, clone.presetIdx));
     };
 
-    vol.addEventListener('input', function() {
-      this.style.setProperty('--lv', this.value+'%');
-      layer.vol = parseInt(this.value) / 100;
-      volLbl.textContent = this.value;
-      volLbl.style.color = color;
-      volLbl.style.opacity = '1';
-      revertVolLbl();
-    });
-    // Beim Loslassen sofort zurück auf "VOL" wenn kein weiterer Input kommt
-    vol.addEventListener('change', revertVolLbl);
-    vol.addEventListener('pointerup', revertVolLbl);
-    vol.addEventListener('touchend', revertVolLbl);
+    const mixDelBtn = document.createElement('button');
+    mixDelBtn.textContent = '✕';
+    mixDelBtn.style.cssText = 'background:transparent;border:1px solid #ff406055;border-radius:4px;color:var(--accent2);width:24px;height:24px;cursor:pointer;padding:0;font-size:0.8rem;';
+    mixDelBtn.onclick = (e) => { e.stopPropagation(); removeLayer(layer.id); };
 
-    volWrap.appendChild(volLbl);
-    volWrap.appendChild(vol);
-    // Per-layer octave (±12 semitones)
-    const octWrap = document.createElement('div');
-    octWrap.style.cssText = 'display:flex;align-items:center;gap:3px;flex-shrink:0';
-    const octDown = document.createElement('button');
-    const octDisp = document.createElement('div');
-    const octUp   = document.createElement('button');
-    octDown.className = 'tr-btn'; octDown.textContent = '−';
-    octUp.className   = 'tr-btn'; octUp.textContent   = '+';
-    octDisp.className = 'tr-val';
-    octDisp.title = 'Oktave dieses Layers';
-    if (!layer.transpose) layer.transpose = 0;
-    function updateOctDisp(){ octDisp.textContent = (layer.transpose>=0?'+':'')+layer.transpose; }
-    updateOctDisp();
-    octDown.addEventListener('click', () => {
-      if (layer.transpose > -48) { layer.transpose -= 12; updateOctDisp(); if(engine.ctx) engine.ctx.resume(); engine.stopAll(); }
-    });
-    octUp.addEventListener('click', () => {
-      if (layer.transpose < 48) { layer.transpose += 12; updateOctDisp(); if(engine.ctx) engine.ctx.resume(); engine.stopAll(); }
-    });
-    octWrap.appendChild(octDown);
-    octWrap.appendChild(octDisp);
-    octWrap.appendChild(octUp);
+    mixRow2.appendChild(mixOctDown);
+    mixRow2.appendChild(mixOctDisp);
+    mixRow2.appendChild(mixOctUp);
+    mixRow2.appendChild(mixMuteBtn);
+    mixRow2.appendChild(mixCopyBtn);
+    mixRow2.appendChild(mixDelBtn);
 
-    compact.appendChild(volWrap);
-    compact.appendChild(octWrap);
-    compact.appendChild(muteBtn);
-
-    // Copy/duplicate button
-    const copyBtn = document.createElement('button');
-    copyBtn.title = 'Layer duplizieren';
-    copyBtn.textContent = '⧉';
-    copyBtn.style.cssText = 'background:#07070f;border:1px solid var(--border);width:36px;height:36px;border-radius:7px;cursor:pointer;font-size:1rem;transition:all .12s;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--dim)';
-    copyBtn.addEventListener('mouseenter', () => copyBtn.style.color = 'var(--accent)');
-    copyBtn.addEventListener('mouseleave', () => copyBtn.style.color = 'var(--dim)');
-    copyBtn.addEventListener('click', () => {
-  const id = nextLayerId++;
-
-  const clone = Object.assign({}, layer, {
-    id,
-    melodyNote: null,
-    bassNote:   null,
-    _expanded:  false,
-    envOverride: layer.envOverride ? { ...layer.envOverride } : {},
-    sources:     layer.sources     ? [...layer.sources]     : ['screen','keys','midi','player'],
-  });
-
-  if (clone.saturation    == null) clone.saturation    = 0;
-  if (clone.buzzEnabled   == null) clone.buzzEnabled   = false;
-  if (clone.buzzThreshold == null) clone.buzzThreshold = 127;
-  if (clone.buzzIntensity == null) clone.buzzIntensity = 70;
-  if (clone.compEnabled   == null) clone.compEnabled   = false;
-  if (clone.compThreshold == null) clone.compThreshold = -24;
-  if (clone.compRatio     == null) clone.compRatio     = 3;
-  if (clone.velMode       == null) clone.velMode       = 'free';
-  if (clone.velOverride   == null) clone.velOverride   = 0;
-  if (clone.delayWet      == null) clone.delayWet      = 0;
-  if (clone.delayTime     == null) clone.delayTime     = 37;
-
-  const idx = layers.indexOf(layer);
-  layers.splice(idx + 1, 0, clone);
-  renderLayers();
-
-  ['fxAdsrAttack','fxAdsrSustain','fxAdsrRelease'].forEach(sid => {
-    document.getElementById(sid)?.dispatchEvent(new Event('input'));
-  });
-
-  engine.ensureAndGetStartT().then(() => engine.prewarmPreset(clone.sfIdx, clone.presetIdx));
-});
-    compact.appendChild(copyBtn);
-    compact.appendChild(expandBtn);
+    mixCompact.appendChild(mixRow1);
+    mixCompact.appendChild(mixRow2);
 
     row.appendChild(legend);
-    row.appendChild(compact);
+    row.appendChild(mixCompact);
 
-    // ── Collapsible details ───────────────────────────────────────
+    // ── Details (collapsible) ────────────────────────────────────
     const details = document.createElement('div');
     details.className = 'layer-details' + (layer._expanded ? ' open' : '');
 
     function toggleExpand() {
       layer._expanded = !layer._expanded;
       details.classList.toggle('open', layer._expanded);
-      expandBtn.classList.toggle('open', layer._expanded);
     }
-    expandBtn.addEventListener('click', toggleExpand);
     presetLabel.addEventListener('click', toggleExpand);
 
     // SF + Preset selects
@@ -5050,7 +5212,7 @@ function renderLayers() {
     });
     sfSel.value = layer.sfIdx;
 
-    // Preset search widget
+    // ── Preset-Search (unverändert übernommen) ───────────────────
     const psWrap = document.createElement('div');
     psWrap.className = 'preset-search-wrap';
 
@@ -5059,7 +5221,7 @@ function renderLayers() {
     psInput.className = 'preset-search-input';
     psInput.autocomplete = 'off';
     psInput.spellcheck = false;
-    psInput.inputMode = 'none';   // suppress virtual keyboard on mobile — search field handles typing
+    psInput.inputMode = 'none';
 
     const psClear = document.createElement('button');
     psClear.className = 'preset-search-clear';
@@ -5076,7 +5238,6 @@ function renderLayers() {
     const psDrop = document.createElement('div');
     psDrop.className = 'preset-dropdown';
 
-    // Separate search input field
     const psSearch = document.createElement('input');
     psSearch.type = 'text';
     psSearch.className = 'layer-search-input';
@@ -5087,9 +5248,8 @@ function renderLayers() {
     psWrap.appendChild(psInput);
     psWrap.appendChild(psClear);
     psWrap.appendChild(psToggle);
-    psWrap.appendChild(psDrop);  // dropdown no longer contains search
+    psWrap.appendChild(psDrop);
 
-    // Track filtered list and keyboard nav index
     let psFiltered = [];
     let psNavIdx = -1;
 
@@ -5097,21 +5257,19 @@ function renderLayers() {
       const sf = engine.soundfonts[layer.sfIdx];
       return sf ? sf.presets : [];
     }
-
     function psLabel(p, i) {
       return `${String(p.program).padStart(3,'0')} – ${p.name}${p.bank ? ' ['+p.bank+']' : ''}`;
     }
 
-    // ── Favourites (in-memory + IndexedDB persistence) ────────────
+    // ── Favourites ───────────────────────────────────────────────
     const _favSet = new Set();
-    // Load from IndexedDB on init
     (async () => {
       try {
         const db = await new Promise((res,rej) => {
           const r = indexedDB.open('sf2favs', 1);
           r.onupgradeneeded = e => e.target.result.createObjectStore('favs');
           r.onsuccess = e => res(e.target.result);
-          r.onerror   = rej;
+          r.onerror = rej;
         });
         const tx = db.transaction('favs','readonly');
         const store = tx.objectStore('favs');
@@ -5162,22 +5320,18 @@ function renderLayers() {
     function makePsItem(p, i, label, sfIdx, onSelect) {
       const item = document.createElement('div');
       item.className = 'preset-dropdown-item' + (i === layer.presetIdx ? ' active' : '');
-
       const star = document.createElement('button');
       star.className = 'preset-fav-btn' + (isFav(sfIdx, i) ? ' on' : '');
       star.textContent = isFav(sfIdx, i) ? '⭐' : '☆';
       star.title = 'Favorit';
       star.addEventListener('mousedown', e => {
-        e.stopPropagation();
-        e.preventDefault();
+        e.stopPropagation(); e.preventDefault();
         toggleFav(sfIdx, i);
         psRenderDrop(psSearch.value);
       });
-
       const lbl = document.createElement('span');
       lbl.className = 'preset-item-label';
       lbl.textContent = label;
-
       item.appendChild(star);
       item.appendChild(lbl);
       item.addEventListener('mousedown', e => { e.preventDefault(); onSelect(i); });
@@ -5186,7 +5340,7 @@ function renderLayers() {
 
     function psSetPreset(idx) {
       layer.presetIdx = idx;
-      engine.resetChannel?.(layer.id); // SpessaSynth: reassign channel for new preset
+      engine.resetChannel?.(layer.id);
       const sf = engine.soundfonts[layer.sfIdx];
       psInput.value = sf ? psLabel(sf.presets[idx], idx) : '';
       psClear.classList.remove('visible');
@@ -5194,23 +5348,19 @@ function renderLayers() {
       psSearch.value = '';
       presetLabel.textContent = sf?.presets[idx]?.name ?? '—';
       engine.stopAll();
-      // Ensure context running, then pre-decode + silent warm
       engine.ensureAndGetStartT().then(() => {
         engine.prewarmPreset(layer.sfIdx, idx);
-        // For large SF2s: SpessaSynth handles decoding internally
         updateMemDisplay();
       });
-      // Remove focus from both fields
       psInput.blur();
       psSearch.blur();
-      // Jam: Instrument-Wechsel sofort an Mitspieler senden
       if (typeof jamBroadcastLayers === 'function') {
         clearTimeout(jam._layerBroadcastTimer);
         jam._layerBroadcastTimer = setTimeout(jamBroadcastLayers, 100);
       }
     }
 
-    let selectedBank = null; // aktuell gewählte Bank im linken Panel
+    let selectedBank = null;
 
     function getBankLabel(bank, isDrum) {
       if (isDrum) return '🥁 Drums';
@@ -5224,7 +5374,6 @@ function renderLayers() {
       const q = query.toLowerCase();
       psDrop.innerHTML = '';
 
-      // Bei Suche: flache Liste wie bisher
       if (q) {
         psFiltered = sf.presets
           .map((p, i) => ({ p, i, label: psLabel(p, i) }))
@@ -5246,11 +5395,9 @@ function renderLayers() {
         return;
       }
 
-      // Kein Suchtext: Zwei-Spalten Bank/Preset
       psFiltered = sf.presets.map((p, i) => ({ p, i, label: psLabel(p, i) }));
       psNavIdx = -1;
 
-      // Unique Banks ermitteln (in Sortierreihenfolge)
       const banks = [];
       const bankSeen = new Set();
       sf.presets.forEach(p => {
@@ -5261,14 +5408,12 @@ function renderLayers() {
         }
       });
 
-      // Aktive Bank: die des gerade gewählten Presets oder erste Bank
       const curP = sf.presets[layer.presetIdx];
       const curKey = curP ? String(curP.bank) + (curP.isDrum ? 'd' : '') : banks[0]?.key;
       if (selectedBank === null || !bankSeen.has(selectedBank)) {
         selectedBank = curKey ?? banks[0]?.key ?? '0';
       }
 
-      // Favoriten-Zeile oben (über den Spalten)
       const favs = getFavs(layer.sfIdx);
       if (favs.length) {
         const favRow = document.createElement('div');
@@ -5288,15 +5433,12 @@ function renderLayers() {
         psDrop.appendChild(favRow);
       }
 
-      // Zwei-Spalten-Layout
       const cols = document.createElement('div');
       cols.className = 'preset-dropdown-cols';
 
-      // Linke Spalte: Banken
       const bankCol = document.createElement('div');
       bankCol.className = 'preset-dropdown-banks';
 
-      // Rechte Spalte: Presets der gewählten Bank
       const presetCol = document.createElement('div');
       presetCol.className = 'preset-dropdown-presets';
 
@@ -5346,7 +5488,6 @@ function renderLayers() {
       });
     }
 
-    // Main display input — click/focus opens dropdown
     psInput.addEventListener('focus', function() { psRenderDrop(psSearch.value); });
     psInput.addEventListener('blur', function() {
       setTimeout(() => {
@@ -5362,16 +5503,10 @@ function renderLayers() {
       if (e.key === 'Escape') { psInput.blur(); }
     });
 
-    // Search field — typing filters the dropdown
-    psSearch.addEventListener('input', function() {
-      psRenderDrop(this.value); // always re-render with current query
-    });
-    psSearch.addEventListener('focus', function() {
-      psRenderDrop(this.value);
-    });
+    psSearch.addEventListener('input', function() { psRenderDrop(this.value); });
+    psSearch.addEventListener('focus', function() { psRenderDrop(this.value); });
     psSearch.addEventListener('blur', function() {
       setTimeout(() => {
-        // Only close if neither psSearch nor psInput has focus
         if (document.activeElement !== psSearch && document.activeElement !== psInput) {
           psDrop.classList.remove('open');
           psToggle.textContent = '▾';
@@ -5425,7 +5560,6 @@ function renderLayers() {
       setTimeout(() => { psToggle.textContent = '▾'; }, 160);
     });
 
-    // Init display
     { const sf = engine.soundfonts[layer.sfIdx];
       if (sf && sf.presets[layer.presetIdx])
         psInput.value = psLabel(sf.presets[layer.presetIdx], layer.presetIdx); }
@@ -5434,7 +5568,7 @@ function renderLayers() {
       const sf = engine.soundfonts[layer.sfIdx];
       if (!sf) return;
       layer.presetIdx = 0;
-      selectedBank = null; // Bank-Auswahl zurücksetzen
+      selectedBank = null;
       psSearch.value = '';
       psClear.classList.remove('visible');
       psInput.value = psLabel(sf.presets[0], 0);
@@ -5446,22 +5580,19 @@ function renderLayers() {
     sfSel.addEventListener('change', e => {
       layer.sfIdx = parseInt(e.target.value);
       layer.presetIdx = 0;
-      // Channel zurücksetzen damit neues SF+Preset auf frischem Channel spielt
       engine.resetChannel(layer.id);
       rebuildPresets();
       engine.stopAll();
     });
 
     selWrap.appendChild(sfSel);
-    selWrap.appendChild(psSearch);  // search above dropdown
+    selWrap.appendChild(psSearch);
     selWrap.appendChild(psWrap);
 
-    // ── Row: preset selector + search ────────────────────────────
     const presetRow = document.createElement('div');
     presetRow.className = 'layer-preset-row';
     presetRow.appendChild(selWrap);
 
-    // ── Row: dot · badges ────────────────────────────────────────
     const topRow = document.createElement('div');
     topRow.className = 'layer-top';
     if (layer.midiCh !== null && layer.midiCh !== undefined) {
@@ -5472,7 +5603,6 @@ function renderLayers() {
       topRow.appendChild(chBadge);
     }
 
-    // Del button in top row
     const delBtn = document.createElement('button');
     delBtn.style.cssText = 'background:#07070f;border:1px solid var(--border);width:36px;height:36px;border-radius:7px;cursor:pointer;font-size:.9rem;transition:all .12s;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--accent2)';
     delBtn.textContent = '✕';
@@ -5480,11 +5610,9 @@ function renderLayers() {
     delBtn.addEventListener('click', () => removeLayer(layer.id));
     topRow.appendChild(delBtn);
 
-    // Bottom controls row
     const bottomRow = document.createElement('div');
     bottomRow.className = 'layer-bottom';
 
-    // Key Range
     const kr = document.createElement('div');
     bottomRow.appendChild(kr);
     kr.className = 'layer-keyrange';
@@ -5519,7 +5647,6 @@ function renderLayers() {
     kr.appendChild(krSep);
     kr.appendChild(krHiNote); kr.appendChild(krHiBtn);
 
-    // Reset key range button
     const krResetBtn = document.createElement('button');
     krResetBtn.className = 'kr-btn';
     krResetBtn.textContent = '↺';
@@ -5535,7 +5662,6 @@ function renderLayers() {
     });
     kr.appendChild(krResetBtn);
 
-    // Melody / Bass
     const melBtn = document.createElement('button');
     melBtn.className = 'layer-melody-btn' + (layer.melody ? ' on' : '');
     melBtn.textContent = '♪ MONO';
@@ -5572,7 +5698,6 @@ function renderLayers() {
     bottomRow.appendChild(melBtn);
     bottomRow.appendChild(bassBtn);
 
-    // Source filter
     const srcWrap = document.createElement('div');
     srcWrap.style.cssText = 'display:flex;align-items:center;gap:4px;margin-left:auto;flex-shrink:0';
     const srcLbl = document.createElement('div');
@@ -5609,9 +5734,7 @@ function renderLayers() {
     });
     bottomRow.appendChild(srcWrap);
 
-    bottomRow.appendChild(srcWrap);
-
-    // ── MIDI Device filter ────────────────────────────────────────
+    // ── MIDI Device filter ──────────────────────────────────────
     const devRow = document.createElement('div');
     devRow.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:4px';
     const devLbl = document.createElement('div');
@@ -5639,12 +5762,11 @@ function renderLayers() {
     devSel.addEventListener('change', () => {
       layer.midiDeviceId = devSel.value || null;
     });
-    // Refresh when dropdown opens (devices may have changed)
     devSel.addEventListener('focus', rebuildDevSel);
     devRow.appendChild(devLbl);
     devRow.appendChild(devSel);
 
-    // Learn buttons for vol + mute in details
+    // Learn buttons
     const learnRow = document.createElement('div');
     learnRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:4px';
     const learnRowLbl = document.createElement('div');
@@ -5675,7 +5797,7 @@ function renderLayers() {
     details.appendChild(devRow);
     details.appendChild(learnRow);
 
-    // ── Velocity mode ─────────────────────────────────────────────
+    // ── Velocity mode ──────────────────────────────────────────
     const velRow = document.createElement('div');
     velRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:4px';
     const velRowLbl = document.createElement('div');
@@ -5698,7 +5820,6 @@ function renderLayers() {
     updateVelBtns();
     velSoftBtn.addEventListener('click', () => { layer.velMode = layer.velMode==='soft' ? 'free' : 'soft'; updateVelBtns(); });
     velHardBtn.addEventListener('click', () => { layer.velMode = layer.velMode==='hard' ? 'free' : 'hard'; updateVelBtns(); });
-    // Velocity Override slider (0=aus, 1-127=fix)
     if (!layer.velOverride) layer.velOverride = 0;
     const velOvrWrap = document.createElement('div');
     velOvrWrap.style.cssText = 'display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:auto';
@@ -5727,7 +5848,7 @@ function renderLayers() {
     velRow.appendChild(velOvrWrap);
     details.appendChild(velRow);
 
-    // ── Per-layer compressor ──────────────────────────────────
+    // ── Compressor ─────────────────────────────────────────────
     const compRow = document.createElement('div');
     compRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap';
     const compLbl = document.createElement('div');
@@ -5747,7 +5868,6 @@ function renderLayers() {
       updateCompToggle();
       engine.setLayerCompressor(String(layer.id), layer.compEnabled, layer.compThreshold, layer.compRatio);
     });
-    // Threshold slider
     const makeFxSlider = (labelTxt, min, max, val, unit, onInput) => {
       const wrap = document.createElement('div');
       wrap.style.cssText = 'display:flex;align-items:center;gap:4px;flex-shrink:0';
@@ -5778,7 +5898,7 @@ function renderLayers() {
     compRow.appendChild(ratWrap);
     details.appendChild(compRow);
 
-    // ── Lip Buzz ──────────────────────────────────────────
+    // ── Lip Buzz ───────────────────────────────────────────────
     const buzzRow = document.createElement('div');
     buzzRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap';
     const buzzLbl = document.createElement('div');
@@ -5796,7 +5916,6 @@ function renderLayers() {
     buzzToggle.addEventListener('click', () => {
       layer.buzzEnabled = !layer.buzzEnabled;
       updateBuzzToggle();
-      // Buzz = zusätzliche Saturation
       _applyBuzz();
     });
     const makeBuzzSlider = (labelTxt, min, max, val, unit, onInput) => {
@@ -5823,7 +5942,7 @@ function renderLayers() {
     buzzRow.appendChild(intWrapB);
     details.appendChild(buzzRow);
 
-    // ── Per-layer Saturation ──────────────────────────────
+    // ── Saturation ─────────────────────────────────────────────
     const satRow = document.createElement('div');
     satRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:4px';
     const satLbl = document.createElement('div');
@@ -5839,31 +5958,27 @@ function renderLayers() {
     satSl.addEventListener('input', function() {
       layer.saturation = parseInt(this.value);
       satValEl.textContent = this.value + '%';
-      // Per-Channel Saturation anwenden (via _applyBuzz, der alle Layer kennt)
       _applyBuzz();
     });
     satRow.appendChild(satLbl); satRow.appendChild(satSl); satRow.appendChild(satValEl);
     details.appendChild(satRow);
 
-    // ── ADSR Envelope Editor ─────────────────────────────────
+    // ── ADSR ───────────────────────────────────────────────────
     const adsrContainer = document.createElement('div');
     adsrContainer.style.cssText = 'margin-top:4px';
     adsrContainer.appendChild(buildAdsrEditor(layer, color, adsrContainer));
     details.appendChild(adsrContainer);
 
-    // ── Per-Layer Delay ───────────────────────────────────────
+    // ── Per-Layer Delay ────────────────────────────────────────
     if (!layer.delayWet)  layer.delayWet  = 0;
-    if (!layer.delayTime) layer.delayTime = 37; // 0–100 wie im FX-Panel
+    if (!layer.delayTime) layer.delayTime = 37;
     const delaySection = document.createElement('div');
     delaySection.style.cssText = 'margin-top:6px;display:flex;flex-direction:column;gap:4px';
-
-    // Trennlinie + Label
     const delayHdr = document.createElement('div');
     delayHdr.style.cssText = 'font-size:.5rem;letter-spacing:.15em;color:var(--accent3);text-transform:uppercase;opacity:.8;padding-top:2px';
     delayHdr.textContent = '⏱ Delay';
     delaySection.appendChild(delayHdr);
 
-    // Hilfsfunktion: einen Slider-Row bauen (wie im FX-Panel)
     function makeDelaySlider(labelTxt, min, max, value, fmtFn, onChange) {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:6px';
@@ -5889,7 +6004,6 @@ function renderLayers() {
       v => v + '%',
       v => {
         layer.delayWet = v;
-        // Sicherstellen, dass der Layer einen Channel hat (falls noch keine Note gespielt wurde)
         if (engine._workletReady && engine.soundfonts[layer.sfIdx]) {
           engine.ensureChannel(layer.id, layer.sfIdx, layer.presetIdx);
         }
@@ -5913,7 +6027,6 @@ function renderLayers() {
     list.appendChild(row);
   });
 }
-
 // ── Visualizer ────────────────────────────────────────────────
 const vizEl = document.getElementById('viz');
 const BN=48, bEls=[], bH=new Array(BN).fill(3), bT=new Array(BN).fill(3);
@@ -6425,13 +6538,14 @@ function settingsGetCurrentColors() {
 }
 
 function initSettingsPanel() {
-  const toggle = document.getElementById('settingsToggle');
+  //const toggle = document.getElementById('settingsToggle');
   const panel  = document.getElementById('settingsPanel');
-  toggle.addEventListener('click', () => {
-    const open = panel.style.display === 'none';
-    panel.style.display = open ? '' : 'none';
-    toggle.classList.toggle('open', open);
-  });
+  if (!panel) return;
+//  toggle.addEventListener('click', () => {
+//    const open = panel.style.display === 'none';
+//    panel.style.display = open ? '' : 'none';
+//    toggle.classList.toggle('open', open);
+//  });
 
   // ── Themes ────────────────────────────────────────────────────
   const themesEl = document.getElementById('settingsThemes');
@@ -17178,147 +17292,8 @@ function panelToggleSave(states) {
 // label        : Text im Streifen
 // storageKey   : localStorage-Key
 // defaultOpen  : ob Panel beim ersten Besuch sichtbar ist
-/*
-function addPanelToggle(panelId, label, storageKey, defaultOpen = true, extraIds = []) {
-  const panel = document.getElementById(panelId);
-  if (!panel) return;
-
-  const states = panelToggleLoad();
-  let open = storageKey in states ? states[storageKey] : defaultOpen;
-
-  const btn = document.createElement('button');
-  btn.className = 'panel-toggle-btn' + (open ? '' : ' closed');
-  btn.innerHTML = `<span>${label}</span><span class="ptb-arrow">▾</span>`;
-  btn.title = open ? 'Panel einklappen' : 'Panel aufklappen';
-
-  // Zusätzliche Elemente (per ID), die NICHT im DOM innerhalb des Panels
-  // liegen, aber trotzdem mit ein-/ausklappen sollen — z.B. der Posaunen-
-  // Blasebereich, der als eigenständiges Geschwister-Element außerhalb des
-  // tbonePanel-Divs positioniert ist.
-  const extraEls = extraIds.map(id => document.getElementById(id)).filter(Boolean);
-
-  function apply(isOpen) {
-    open = isOpen;
-    panel.style.display = open ? '' : 'none';
-    extraEls.forEach(el => { el.style.display = open ? '' : 'none'; });
-    btn.classList.toggle('closed', !open);
-    btn.title = open ? 'Panel einklappen' : 'Panel aufklappen';
-    const s = panelToggleLoad();
-    s[storageKey] = open;
-    panelToggleSave(s);
-    // Posaunen-Blasebereich hat eine eigene Landscape-Höhenberechnung, die
-    // sonst erst beim nächsten Resize-Event greift — sofort neu anstoßen,
-    // damit er unmittelbar mit ein-/ausklappt statt verzögert.
-    if (typeof tboneSizeMegaBlow === 'function') tboneSizeMegaBlow();
-  }
-
-  apply(open);
-  btn.addEventListener('click', () => apply(!open));
-
-  panel.parentNode.insertBefore(btn, panel);
-}
-*/
-function addPanelToggle(panelId, label, storageKey, defaultOpen = true, extraIds = []) {
-  const panel = document.getElementById(panelId);
-  if (!panel) return;
-
-  const states = panelToggleLoad();
-  let open = storageKey in states ? states[storageKey] : defaultOpen;
-
-  const btn = document.createElement('button');
-  btn.className = 'panel-toggle-btn' + (open ? '' : ' closed');
-  btn.innerHTML = `<span>${label}</span><span class="ptb-arrow">▾</span>`;
-  btn.title = open ? 'Panel einklappen' : 'Panel aufklappen';
-
-  const extraEls = extraIds.map(id => document.getElementById(id)).filter(Boolean);
-
-  function apply(isOpen) {
-    open = isOpen;
-    panel.style.display = open ? '' : 'none';
-    extraEls.forEach(el => { el.style.display = open ? '' : 'none'; });
-    btn.classList.toggle('closed', !open);
-    btn.title = open ? 'Panel einklappen' : 'Panel aufklappen';
-    const s = panelToggleLoad();
-    s[storageKey] = open;
-    panelToggleSave(s);
-    if (typeof tboneSizeMegaBlow === 'function') tboneSizeMegaBlow();
-  }
-
-  // ── Spezialfall: Noteneditor → Vollbild-Toggle ─────────────────
-  if (panelId === 'scorePanel') {
-    btn.addEventListener('click', () => {
-      const isFullscreen = panel.classList.contains('score-fullscreen');
-
-      if (isFullscreen) {
-        // Vollbild verlassen → Panel wieder normal anzeigen (und einklappen)
-        panel.classList.remove('score-fullscreen');
-        panel.style.position = '';
-        panel.style.inset = '';
-        panel.style.zIndex = '';
-        panel.style.margin = '';
-        panel.style.borderRadius = '';
-        document.body.style.overflow = '';
-
-        // Button-Styles zurücksetzen
-        btn.style.position = '';
-        btn.style.top = '';
-        btn.style.left = '';
-        btn.style.zIndex = '';
-        btn.innerHTML = `<span>${label}</span><span class="ptb-arrow">▾</span>`;
-        btn.title = 'Panel einklappen';
-
-        apply(true); // Panel offen lassen
 
 
-                // Sanft zum Noteneditor scrollen — Oberkante unter die Jump-Nav
-        setTimeout(() => {
-          const nav = document.getElementById('jumpNav');
-          const navOffset = nav ? nav.offsetHeight + 4 : 0;
-          const panelTop = panel.getBoundingClientRect().top + window.scrollY - navOffset;
-          window.scrollTo({ top: panelTop, behavior: 'smooth' });
-        }, 80);
-        
-      } else {
-        // Vollbild aktivieren
-        panel.classList.add('score-fullscreen');
-        panel.style.position = 'fixed';
-        panel.style.inset = '0';
-        panel.style.zIndex = '9999';
-        panel.style.margin = '50';
-        panel.style.borderRadius = '0';
-        document.body.style.overflow = 'hidden';
-
-        // Button fixieren und sichtbar machen
-        btn.style.position = 'fixed';
-        btn.style.top = '10px';
-        btn.style.left = '10px';
-        btn.style.zIndex = '10000';
-        btn.innerHTML = `<span>${label} – Vollbild beenden</span><span class="ptb-arrow">▾</span>`;
-        btn.title = 'Vollbild beenden';
-
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch(() => {});
-        }
-        // Falls das Panel vorher geschlossen war, jetzt öffnen
-        if (!open) {
-          apply(true);
-        }
-        // Nach apply(true) Button-Label wieder überschreiben (apply ändert es)
-        btn.innerHTML = `<span>${label} – Vollbild beenden</span><span class="ptb-arrow">▾</span>`;
-        btn.title = 'Vollbild beenden';
-      }
-    });
-  } else {
-    // Normales Verhalten für alle anderen Panels
-    btn.addEventListener('click', () => apply(!open));
-  }
-
-  // Initialzustand anwenden (open/closed)
-  apply(open);
-
-  // Button vor dem Panel einfügen
-  panel.parentNode.insertBefore(btn, panel);
-}
 // ── Metronom-Steuerung im Score-Header ───────────────────────
 (function initScoreMetroControls() {
   const downBtn = document.getElementById('scoreMetroDown');
@@ -17642,21 +17617,24 @@ document.addEventListener('DOMContentLoaded', () => {
   addPanelToggle('pdfPanel',     '🎼 Noten (PDF)',        'pdf',     false);
   addPanelToggle('scorePanel',   '🎵 Noten-Editor',       'score',   false);
   addPanelToggle('jamPanel',     '🌐 Live Jam',           'jam',     false);
+  addPanelToggle('settingsPanel', '⚙ Einstellungen', 'settings', false);
 })();
 
 // ══════════════════════════════════════════════════════════════
 // NEUES UI-LAYOUT ENGINE (Tabs oben, Mixer rechts)
 // ══════════════════════════════════════════════════════════════
 
-// 1. Navigation (Tabs oben)
+// 1. Navigation (Tabs oben) + Rail-Update (EIN einziger Listener)
 document.querySelectorAll('.tab-btn[data-target]').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
     document.getElementById(btn.dataset.target).classList.add('active');
-    
-    // Wenn wir den Noteneditor verlassen, Vollbild beenden
+
+    closeLayerDetails();
+    updateRailForView(btn.dataset.target);
+
     if (btn.dataset.target !== 'view-notes') {
       document.body.classList.remove('score-focus');
       const fsBtn = document.getElementById('scoreFullscreenBtn');
@@ -17665,7 +17643,7 @@ document.querySelectorAll('.tab-btn[data-target]').forEach(btn => {
   });
 });
 
-// 2. Noteneditor Vollbild (Ausnahme)
+// 2. Noteneditor Vollbild-Button (einmalig einbauen)
 const scoreHeader = document.querySelector('.score-header');
 if (scoreHeader && !document.getElementById('scoreFullscreenBtn')) {
   const fsBtn = document.createElement('button');
@@ -17676,12 +17654,12 @@ if (scoreHeader && !document.getElementById('scoreFullscreenBtn')) {
   fsBtn.addEventListener('click', () => {
     document.body.classList.toggle('score-focus');
     fsBtn.textContent = document.body.classList.contains('score-focus') ? '✕ Verkleinern' : '⛶ Vollbild';
-    setTimeout(() => { if(typeof resizeScorePaper === 'function') resizeScorePaper(); }, 150);
+    setTimeout(() => { if (typeof resizeScorePaper === 'function') resizeScorePaper(); }, 150);
   });
   scoreHeader.appendChild(fsBtn);
 }
 
-// 3. Querformat / Fullscreen erzwingen (für Android)
+// 3. Querformat / Fullscreen (NUR EINMAL registriert)
 document.getElementById('forceLandscapeBtn')?.addEventListener('click', async () => {
   try {
     if (!document.fullscreenElement) {
@@ -17691,36 +17669,33 @@ document.getElementById('forceLandscapeBtn')?.addEventListener('click', async ()
       await screen.orientation.lock('landscape');
     }
   } catch(e) {
-    alert('Dein Browser unterstützt das Erzwingen des Querformats leider nicht.');
+    // Absichtlich still: schlägt fehl, wenn der Browser das nicht unterstützt.
+    // Alert-Meldung kann drin bleiben, wenn du sie willst:
+    // alert('Dein Browser unterstützt das Erzwingen des Querformats leider nicht.');
   }
 });
 
 // 4. Mixer: Layer-Details per Klick in den Hauptbereich verschieben
-const layerList = document.getElementById('layerList');
-if (layerList) {
-  layerList.addEventListener('click', (e) => {
+const layerListEl = document.getElementById('layerList');
+if (layerListEl) {
+  layerListEl.addEventListener('click', (e) => {
     const row = e.target.closest('.layer-row');
-    if (!row || e.target.closest('.layer-mute-btn') || e.target.closest('.layer-vol-wrap')) return;
-    
+    // Klick nur auslösen, wenn nicht auf interaktive Elemente geklickt wurde
+    if (!row || e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
+
     document.querySelectorAll('.layer-row').forEach(r => r.classList.remove('active'));
     row.classList.add('active');
 
     const details = row.querySelector('.layer-details');
     const container = document.getElementById('layerDetailContainer');
-    
-    if (details && container) {
-      if (container.firstChild) {
-        const oldRow = container.firstChild.closest('.layer-row');
-        if (oldRow) {
-          const oldDetails = container.querySelector('.layer-details');
-          if (oldDetails) oldRow.appendChild(oldDetails);
-        }
-        container.innerHTML = '';
-      }
 
+    if (details && container) {
+      closeLayerDetails(); // Alte schließen
       container.appendChild(details);
+      container.style.display = 'flex';
       container.classList.add('active');
-      
+
+      // Close-Button im Detail-Bereich (einmalig pro Öffnen)
       if (!details.querySelector('.close-detail-btn')) {
         const closeBtn = document.createElement('button');
         closeBtn.className = 'score-btn danger close-detail-btn';
@@ -17730,13 +17705,16 @@ if (layerList) {
           ev.stopPropagation();
           row.appendChild(details);
           container.innerHTML = '';
+          container.style.display = 'none';
           container.classList.remove('active');
           row.classList.remove('active');
+          const cb = details.querySelector('.close-detail-btn');
+          if (cb) cb.remove();
         };
         details.appendChild(closeBtn);
       }
 
-      // Wechsle automatisch zum Setup-Tab, damit man die Details sieht
+      // Automatisch zum Setup-Tab wechseln, um die Details zu sehen
       const setupTab = document.querySelector('.tab-btn[data-target="view-setup"]');
       if (setupTab && !setupTab.classList.contains('active')) setupTab.click();
     }
@@ -17748,8 +17726,161 @@ document.getElementById('addLayerBtnTop')?.addEventListener('click', () => {
   document.getElementById('addLayerBtn')?.click();
 });
 
-// 6. Original RenderLayers aufrufen, damit deine Layer geladen werden
+// 6. Original RenderLayers aufrufen, damit Layer angezeigt werden
 setTimeout(() => { if (typeof renderLayers === 'function') renderLayers(); }, 500);
+
+// ══════════════════════════════════════════════════════════════
+// NEU: Linke Icon-Leiste (ersetzt die alten Jalousie-Buttons)
+// ══════════════════════════════════════════════════════════════
+
+function addPanelToggle(panelId, label, storageKey, defaultOpen = true, extraIds = []) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  const view = panel.closest('.app-view');
+  if (!view) return;
+
+  let icon = '📄';
+  if (label.includes('🎹')) icon = '🎹';
+  if (label.includes('🎛')) icon = '🎛';
+  if (label.includes('🎺')) icon = '🎺';
+  if (label.includes('🥁')) icon = '🥁';
+  if (label.includes('🎼')) icon = '🎼';
+  if (label.includes('⏺')) icon = '⏺';
+  if (label.includes('🗂')) icon = '🗂';
+  if (label.includes('🌐')) icon = '🌐';
+  if (label.includes('🎸')) icon = '🎸';
+  if (label.includes('📊')) icon = '📊';
+  if (label.includes('⚙')) icon = '⚙️';
+
+  const railBtn = document.createElement('button');
+  railBtn.className = 'rail-btn';
+  railBtn.dataset.targetView = view.id;
+  railBtn.dataset.targetPanel = panelId;
+  railBtn.innerHTML = `<span class="rail-icon">${icon}</span>`;
+  railBtn.title = label.replace(/^[^\s]+\s*/, '');
+
+  document.getElementById('app-rail').appendChild(railBtn);
+
+  // Panel initial verstecken
+  panel.style.display = 'none';
+  extraIds.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+
+  // Klick-Logik für die linke Leiste
+  railBtn.addEventListener('click', () => {
+    // 1. Tab wechseln, falls nötig
+    if (!view.classList.contains('active')) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      const tabBtn = document.querySelector(`.tab-btn[data-target="${view.id}"]`);
+      if (tabBtn) tabBtn.classList.add('active');
+      document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+      view.classList.add('active');
+    }
+
+    // 2. Layer-Details schließen
+    closeLayerDetails();
+
+    // 3. ALLE Panels in DIESEM View verstecken (nur die, die als Rail-Button registriert sind)
+    document.querySelectorAll(`.rail-btn[data-target-view="${view.id}"]`).forEach(rb => {
+      const pnl = document.getElementById(rb.dataset.targetPanel);
+      if (pnl) pnl.style.display = 'none';
+      // Zugehörige Extra-Elemente auch verstecken
+      const extras = pnl ? (pnl.dataset.extraIds || '').split(',').filter(Boolean) : [];
+      extras.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+    });
+
+    // 4. Ziel-Panel anzeigen
+    panel.style.display = '';
+    extraIds.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
+
+    // 5. Buttons aktualisieren
+    document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('active'));
+    railBtn.classList.add('active');
+  });
+
+  // Speichere extraIds für den Klick-Handler
+  panel.dataset.extraIds = extraIds.join(',');
+
+  if (!view.dataset.hasRail) {
+    view.dataset.hasRail = 'true';
+    view.dataset.firstRailPanel = panelId;
+  }
+}
+
+function updateRailForView(viewId) {
+  // 1. Alle Rail-Buttons ausblenden
+  document.querySelectorAll('.rail-btn').forEach(btn => {
+    btn.style.display = 'none';
+    btn.classList.remove('active');
+  });
+
+  // 2. Prüfen, ob das Detail-Fenster gerade offen ist
+  const container = document.getElementById('layerDetailContainer');
+  const hasDetails = container && container.classList.contains('active');
+  if (hasDetails) return; // Wenn ja, keine Leisten-Icons anzeigen
+
+  // 3. Nur die Buttons für den aktuellen Tab einblenden
+  const viewBtns = document.querySelectorAll(`.rail-btn[data-target-view="${viewId}"]`);
+  viewBtns.forEach(btn => btn.style.display = 'flex');
+
+  // 4. Den ersten Button dieses Tabs automatisch anklicken, damit der Bereich nicht leer ist
+  if (viewBtns.length > 0) {
+    viewBtns[0].click();
+  } else {
+    // Falls der Tab keine Panels hat, alle anderen Panels verstecken
+    document.getElementById(viewId).querySelectorAll(':scope > div').forEach(p => {
+      if (p.id !== 'layerDetailContainer') p.style.display = 'none';
+    });
+  }
+}
+
+function closeLayerDetails() {
+  const container = document.getElementById('layerDetailContainer');
+  if (!container) return;
+  container.style.display = 'none';
+  container.classList.remove('active');
+  const oldRow = container.querySelector('.layer-row');
+  if (oldRow) {
+    const oldDetails = container.querySelector('.layer-details');
+    if (oldDetails) {
+      const cb = oldDetails.querySelector('.close-detail-btn');
+      if (cb) cb.remove();
+      oldRow.appendChild(oldDetails);
+    }
+  }
+  container.innerHTML = '';
+  document.querySelectorAll('.layer-row').forEach(r => r.classList.remove('active'));
+}
+
+// Initial den Setup-Tab in der Leiste anzeigen
+setTimeout(() => updateRailForView('view-setup'), 500);
+// ══════════════════════════════════════════════════════════════
+// SPLASH SCREEN LOGIK
+// ══════════════════════════════════════════════════════════════
+window.startApp = function() {
+  const splash = document.getElementById('splash-screen');
+  if (!splash || splash.classList.contains('fade-out')) return;
+
+  // 1. Sanft ausblenden
+  splash.classList.add('fade-out');
+
+  // 2. AudioContext wecken (WICHTIG für Android!)
+  if (typeof window.initAudio === 'function') {
+    window.initAudio();
+  }
+
+  // 3. Ggf. Fullscreen triggern (da wir uns in einem User-Klick befinden)
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+
+  // 4. Nach der Animation komplett aus dem DOM nehmen, damit es nicht stört
+  setTimeout(() => {
+    splash.style.display = 'none';
+  }, 600);
+};
 </script>
 </body>
 </html>
