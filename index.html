@@ -142,14 +142,61 @@ select{background:#07070f;border:1px solid var(--border);color:var(--textbright)
   border-radius:6px;width:100%;min-width:0;outline:none;cursor:pointer;transition:border-color .2s}
 select:hover,select:focus{border-color:var(--accent);box-shadow:var(--glow)}
 select:disabled{opacity:.7;cursor:default}
-input[type=range]{-webkit-appearance:none;appearance:none;height:6px;width:100%;padding:0;
-  background:linear-gradient(to right,var(--accent) var(--val,75%),var(--border) var(--val,75%));
-  border:none;border-radius:3px;outline:none;cursor:pointer}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;
-  background:var(--accent);border-radius:50%;box-shadow:var(--glow);cursor:pointer}
-input[type=range]::-moz-range-thumb{width:15px;height:15px;background:var(--accent);
-  border-radius:50%;box-shadow:var(--glow);cursor:pointer;border:none}
-input[type=range]::-moz-range-track{height:6px;background:inherit;border-radius:3px}
+/* ── GLOBALER SLIDER FIX (Entfernt Geister-Knöpfe) ── */
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px; /* Höhe für bessere Touch-Bedienung */
+  width: 100%;
+  padding: 0;
+  background: transparent; /* GANZ WICHTIG: Versteckt den nativen grauen Hintergrund */
+  border: none;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Der farbige Balken (WebKit: Chrome, Edge, Safari, Android) */
+input[type=range]::-webkit-slider-runnable-track {
+  height: 6px;
+  width: 100%;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--accent) var(--val, 75%), var(--border) var(--val, 75%));
+}
+
+/* Der runde Knopf (WebKit) */
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 16px;
+  width: 16px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: var(--glow);
+  cursor: pointer;
+  margin-top: -5px; /* Zentriert den Knopf exakt auf dem 6px-Balken */
+}
+
+/* Der farbige Balken (Firefox) */
+input[type=range]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+}
+input[type=range]::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+/* Der runde Knopf (Firefox) */
+input[type=range]::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: var(--glow);
+  cursor: pointer;
+  border: none;
+}
 /* Seq velocity slider — Firefox braucht explizite Breite nicht, flex:1 reicht */
 .seq-row-vel::-moz-range-thumb{width:12px;height:12px;background:var(--accent2);border:none}
 .seq-row-vel::-moz-range-track{height:4px;border-radius:2px}
@@ -590,7 +637,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   padding:0;background:transparent;border:none;outline:none;cursor:pointer}
 .layer-vol::-webkit-slider-runnable-track{
   height:5px;border-radius:3px;
-  background:linear-gradient(to right,var(--accent) var(--lv,75%),var(--border) var(--lv,75%));
+  background: linear-gradient(to right, var(--accent) var(--lv,75%), var(--border) var(--lv,75%));
 }
 .layer-vol::-webkit-slider-thumb{
   -webkit-appearance:none;width:14px;height:14px;
@@ -1766,6 +1813,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   overflow: hidden;
   padding: 0;
          }
+/*
   .score-scroll-area {
   flex: 1;
   min-height: 0;
@@ -1778,6 +1826,20 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   }
   .score-paper-scale-wrap {
   position: relative;
+  }
+  */
+  .score-scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: block; /* GANZ WICHTIG: Kein Flex, sonst verschiebt es sich! */
+  padding: 0px;
+  box-sizing: border-box;
+  }
+  .score-paper-scale-wrap {
+  position: relative;
+  margin: 0 auto; /* Zentriert das Blatt horizontal, egal wie breit */
   }
   /*
 .score-track-row {
@@ -2306,17 +2368,36 @@ body.score-focus #app-grid { grid-template-columns: 1fr; }
 #layerList .layer-row {
   background: #0d0d1a !important;
   border: 1px solid var(--border) !important;
-  border-radius: 8px !important;
-  padding: 6px 8px !important;
+  border-radius: 10px !important;
+  padding: 16px 8px 10px 8px !important; /* Mehr Platz nach oben für den schwebenden Namen */
   margin: 0 !important;
   position: relative !important;
   cursor: pointer;
 }
-#layerList .layer-row.active { border-color: var(--accent) !important; box-shadow: 0 0 8px rgba(0,229,255,.2) !important; }
-#layerList .layer-legend { position: static !important; background: transparent !important; padding: 0 !important; border: none !important; max-width: 100% !important; display: flex !important; }
-#layerList .layer-legend-dot { width: 8px !important; height: 8px !important; }
-#layerList .layer-legend-name { font-size: 0.7rem !important; background: transparent !important; padding: 0 5px !important; }
-#layerList .layer-compact { padding: 0 !important; min-height: auto !important; margin-top: 5px !important; flex-wrap: wrap !important; gap: 5px !important; }
+#layerList .layer-legend { 
+  position: static !important; 
+  background: transparent !important; 
+  padding: 0 !important; 
+  border: none !important; 
+  display: flex !important; 
+  justify-content: space-between !important; /* <-- Zwingt den Stern nach ganz rechts */
+  align-items: center !important;
+  width: 100% !important;
+}
+#layerList .layer-legend-name { 
+  font-size: 0.75rem !important; 
+  background: transparent !important; 
+  padding: 0 5px !important;
+  flex: 1 !important; /* <-- Der Name nimmt den ganzen Platz links ein */
+  text-align: left !important;
+}
+#layerList .layer-compact { 
+  padding: 0 !important; 
+  min-height: auto !important; 
+  margin-top: 12px !important; /* <-- Mehr Abstand zum Presetnamen */
+  flex-wrap: wrap !important; 
+  gap: 10px !important; /* <-- Mehr Abstand zwischen Slider (Zeile 1) und Buttons (Zeile 2) */
+}
 #layerList .layer-compact > * { flex: 1 1 100%; }
 #layerList .layer-vol-wrap { order: -1; width: 100%; }
 #layerList .layer-mute-btn { width: 100% !important; height: 24px !important; font-size: 0.7rem !important; margin-top: 4px; }
@@ -2445,8 +2526,133 @@ body.score-focus #app-main { padding: 0; }
   padding: 0 20px;
   pointer-events: none;
 }
+/* ── MASTER LAYER ── */
+.master-layer {
+  border-color: #ffb830 !important; /* Goldener Rand */
+  background: #141007 !important;   /* Leichter Gold-Schimmer im Hintergrund */
+  box-shadow: 0 0 10px rgba(255, 184, 48, 0.15) !important;
+  margin-bottom: 12px !important;
+}
+.master-layer .layer-legend-dot {
+  background: #ffb830 !important;
+  box-shadow: 0 0 6px #ffb830 !important;
+}
+.master-layer .layer-legend-name {
+  color: #ffb830 !important;
+  font-weight: bold;
+}
+.master-layer .master-btn-group {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+.master-layer .master-btn {
+  flex: 1;
+  background: #07070f;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.master-layer .master-btn:hover {
+  border-color: #ffb830;
+  color: #ffb830;
+}
+.master-layer .master-btn.danger:hover {
+  border-color: var(--accent2);
+  color: var(--accent2);
+  background: rgba(255, 64, 96, 0.1);
+}
+/* Styling für das BPM-Eingabefeld im Noteneditor */
+#scoreMetroDisp {
+  width: 50px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--accent3);
+  font-family: 'Orbitron', monospace;
+  font-size: .85rem;
+  text-align: center;
+  outline: none;
+  padding: 2px;
+  transition: border-color .15s;
+  -moz-appearance: textfield; /* Versteckt die Pfeile in Firefox */
+}
+#scoreMetroDisp:focus, #scoreMetroDisp:hover {
+  border-color: var(--border);
+  background: #07070f;
+}
+/* Versteckt die Pfeile in Chrome/Safari/Edge */
+#scoreMetroDisp::-webkit-outer-spin-button,
+#scoreMetroDisp::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* ── GLOBALER SLIDER FIX (Überschreibt alte Regeln) ── */
+input[type=range] {
+  accent-color: transparent !important; /* Verhindert native Browser-Balken */
+  background: transparent !important;   /* Verhindert alte Farbverläufe */
+}
 
+/* Unser sauberer, universeller Track */
+input[type=range]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  /* Nutzt --val für die Breite und --accent für die Farbe (Cyan, Gold, Layerfarbe etc.) */
+  background: linear-gradient(to right, var(--accent) var(--val, 0%), var(--border) var(--val, 0%)) !important;
+}
 
+/* Thumb (Knopf) vertikal zentrieren */
+input[type=range]::-webkit-slider-thumb {
+  margin-top: -5px; /* (16px Thumb - 6px Track) / 2 = 5px nach oben */
+}
+/* ── SCHRIFTGRÖSSEN-VARIABLEN ANWENDEN ── */
+.ps label, 
+.fx-label, 
+.layer-vol-lbl, 
+.kr-note, 
+.metro-sig-lbl, 
+.seq-lbl, 
+.vel-label, 
+.gate-label, 
+.score-metro-lbl, 
+.settings-section-lbl, 
+.size-lbl, 
+.color-lbl, 
+.drum-pad-note, 
+.tbone-pos-labels, 
+.metro-bpm-lbl, 
+.reg-hint, 
+.fav-hint, 
+.info-box,
+.splash-hint {
+  font-size: var(--ui-label-size) !important;
+}
+
+/* ── MONO-SCHRIFTGRÖSSEN ANWENDEN ── */
+.fx-value, 
+.oct-disp, 
+.metro-bpm-val, 
+.tr-val, 
+.rec-time, 
+.jam-ping, 
+.jam-status-txt, 
+.settings-themes .theme-btn, 
+.settings-reset-btn, 
+.jam-chat-log,
+.seq-row-note,
+.metro-sig-sel,
+.sf-name,
+.sf-count {
+  font-size: var(--ui-mono-size) !important;
+}
 </style>
 </head>
 <body>
@@ -2475,6 +2681,7 @@ body.score-focus #app-main { padding: 0; }
   <nav id="app-tabs">
     <button class="tab-btn active" data-target="view-setup">⚙️ Setup</button>
     <button class="tab-btn" data-target="view-play">🎹 Spielen</button>
+	<button class="tab-btn" data-target="view-layer">🎵 Layer</button>
     <button class="tab-btn" data-target="view-seq">🥁 Aufnahme</button>
     <button class="tab-btn" data-target="view-fx">🎛 Effekte</button>
     <button class="tab-btn" data-target="view-notes">🎼 Noten</button>
@@ -2484,7 +2691,7 @@ body.score-focus #app-main { padding: 0; }
 <aside id="app-rail"></aside>
   <!-- MITTLERER BEREICH (Arbeitsfläche) -->
   <main id="app-main">
-    <div id="layerDetailContainer" style="flex:1; overflow-y:auto; padding-bottom:20px;"></div>
+    
     <!-- VIEW 1: SETUP & JAM -->
     <div id="view-setup" class="app-view active">
       
@@ -2500,8 +2707,16 @@ body.score-focus #app-main { padding: 0; }
           <div class="settings-sizes" id="settingsSizes"></div>
           <div class="settings-section-lbl">Labels &amp; Lesbarkeit</div>
           <div class="settings-sizes" id="settingsLabels"></div>
-          <div class="settings-footer">
+                    <div class="settings-footer">
             <button class="settings-reset-btn" id="debugToggleBtn" style="margin-right:auto">🐛 Debug: AUS</button>
+            
+            <button class="settings-reset-btn" id="settingsSaveBtn" style="margin-right:6px; border-color:var(--accent); color:var(--accent);">💾 Speichern</button>
+            
+            <label class="settings-reset-btn" style="margin-right:6px; border-color:var(--accent3); color:var(--accent3); cursor:pointer; display:inline-flex; align-items:center;">
+              📂 Laden
+              <input type="file" id="settingsLoadInput" accept=".json" style="display:none">
+            </label>
+
             <button class="settings-reset-btn" id="settingsResetBtn">↺ Zurücksetzen</button>
           </div>
         </div>
@@ -2598,6 +2813,12 @@ body.score-focus #app-main { padding: 0; }
       </div>
     </div>
 
+<div id="view-layer" class="app-view">
+      <div id="layerDetailContainer" style="display:none; flex-direction:column; width:100%;"></div>
+      <div id="layerEmptyState" style="font-size:.8rem; color:var(--dim); text-align:center; padding:40px 20px; letter-spacing:.1em;">
+        Klicke auf einen Layer in der rechten Leiste, um ihn hier zu bearbeiten.
+      </div>
+    </div>
     <!-- VIEW 2: SPIELEN (Klaviaturen, Posaune, Drums) -->
     <div id="view-play" class="app-view">
       
@@ -2898,12 +3119,7 @@ body.score-focus #app-main { padding: 0; }
         <div class="fx-slider-row" id="fxSliders"></div>
         <div class="fx-divider"></div>
         <div class="fx-row" id="fxToggles"></div>
-        <div class="fx-divider"></div>
-        <div class="fx-row" style="flex-wrap:wrap;gap:6px;align-items:center">
-          <span style="font-size:.55rem;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;flex-shrink:0">🎬 Cinematic:</span>
-          <div id="fxCinematicBtns" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-        </div>
-        <div class="fx-divider"></div>
+		<div class="fx-divider"></div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span style="font-size:.55rem;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;flex-shrink:0">🎵 Globale Hüllkurve</span>
           <button class="fx-adsr-reset" id="fxAdsrResetBtn">↺ Zurücksetzen</button>
@@ -2913,6 +3129,12 @@ body.score-focus #app-main { padding: 0; }
           <div class="fx-adsr-item"><div style="display:flex;justify-content:space-between"><span class="fx-adsr-lbl">Sustain</span><span class="fx-adsr-val" id="fxAdsrSustainVal">SF2</span></div><input type="range" class="fx-adsr-sl" id="fxAdsrSustain" min="0" max="1000" value="1000"></div>
           <div class="fx-adsr-item"><div style="display:flex;justify-content:space-between"><span class="fx-adsr-lbl">Release</span><span class="fx-adsr-val" id="fxAdsrReleaseVal">SF2</span></div><input type="range" class="fx-adsr-sl" id="fxAdsrRelease" min="0" max="1000" value="0"></div>
         </div>
+        <div class="fx-divider"></div>
+        <div class="fx-row" style="flex-wrap:wrap;gap:6px;align-items:center">
+          <span style="font-size:.55rem;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;flex-shrink:0">🎬 Cinematic:</span>
+          <div id="fxCinematicBtns" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+        
       </div>
 
       <!-- Master -->
@@ -3033,7 +3255,7 @@ body.score-focus #app-main { padding: 0; }
           <div class="score-metro-ctrl">
             <span class="score-metro-lbl">♩</span>
             <button class="score-btn" id="scoreMetroDown" title="BPM −1">−</button>
-            <span class="score-metro-val" id="scoreMetroDisp">120</span>
+            <input type="number" class="score-metro-val" id="scoreMetroDisp" min="30" max="300" value="120">
             <button class="score-btn" id="scoreMetroUp" title="BPM +1">+</button>
           </div>
         </div>
@@ -5036,8 +5258,126 @@ function renderLayers() {
   setTimeout(autoSaveSession, 0);
   if (typeof updateTboneLayerSel === 'function') updateTboneLayerSel();
   const list = document.getElementById('layerList');
-  if (!engine.soundfonts.length) return;
-  list.innerHTML = '';
+  //if (!engine.soundfonts.length) return;
+    list.innerHTML = '';
+
+   // ── MASTER LAYER ERZEUGEN ──
+  const masterRow = document.createElement('div');
+  masterRow.className = 'layer-row master-layer';
+  // WICHTIG: Kein flex-column auf dem Row selbst, sondern wir steuern den Inhalt
+  masterRow.style.cssText = 'display: block; padding: 16px 8px 10px 8px; box-sizing: border-box;';
+  
+  // Header (Legende)
+  const mLegend = document.createElement('div');
+  mLegend.className = 'layer-legend';
+  mLegend.innerHTML = `<div class="layer-legend-dot"></div><div class="layer-legend-name" style="flex: 1; text-align: left;">⭐ MASTER</div>`;
+  masterRow.appendChild(mLegend);
+
+  // Eigener Container für die Steuerelemente (NICHT layer-compact nennen!)
+  const mBody = document.createElement('div');
+  mBody.style.cssText = 'display: flex; flex-direction: column; gap: 10px; margin-top: 12px; width: 100%;';
+
+  // Zeile 1: Master Volume (Slider)
+  const mRow1 = document.createElement('div');
+  mRow1.style.cssText = 'display: flex; align-items: center; width: 100%;';
+  
+  const mVol = document.createElement('input');
+  mVol.type = 'range'; mVol.className = 'layer-vol';
+  mVol.dataset.master = 'true';
+  mVol.min = 0; mVol.max = 100; 
+  const currentMasterVol = Math.round((engine._vol ?? 0.75) * 100);
+  mVol.value = currentMasterVol;
+  mVol.style.width = '100%';
+  mVol.style.setProperty('--lv', currentMasterVol + '%');
+  mVol.style.setProperty('--accent', '#ffb830');
+  
+  mVol.addEventListener('input', function() {
+    const val = parseInt(this.value);
+    this.style.setProperty('--lv', val + '%');
+    engine.setVol(val / 100);
+    const fxSlider = document.getElementById('volSlider');
+    if (fxSlider) {
+      fxSlider.value = val;
+      fxSlider.style.setProperty('--val', val + '%');
+    }
+  });
+  mRow1.appendChild(mVol);
+
+  // Zeile 2: Buttons (Mute All, Transpose, Delete All)
+  const mRow2 = document.createElement('div');
+  // Flex-Row mit 4 gleich großen Buttons
+  mRow2.style.cssText = 'display: flex; gap: 4px; width: 100%; justify-content: space-between;';
+
+  // 1. Mute All Button
+  const mBtnMute = document.createElement('button');
+  mBtnMute.className = 'master-btn';
+  const allMuted = layers.length > 0 && layers.every(l => l.muted);
+  mBtnMute.innerHTML = allMuted ? '🔇' : '🔊';
+  mBtnMute.title = 'Alle Layer stummschalten / einschalten';
+  if (allMuted) mBtnMute.style.color = 'var(--accent2)';
+  mBtnMute.onclick = (e) => {
+    e.stopPropagation();
+    const targetMute = !allMuted;
+    layers.forEach(l => l.muted = targetMute);
+    if (targetMute) engine.stopAll();
+    renderLayers();
+  };
+  if (layers.length === 0) mBtnMute.disabled = true;
+
+  // 2. Transpose Down
+  const mBtnTrDown = document.createElement('button');
+  mBtnTrDown.className = 'master-btn';
+  mBtnTrDown.innerHTML = '8↓';
+  mBtnTrDown.title = 'Alle Layer eine Oktave tiefer';
+  mBtnTrDown.onclick = (e) => {
+    e.stopPropagation();
+    layers.forEach(l => l.transpose = (l.transpose || 0) - 12);
+    engine.stopAll();
+    renderLayers();
+  };
+  if (layers.length === 0) mBtnTrDown.disabled = true;
+
+  // 3. Transpose Up
+  const mBtnTrUp = document.createElement('button');
+  mBtnTrUp.className = 'master-btn';
+  mBtnTrUp.innerHTML = '8↑';
+  mBtnTrUp.title = 'Alle Layer eine Oktave höher';
+  mBtnTrUp.onclick = (e) => {
+    e.stopPropagation();
+    layers.forEach(l => l.transpose = (l.transpose || 0) + 12);
+    engine.stopAll();
+    renderLayers();
+  };
+  if (layers.length === 0) mBtnTrUp.disabled = true;
+
+  // 4. Delete All
+  const mBtnDel = document.createElement('button');
+  mBtnDel.className = 'master-btn danger';
+  mBtnDel.innerHTML = '🗑';
+  mBtnDel.title = 'Alle Layer löschen';
+  mBtnDel.onclick = (e) => {
+    e.stopPropagation();
+    if (confirm('Möchtest du wirklich ALLE Layer löschen?')) {
+      layers = [];
+      nextLayerId = 1;
+      engine.stopAll();
+      renderLayers();
+    }
+  };
+  if (layers.length === 0) mBtnDel.disabled = true;
+
+  mRow2.appendChild(mBtnMute);
+  mRow2.appendChild(mBtnTrDown);
+  mRow2.appendChild(mBtnTrUp);
+  mRow2.appendChild(mBtnDel);
+
+  mBody.appendChild(mRow1);
+  mBody.appendChild(mRow2);
+  masterRow.appendChild(mBody);
+  
+  // Master-Layer ganz oben anfügen
+  list.appendChild(masterRow);
+  // ── ENDE MASTER LAYER ──
 
   if (layers.length === 0) {
     const e = document.createElement('div');
@@ -5085,6 +5425,9 @@ function renderLayers() {
       favBtn.title = 'Gespeichert!';
     });
 
+// Sorgt dafür, dass der Name den Platz einnimmt und der Stern nach rechts wandert
+    presetLabel.style.flex = '1';
+    presetLabel.style.minWidth = '0'; // Verhindert, dass zu lange Namen das Layout sprengen
     legend.appendChild(legendDot);
     legend.appendChild(presetLabel);
     legend.appendChild(favBtn);
@@ -6075,8 +6418,7 @@ const FX_DEFS = [
   { id:'eqMid',    label:'EQ Mid',     min:0,    max:100,  def:50,  step:1,   fmt: v=>(v>=50?'+':'')+(((v-50)/50)*12).toFixed(1)+'dB', toAudio: v=>((v-50)/50)*12 },
   { id:'eqHigh',   label:'EQ High',    min:0,    max:100,  def:50,  step:1,   fmt: v=>(v>=50?'+':'')+(((v-50)/50)*12).toFixed(1)+'dB', toAudio: v=>((v-50)/50)*12 },
   { id:'filterFreq',label:'Filter Freq',min:0,   max:100,  def:100, step:1,   fmt: v=>Math.round(80*Math.pow(20000/80,v/100))+'Hz', toAudio: v=>80*Math.pow(20000/80,v/100) },
-  { id:'saturation', label:'Saturation',   min:0, max:100, def:0,  step:1, fmt: v=>v+'%', toAudio: v=>v/100 },
-  { id:'stereoWidth',label:'Stereo Breite',min:0, max:100, def:0,  step:1, fmt: v=>v+'%', toAudio: v=>v/100 },
+  
 ];
 
 // ── FX-Persistenz ─────────────────────────────────────────────
@@ -6694,12 +7036,20 @@ function initSettingsPanel() {
   // ── Reset ─────────────────────────────────────────────────────
   // ── Label Helligkeit ─────────────────────────────────────────
   const labelsEl = document.getElementById('settingsLabels');
-  const LABEL_DEFS = [
+    const LABEL_DEFS = [
     { key:'--label-opacity', label:'Label Helligkeit', min:30, max:100, def:70, unit:'%',
       apply: v => {
-        document.documentElement.style.setProperty('--label-opacity', v/100);
-        // Apply to all opacity labels dynamically
-        document.querySelectorAll('[data-label-opacity]').forEach(el => el.style.opacity = v/100);
+        const op = v / 100;
+        document.documentElement.style.setProperty('--label-opacity', op);
+        
+        // NEU: Wir zwingen die Helligkeit direkt auf alle bekannten Label-Klassen
+        const labels = document.querySelectorAll(
+          '.ps label, .fx-label, .fx-value, .layer-vol-lbl, .kr-note, ' + 
+          '.metro-sig-lbl, .seq-lbl, .vel-label, .gate-label, ' + 
+          '.score-metro-lbl, .settings-section-lbl, .size-lbl, .color-lbl, ' + 
+          '.drum-pad-note, .tbone-pos-labels, .metro-bpm-lbl, .mb-label'
+        );
+        labels.forEach(el => { el.style.opacity = op; });
       }
     },
   ];
@@ -6732,6 +7082,54 @@ function initSettingsPanel() {
     SIZE_DEFS.forEach(d => { d.apply(d.def); if(sizeInputs[d.key]) sizeInputs[d.key].value = d.def; });
     refreshColorInputs();
     themesEl.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+  });
+    // ── Einstellungen Exportieren (Speichern) ──────────────────────
+  document.getElementById('settingsSaveBtn')?.addEventListener('click', () => {
+    // Aktuelle Werte ermitteln (falls sie noch nicht im localStorage sind)
+    const currentColors = settingsGetCurrentColors();
+    const currentSizes = getCurrentSizes();
+    
+    // Wir holen uns das aktuelle Theme (Light-Mode Status)
+    const isLightMode = document.body.classList.contains('light-mode');
+    currentColors._lightMode = isLightMode;
+
+    // Datenpaket für den Export schnüren
+    const dataToSave = {
+      colors: currentColors,
+      sizes: currentSizes
+    };
+
+    // Als JSON-Datei herunterladen
+    const blob = new Blob([JSON.stringify(dataToSave, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'ensemble_design_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // ── Einstellungen Importieren (Laden) ──────────────────────────
+  document.getElementById('settingsLoadInput')?.addEventListener('change', function(e) {
+    if (!e.target.files[0]) return;
+    
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (!d.colors || !d.sizes) throw new Error('Ungültiges Design-Format');
+        
+        // Werte in den localStorage schreiben
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(d));
+        
+        // Seite neu laden, damit alle Farben und Schriften sofort greifen
+        location.reload(); 
+        
+      } catch(err) {
+        alert('Fehler beim Laden der Design-Datei: ' + err.message);
+        this.value = '';
+      }
+    };
+    reader.readAsText(e.target.files[0]);
   });
 }
 
@@ -7490,7 +7888,18 @@ document.addEventListener('keydown', e => {
 
 const vs=document.getElementById('volSlider');
 vs.style.setProperty('--val','75%');
-vs.addEventListener('input',function(){this.style.setProperty('--val',this.value+'%');engine.setVol(parseInt(this.value)/100);});
+vs.addEventListener('input', function() {
+  this.style.setProperty('--val', this.value + '%');
+  const vol = parseInt(this.value) / 100;
+  engine.setVol(vol);
+  
+  // NEU: Den Slider im Master-Layer synchronisieren
+  const mVol = document.querySelector('.master-layer .layer-vol');
+  if (mVol) {
+    mVol.value = this.value;
+    mVol.style.setProperty('--lv', this.value + '%');
+  }
+});
 // Learn button for master vol — insert next to slider
 const vsLearn = makeLearnBtn('master-vol', 'master-vol', mmMakeApplyFn('master-vol','master-vol'));
 vs.parentNode.insertBefore(vsLearn, vs.nextSibling);
@@ -10075,15 +10484,17 @@ function resizeScorePaper() {
   scaleWrap.style.width = '';
   scaleWrap.style.height = '';
 
+  const availW = scrollArea.clientWidth - 16;
+  if (availW <= 0) return; 
+
   const naturalH = paper.scrollHeight;
   const paperW = 794;
-  const availW = scrollArea.clientWidth - 16;
   const scale = availW / paperW;
 
   paper.style.transform = `scale(${scale})`;
   scaleWrap.style.width  = (paperW * scale) + 'px';
   scaleWrap.style.height = (naturalH * scale) + 'px';
-      }
+}
 // ── Gate-Sidebar ─────────────────────────────────────────────
 (function initGateSidebar() {
   const sidebar  = document.getElementById('gateSidebar');
@@ -17294,17 +17705,25 @@ function panelToggleSave(states) {
 // defaultOpen  : ob Panel beim ersten Besuch sichtbar ist
 
 
+
 // ── Metronom-Steuerung im Score-Header ───────────────────────
 (function initScoreMetroControls() {
   const downBtn = document.getElementById('scoreMetroDown');
   const upBtn   = document.getElementById('scoreMetroUp');
-  const disp    = document.getElementById('scoreMetroDisp');
+  const disp    = document.getElementById('scoreMetroDisp'); // Jetzt ein <input>
   if (!downBtn || !upBtn || !disp) return;
 
+  // Hilfsfunktion zum Aktualisieren des Feldes
   function updateDisplay() {
-    if (typeof metro !== 'undefined') disp.textContent = metro.bpm;
+    if (typeof metro !== 'undefined') {
+      // Nur aktualisieren, wenn das Feld nicht gerade vom Nutzer bearbeitet wird
+      if (document.activeElement !== disp) {
+        disp.value = metro.bpm;
+      }
+    }
   }
 
+  // Minus / Plus Buttons
   downBtn.addEventListener('click', () => {
     if (typeof metroSetBpm === 'function') metroSetBpm(metro.bpm - 1);
     updateDisplay();
@@ -17326,27 +17745,42 @@ function panelToggleSave(states) {
       }, 80);
     };
     const stop = () => { clearInterval(iv); iv = null; };
-
     btn.addEventListener('mousedown', start);
     btn.addEventListener('touchstart', start, { passive: true });
-    ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev =>
-      btn.addEventListener(ev, stop));
+    ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev => btn.addEventListener(ev, stop));
   }
   attachHold(downBtn, -1);
   attachHold(upBtn,   1);
 
-  // Anzeige initial und bei jeder externen BPM-Änderung aktualisieren
+  // Manuelle Eingabe im Feld (Enter oder Verlassen des Feldes)
+  function applyManualInput() {
+    let val = parseInt(disp.value);
+    if (isNaN(val)) val = metro.bpm; // Fallback
+    val = Math.max(30, Math.min(300, val)); // Grenzen einhalten
+    if (typeof metroSetBpm === 'function') metroSetBpm(val);
+    disp.value = metro.bpm;
+  }
+
+  disp.addEventListener('change', applyManualInput);
+  disp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { disp.blur(); } // Enter löst Blur und damit 'change' aus
+  });
+
+  // Initialer Wert
   updateDisplay();
 
-  // Hook: wenn metroSetBpm irgendwo anders aufgerufen wird (Tap, Panel, Session),
-  // soll die Anzeige im Score-Header mitlaufen. Der sauberste Weg ist der
-  // gleiche wie beim Arp: metroSetBpm kurz wrappen.
-  if (typeof window.metroSetBpm === 'function' && !window._scoreMetroSyncInstalled) {
+  // GLOBALER HOOK: Wenn sich die BPM irgendwo anders ändert (Metronom, Arp, Session),
+  // soll das Eingabefeld sofort mitziehen.
+  if (!window._scoreMetroSyncInstalled) {
     window._scoreMetroSyncInstalled = true;
-    const _prev = window.metroSetBpm;
+    const _prevMetroSetBpm = window.metroSetBpm;
     window.metroSetBpm = function(bpm) {
-      _prev(bpm);
-      updateDisplay();
+      if (typeof _prevMetroSetBpm === 'function') _prevMetroSetBpm(bpm);
+      // Das Feld direkt im DOM suchen (da es bei Tab-Wechseln evtl. neu gerendert wird)
+      const currentDisp = document.getElementById('scoreMetroDisp');
+      if (currentDisp && document.activeElement !== currentDisp) {
+        currentDisp.value = metro.bpm;
+      }
     };
   }
 })();
@@ -17593,31 +18027,42 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 (function initPanelToggles() {
-  addPanelToggle('ancKeys',      '🎹 Klaviatur',          'keys1',   true);
-  addPanelToggle('masterPanel',  '🔊 Master / Transport', 'master',  true);
-  addPanelToggle('ancSF2',       '🗂 Soundfonts',         'sf2',     true);
-  addPanelToggle('sessionPanel', '💾 Session',            'session', true);
-  addPanelToggle('midiPanel',    '🎹 MIDI Input',         'midi',    false);
-  addPanelToggle('favPanel',     '⭐ Favoriten',           'fav',     false);
-  addPanelToggle('regPanel',     '🔵 Register',           'reg',     true);
-  addPanelToggle('ancLayer',     '🎵 Preset-Layer',       'layer',   true);
-  addPanelToggle('ancFX',        '🎛 Effekte & EQ',       'fx',      true);
-  addPanelToggle('drawbarPanel', '🎹 Zugriegel',          'drawbar', false);
-  addPanelToggle('tbonePanel',   '🎺 Posaune',            'tbone',   true, ['tbone-megaBlow']);
-  addPanelToggle('viz',          '📊 Visualizer',         'viz',     false);
-  addPanelToggle('qzPanel',      '🎸 Quintenzirkel',      'qz',      false);
-  addPanelToggle('chordPanel',   '🎼 Akkorde',            'chord',   true);
-  addPanelToggle('metroPanel',   '♩ Metronom',            'metro',   true);
-  addPanelToggle('seqPanel',     '🥁 Beat Sequenzer',     'seq',     true);
-  addPanelToggle('recPanel',     '⏺ Aufnahme',            'rec',     true);
-  addPanelToggle('kbWrap2',      '🎹 Klaviatur 2',        'keys2',   true);
-  addPanelToggle('drawbarPanel2','🎹 Zugriegel 2',        'drawbar2',false);
-  addPanelToggle('tboneWrap',    '🎺 Zugposaune',         'tbone',   false);
-  addPanelToggle('drumPanel',    '🥁 Drum Pads',          'drums',   true);
-  addPanelToggle('pdfPanel',     '🎼 Noten (PDF)',        'pdf',     false);
-  addPanelToggle('scorePanel',   '🎵 Noten-Editor',       'score',   false);
-  addPanelToggle('jamPanel',     '🌐 Live Jam',           'jam',     false);
-  addPanelToggle('settingsPanel', '⚙ Einstellungen', 'settings', false);
+  // SETUP
+  addPanelToggle('settingsPanel', '⚙️ Einstellungen', 'settings', false, [], '⚙️');
+  addPanelToggle('ancSF2',        '📁 Soundfonts',    'sf2',      true,  [], '📁');
+  addPanelToggle('sessionPanel',  '💾 Session',       'session',  true,  [], '💾');
+  addPanelToggle('midiPanel',     '🎹 MIDI Input',    'midi',     false, [], '🎹');
+  addPanelToggle('jamPanel',      '🌐 Live Jam',      'jam',      false, [], '🌐');
+  
+  // SPIELEN
+  addPanelToggle('ancKeys',       '🎹 Klaviatur 1',   'keys1',    true,  [], '🎹');
+  addPanelToggle('kbWrap2',       '🎹 Klaviatur 2',   'keys2',    true,  [], '🎹');
+  addPanelToggle('chordPanel',    '🎸 Akkorde',       'chord',    true,  [], '🎸');
+  addPanelToggle('drawbarPanel',  '🎛️ Zugriegel 1',   'drawbar',  false, [], '🎚️');
+  addPanelToggle('tbonePanel',    '🎺 Posaune',       'tbone',    true,  ['tbone-megaBlow'], '🎺');
+  addPanelToggle('drumPanel',     '🥁 Drum Pads',     'drums',    true,  [], '🥁');
+  
+  // AUFNAHME
+  addPanelToggle('metroPanel',    '⏱️ Metronom',      'metro',    true,  [], '⏱️');
+  addPanelToggle('seqPanel',      '🔲 Beat Sequenzer','seq',      true,  [], '🔲');
+  addPanelToggle('recPanel',      '🔴 Aufnahme',      'rec',      true,  [], '🔴');
+  
+  // EFFEKTE
+  addPanelToggle('ancFX',         '🎛️ Effekte & EQ',  'fx',       true,  [], '🎛️');
+  addPanelToggle('masterPanel',   '🔊 Master',        'master',   true,  [], '🔊');
+  addPanelToggle('viz',           '📊 Visualizer',    'viz',      false, [], '📊');
+  addPanelToggle('qzPanel',       '🎸 Quintenzirkel', 'qz',       false, [], '🎸');
+  addPanelToggle('regPanel',      '🔘 Register',      'reg',      true,  [], '🔘');
+  addPanelToggle('favPanel',      '⭐ Favoriten',     'fav',      false, [], '⭐');
+  
+  // NOTEN
+  addPanelToggle('pdfPanel',      '📄 Noten (PDF)',   'pdf',      false, [], '📄');
+  addPanelToggle('scorePanel',    '🎼 Noten-Editor',  'score',    false, [], '🎼');
+  
+  // VERSTECKTE (nur falls noch irgendwo verlinkt)
+  addPanelToggle('ancLayer',      '🎵 Preset-Layer',  'layer',    true,  [], '🎵');
+  addPanelToggle('drawbarPanel2', '🎛️ Zugriegel 2',   'drawbar2', false, [], '🎚️');
+  addPanelToggle('tboneWrap',     '🎺 Zugosaune',     'tbone2',   false, [], '🎺');
 })();
 
 // ══════════════════════════════════════════════════════════════
@@ -17635,10 +18080,15 @@ document.querySelectorAll('.tab-btn[data-target]').forEach(btn => {
     closeLayerDetails();
     updateRailForView(btn.dataset.target);
 
-    if (btn.dataset.target !== 'view-notes') {
+        if (btn.dataset.target !== 'view-notes') {
       document.body.classList.remove('score-focus');
       const fsBtn = document.getElementById('scoreFullscreenBtn');
       if (fsBtn) fsBtn.textContent = '⛶ Vollbild';
+    } else {
+      // Nicht mehr per Timeout rätseln – der ResizeObserver übernimmt das!
+      requestAnimationFrame(() => {
+        if (typeof scoreDrawBeams === 'function') scoreDrawBeams();
+      });
     }
   });
 });
@@ -17651,10 +18101,20 @@ if (scoreHeader && !document.getElementById('scoreFullscreenBtn')) {
   fsBtn.className = 'score-btn';
   fsBtn.textContent = '⛶ Vollbild';
   fsBtn.style.cssText = 'background:var(--accent);color:#000;font-weight:bold;margin-left:auto;';
-  fsBtn.addEventListener('click', () => {
-    document.body.classList.toggle('score-focus');
-    fsBtn.textContent = document.body.classList.contains('score-focus') ? '✕ Verkleinern' : '⛶ Vollbild';
-    setTimeout(() => { if (typeof resizeScorePaper === 'function') resizeScorePaper(); }, 150);
+      fsBtn.addEventListener('click', () => {
+    // Nur das App-interne Layout umschalten
+    const isFocus = document.body.classList.toggle('score-focus');
+    fsBtn.textContent = isFocus ? '✕ Verkleinern' : '⛶ Vollbild';
+
+    // (Der try/catch-Block für das Browser-Vollbild ist hier komplett entfernt!)
+
+    // Nach dem Layout-Wechsel das Notenblatt neu skalieren
+    setTimeout(() => {
+      if (typeof resizeScorePaper === 'function') resizeScorePaper();
+      if (typeof scoreDrawBeams === 'function') scoreDrawBeams();
+      const scrollArea = document.querySelector('.score-scroll-area');
+      if (scrollArea) { scrollArea.scrollLeft = 0; scrollArea.scrollTop = 0; }
+    }, 250);
   });
   scoreHeader.appendChild(fsBtn);
 }
@@ -17686,16 +18146,55 @@ if (layerListEl) {
     document.querySelectorAll('.layer-row').forEach(r => r.classList.remove('active'));
     row.classList.add('active');
 
-    const details = row.querySelector('.layer-details');
     const container = document.getElementById('layerDetailContainer');
+    const emptyState = document.getElementById('layerEmptyState');
+    if (!container) return;
 
-    if (details && container) {
-      closeLayerDetails(); // Alte schließen
+    // ── 1. TAB-WECHSEL ZUERST (Wichtig für den Doppelklick-Bug!) ──
+    const layerTab = document.querySelector('.tab-btn[data-target="view-layer"]');
+    if (layerTab && !layerTab.classList.contains('active')) {
+      window._skipCloseDetails = true; 
+      layerTab.click();
+    }
+
+    // ── 2. WENN MASTER-LAYER GEKLICKT WURDE ──
+    if (row.classList.contains('master-layer')) {
+      closeLayerDetails(); 
+      
+      const masterPanel = document.getElementById('masterPanel');
+      if (masterPanel) {
+        container.appendChild(masterPanel);
+        masterPanel.style.display = 'flex'; 
+        
+        container.style.display = 'flex';
+        container.classList.add('active');
+        if (emptyState) emptyState.style.display = 'none';
+
+        // Schließen-Button für Master hinzufügen
+        if (!masterPanel.querySelector('.close-master-btn')) {
+          const closeBtn = document.createElement('button');
+          closeBtn.className = 'score-btn danger close-master-btn';
+          closeBtn.textContent = '✕ Master schließen';
+          closeBtn.style.cssText = 'margin-top:15px; width:100%; padding:10px; font-weight:bold;';
+          closeBtn.onclick = (ev) => {
+            ev.stopPropagation();
+            closeLayerDetails();
+          };
+          masterPanel.appendChild(closeBtn);
+        }
+      }
+      return; 
+    }
+
+    // ── 3. WENN EIN NORMALER LAYER GEKLICKT WURDE ──
+    const details = row.querySelector('.layer-details');
+    if (details) {
+      closeLayerDetails(); 
       container.appendChild(details);
       container.style.display = 'flex';
       container.classList.add('active');
+      if (emptyState) emptyState.style.display = 'none';
 
-      // Close-Button im Detail-Bereich (einmalig pro Öffnen)
       if (!details.querySelector('.close-detail-btn')) {
         const closeBtn = document.createElement('button');
         closeBtn.className = 'score-btn danger close-detail-btn';
@@ -17703,20 +18202,10 @@ if (layerListEl) {
         closeBtn.style.cssText = 'margin-top:15px; width:100%; padding:10px; font-weight:bold;';
         closeBtn.onclick = (ev) => {
           ev.stopPropagation();
-          row.appendChild(details);
-          container.innerHTML = '';
-          container.style.display = 'none';
-          container.classList.remove('active');
-          row.classList.remove('active');
-          const cb = details.querySelector('.close-detail-btn');
-          if (cb) cb.remove();
+          closeLayerDetails();
         };
         details.appendChild(closeBtn);
       }
-
-      // Automatisch zum Setup-Tab wechseln, um die Details zu sehen
-      const setupTab = document.querySelector('.tab-btn[data-target="view-setup"]');
-      if (setupTab && !setupTab.classList.contains('active')) setupTab.click();
     }
   });
 }
@@ -17733,33 +18222,38 @@ setTimeout(() => { if (typeof renderLayers === 'function') renderLayers(); }, 50
 // NEU: Linke Icon-Leiste (ersetzt die alten Jalousie-Buttons)
 // ══════════════════════════════════════════════════════════════
 
-function addPanelToggle(panelId, label, storageKey, defaultOpen = true, extraIds = []) {
+function addPanelToggle(panelId, label, storageKey, defaultOpen = true, extraIds = [], explicitIcon = null) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
   const view = panel.closest('.app-view');
   if (!view) return;
 
-  let icon = '📄';
-  if (label.includes('🎹')) icon = '🎹';
-  if (label.includes('🎛')) icon = '🎛';
-  if (label.includes('🎺')) icon = '🎺';
-  if (label.includes('🥁')) icon = '🥁';
-  if (label.includes('🎼')) icon = '🎼';
-  if (label.includes('⏺')) icon = '⏺';
-  if (label.includes('🗂')) icon = '🗂';
-  if (label.includes('🌐')) icon = '🌐';
-  if (label.includes('🎸')) icon = '🎸';
-  if (label.includes('📊')) icon = '📊';
-  if (label.includes('⚙')) icon = '⚙️';
+  // Icon bestimmen: Wenn ein explizites Icon übergeben wurde, nimm das.
+  // Ansonsten den alten Fallback nutzen.
+  let icon = explicitIcon || '📄';
+  if (!explicitIcon) {
+    if (label.includes('🎹')) icon = '🎹';
+    if (label.includes('🎛')) icon = '🎛';
+    if (label.includes('🎺')) icon = '🎺';
+    if (label.includes('🥁')) icon = '🥁';
+    if (label.includes('🎼')) icon = '🎼';
+    if (label.includes('⏺')) icon = '⏺';
+    if (label.includes('🗂')) icon = '🗂';
+    if (label.includes('🌐')) icon = '🌐';
+    if (label.includes('🎸')) icon = '🎸';
+    if (label.includes('📊')) icon = '📊';
+    if (label.includes('⚙')) icon = '⚙️';
+  }
 
   const railBtn = document.createElement('button');
   railBtn.className = 'rail-btn';
   railBtn.dataset.targetView = view.id;
   railBtn.dataset.targetPanel = panelId;
-  railBtn.innerHTML = `<span class="rail-icon">${icon}</span>`;
+  railBtn.innerHTML = `<span class="rail-icon" style="font-size: 1.3rem;">${icon}</span>`;
   railBtn.title = label.replace(/^[^\s]+\s*/, '');
 
   document.getElementById('app-rail').appendChild(railBtn);
+ 
 
   // Panel initial verstecken
   panel.style.display = 'none';
@@ -17838,20 +18332,48 @@ function updateRailForView(viewId) {
 
 function closeLayerDetails() {
   const container = document.getElementById('layerDetailContainer');
-  if (!container) return;
-  container.style.display = 'none';
-  container.classList.remove('active');
-  const oldRow = container.querySelector('.layer-row');
-  if (oldRow) {
-    const oldDetails = container.querySelector('.layer-details');
-    if (oldDetails) {
-      const cb = oldDetails.querySelector('.close-detail-btn');
-      if (cb) cb.remove();
-      oldRow.appendChild(oldDetails);
-    }
+  const emptyState = document.getElementById('layerEmptyState');
+  const masterPanel = document.getElementById('masterPanel');
+
+  // 1. NEU: Wenn der Master offen ist, schieb ihn zurück in den Effekte-Tab
+  if (masterPanel && container && container.contains(masterPanel)) {
+    // WICHTIG: Den Schließen-Button entfernen, bevor das Panel zurückwandert!
+    const masterCb = masterPanel.querySelector('.close-master-btn');
+    if (masterCb) masterCb.remove();
+
+    const fxView = document.getElementById('view-fx');
+    if (fxView) fxView.appendChild(masterPanel);
   }
-  container.innerHTML = '';
-  document.querySelectorAll('.layer-row').forEach(r => r.classList.remove('active'));
+
+  if (container) {
+    // 2. Container im Center-Bereich verstecken
+    container.style.display = 'none';
+    container.classList.remove('active');
+
+    // 3. Die Details finden, die gerade im Container liegen
+    const details = container.querySelector('.layer-details');
+    
+    // 4. Den dazugehörigen Layer in der rechten Leiste finden
+    const activeRow = document.querySelector('#layerList .layer-row.active');
+
+    // 5. Details wieder zurück in die rechte Leiste schieben
+    if (details && activeRow) {
+      const cb = details.querySelector('.close-detail-btn');
+      if (cb) cb.remove(); // Den "Details schließen"-Button entfernen
+      activeRow.appendChild(details); // Details zurück in den Layer schieben
+    }
+
+    // 6. Container leeren
+    container.innerHTML = '';
+  }
+
+  // 7. Den "Bitte klicke auf einen Layer"-Text im Layer-Tab wieder anzeigen
+  if (emptyState) {
+    emptyState.style.display = 'block';
+  }
+
+  // 8. Die aktive Markierung von allen Layern in der rechten Leiste entfernen
+  document.querySelectorAll('#layerList .layer-row').forEach(r => r.classList.remove('active'));
 }
 
 // Initial den Setup-Tab in der Leiste anzeigen
@@ -17881,6 +18403,89 @@ window.startApp = function() {
     splash.style.display = 'none';
   }, 600);
 };
+// Repariert das Notenlayout, wenn der Vollbildmodus beendet oder gestartet wird
+document.addEventListener('fullscreenchange', () => {
+  if (document.getElementById('view-notes')?.classList.contains('active')) {
+    // Kurz warten, bis der Browser den Vollbild-Status verarbeitet hat
+    setTimeout(() => {
+      if (typeof resizeScorePaper === 'function') resizeScorePaper();
+      if (typeof scoreDrawBeams === 'function') scoreDrawBeams();
+    }, 100);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// RESIZE OBSERVER FÜR NOTEN-EDITOR (Löst das Layout-Problem)
+// ══════════════════════════════════════════════════════════════
+const scoreScrollArea = document.querySelector('.score-scroll-area');
+if (scoreScrollArea && window.ResizeObserver) {
+  let lastWidth = 0;
+  const observer = new ResizeObserver(entries => {
+    for (let entry of entries) {
+      const width = entry.contentRect.width;
+      // Sobald der Tab sichtbar wird und eine Breite > 0 hat
+      if (width > 0 && width !== lastWidth) {
+        lastWidth = width;
+        if (typeof resizeScorePaper === 'function') {
+          resizeScorePaper();
+        }
+        if (typeof scoreDrawBeams === 'function') {
+          scoreDrawBeams();
+        }
+      }
+    }
+  });
+  observer.observe(scoreScrollArea);
+}
+// ══════════════════════════════════════════════════════════════
+// VOLLBILD-WÄCHTER: Repariert das Notenlayout bei jedem Wechsel
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('fullscreenchange', () => {
+  // Nur eingreifen, wenn wir im Noten-Tab sind
+  if (document.getElementById('view-notes')?.classList.contains('active')) {
+    // 300ms warten, bis der Browser die neue Bildschirmgröße (Statusleiste etc.) verarbeitet hat
+    setTimeout(() => {
+      if (typeof resizeScorePaper === 'function') resizeScorePaper();
+      if (typeof scoreDrawBeams === 'function') scoreDrawBeams();
+      
+      // Ganz nach oben links zwingen
+      const scrollArea = document.querySelector('.score-scroll-area');
+      if (scrollArea) {
+        scrollArea.scrollLeft = 0;
+        scrollArea.scrollTop = 0;
+      }
+    }, 300); 
+  }
+});
+// ══════════════════════════════════════════════════════════════
+// UNIVERSAL SLIDER FIX (Synchronisiert alle Balken mit den Punkten)
+// ══════════════════════════════════════════════════════════════
+function updateSliderVisuals(slider) {
+  if (!slider || slider.type !== 'range') return;
+  const min = parseFloat(slider.min) || 0;
+  const max = parseFloat(slider.max) || 100;
+  const val = parseFloat(slider.value) || 0;
+  const pct = ((val - min) / (max - min)) * 100;
+  
+  // Setzt alle möglichen Variablen, damit jedes CSS-System bedient wird
+  slider.style.setProperty('--val', pct + '%');
+  slider.style.setProperty('--lv',  pct + '%');
+  slider.style.setProperty('--sv',  pct + '%');
+}
+
+// Auf Bewegung reagieren
+document.addEventListener('input', (e) => {
+  if (e.target.matches('input[type="range"]')) {
+    updateSliderVisuals(e.target);
+  }
+}, { passive: true });
+
+// Beim Laden und bei neuen Elementen (z.B. Layer öffnen) ausführen
+function initAllSliders() {
+  document.querySelectorAll('input[type="range"]').forEach(updateSliderVisuals);
+}
+initAllSliders();
+new MutationObserver(initAllSliders).observe(document.body, { childList: true, subtree: true });
 </script>
 </body>
 </html>
