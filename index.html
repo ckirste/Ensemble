@@ -18136,76 +18136,118 @@ document.getElementById('forceLandscapeBtn')?.addEventListener('click', async ()
 });
 
 // 4. Mixer: Layer-Details per Klick in den Hauptbereich verschieben
+// Zentraler Zustand: welche Layer-Row liegt gerade im Detailbereich?
+let _openLayerRow = null;
+
+// Räumt Details / Master-Panel aus dem Container zurück an ihren Platz.
+// Wird beim direkten Layer-Wechsel UND beim Schließen aufgerufen — dadurch
+// gibt es nie "verwaiste" Detail-Blöcke in der falschen Row.
+function _restoreOpenDetails(container) {
+  if (!container) return;
+
+  container.querySelectorAll('.layer-details').forEach(d => {
+    const cb = d.querySelector('.close-detail-btn');
+    if (cb) cb.remove();
+    if (_openLayerRow && _openLayerRow.isConnected) {
+      _openLayerRow.appendChild(d);
+    }
+  });
+
+  const mp = document.getElementById('masterPanel');
+  if (mp && container.contains(mp)) {
+    const mcb = mp.querySelector('.close-master-btn');
+    if (mcb) mcb.remove();
+    const fxView = document.getElementById('view-fx');
+    if (fxView) fxView.appendChild(mp);
+  }
+
+  container.innerHTML = '';
+  if (_openLayerRow) _openLayerRow.classList.remove('active');
+  _openLayerRow = null;
+}
+
 const layerListEl = document.getElementById('layerList');
 if (layerListEl) {
   layerListEl.addEventListener('click', (e) => {
     const row = e.target.closest('.layer-row');
-    // Klick nur auslösen, wenn nicht auf interaktive Elemente geklickt wurde
     if (!row || e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
 
-    document.querySelectorAll('.layer-row').forEach(r => r.classList.remove('active'));
-    row.classList.add('active');
-
-    const container = document.getElementById('layerDetailContainer');
+    const container  = document.getElementById('layerDetailContainer');
     const emptyState = document.getElementById('layerEmptyState');
     if (!container) return;
 
-    // ── 1. TAB-WECHSEL ZUERST (Wichtig für den Doppelklick-Bug!) ──
-    const layerTab = document.querySelector('.tab-btn[data-target="view-layer"]');
-    if (layerTab && !layerTab.classList.contains('active')) {
-      window._skipCloseDetails = true; 
-      layerTab.click();
+    // Toggle: gleicher Layer nochmal klicken → schließen
+    if (_openLayerRow === row) {
+      closeLayerDetails();
+      return;
     }
 
-    // ── 2. WENN MASTER-LAYER GEKLICKT WURDE ──
+    // Tab-Zustand manuell setzen (KEIN layerTab.click(), denn dessen Handler
+    // ruft closeLayerDetails() auf und würde die gerade geöffneten Details
+    // sofort wieder zerstören — genau das war der eigentliche Bug).
+    const layerTab = document.querySelector('.tab-btn[data-target="view-layer"]');
+    if (layerTab && !layerTab.classList.contains('active')) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      layerTab.classList.add('active');
+      document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-layer').classList.add('active');
+      document.body.classList.remove('score-focus');
+
+      document.querySelectorAll('.rail-btn').forEach(btn => {
+        btn.style.display = 'none';
+        btn.classList.remove('active');
+      });
+      document.querySelectorAll('.rail-btn[data-target-view="view-layer"]').forEach(btn => {
+        btn.style.display = 'flex';
+      });
+    }
+
+    // Vorherigen Layer sauber zurücksetzen
+    _restoreOpenDetails(container);
+
+    // Neue Row aktivieren
+    document.querySelectorAll('.layer-row').forEach(r => r.classList.remove('active'));
+    row.classList.add('active');
+    _openLayerRow = row;
+
+    // Master-Layer
     if (row.classList.contains('master-layer')) {
-      closeLayerDetails(); 
-      
       const masterPanel = document.getElementById('masterPanel');
       if (masterPanel) {
         container.appendChild(masterPanel);
-        masterPanel.style.display = 'flex'; 
-        
+        masterPanel.style.display = 'flex';
         container.style.display = 'flex';
         container.classList.add('active');
         if (emptyState) emptyState.style.display = 'none';
 
-        // Schließen-Button für Master hinzufügen
         if (!masterPanel.querySelector('.close-master-btn')) {
           const closeBtn = document.createElement('button');
           closeBtn.className = 'score-btn danger close-master-btn';
           closeBtn.textContent = '✕ Master schließen';
-          closeBtn.style.cssText = 'margin-top:15px; width:100%; padding:10px; font-weight:bold;';
-          closeBtn.onclick = (ev) => {
-            ev.stopPropagation();
-            closeLayerDetails();
-          };
+          closeBtn.style.cssText = 'margin-top:15px;width:100%;padding:10px;font-weight:bold;';
+          closeBtn.onclick = (ev) => { ev.stopPropagation(); closeLayerDetails(); };
           masterPanel.appendChild(closeBtn);
         }
       }
-      return; 
+      return;
     }
 
-    // ── 3. WENN EIN NORMALER LAYER GEKLICKT WURDE ──
+    // Normaler Layer
     const details = row.querySelector('.layer-details');
-    if (details) {
-      closeLayerDetails(); 
-      container.appendChild(details);
-      container.style.display = 'flex';
-      container.classList.add('active');
-      if (emptyState) emptyState.style.display = 'none';
+    if (!details) return;
 
-      if (!details.querySelector('.close-detail-btn')) {
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'score-btn danger close-detail-btn';
-        closeBtn.textContent = '✕ Details schließen';
-        closeBtn.style.cssText = 'margin-top:15px; width:100%; padding:10px; font-weight:bold;';
-        closeBtn.onclick = (ev) => {
-          ev.stopPropagation();
-          closeLayerDetails();
-        };
-        details.appendChild(closeBtn);
-      }
+    container.appendChild(details);
+    container.style.display = 'flex';
+    container.classList.add('active');
+    if (emptyState) emptyState.style.display = 'none';
+
+    if (!details.querySelector('.close-detail-btn')) {
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'score-btn danger close-detail-btn';
+      closeBtn.textContent = '✕ Details schließen';
+      closeBtn.style.cssText = 'margin-top:15px;width:100%;padding:10px;font-weight:bold;';
+      closeBtn.onclick = (ev) => { ev.stopPropagation(); closeLayerDetails(); };
+      details.appendChild(closeBtn);
     }
   });
 }
@@ -18331,51 +18373,23 @@ function updateRailForView(viewId) {
 }
 
 function closeLayerDetails() {
-  const container = document.getElementById('layerDetailContainer');
+  const container  = document.getElementById('layerDetailContainer');
   const emptyState = document.getElementById('layerEmptyState');
-  const masterPanel = document.getElementById('masterPanel');
-
-  // 1. NEU: Wenn der Master offen ist, schieb ihn zurück in den Effekte-Tab
-  if (masterPanel && container && container.contains(masterPanel)) {
-    // WICHTIG: Den Schließen-Button entfernen, bevor das Panel zurückwandert!
-    const masterCb = masterPanel.querySelector('.close-master-btn');
-    if (masterCb) masterCb.remove();
-
-    const fxView = document.getElementById('view-fx');
-    if (fxView) fxView.appendChild(masterPanel);
-  }
 
   if (container) {
-    // 2. Container im Center-Bereich verstecken
     container.style.display = 'none';
     container.classList.remove('active');
-
-    // 3. Die Details finden, die gerade im Container liegen
-    const details = container.querySelector('.layer-details');
-    
-    // 4. Den dazugehörigen Layer in der rechten Leiste finden
-    const activeRow = document.querySelector('#layerList .layer-row.active');
-
-    // 5. Details wieder zurück in die rechte Leiste schieben
-    if (details && activeRow) {
-      const cb = details.querySelector('.close-detail-btn');
-      if (cb) cb.remove(); // Den "Details schließen"-Button entfernen
-      activeRow.appendChild(details); // Details zurück in den Layer schieben
+    if (typeof _restoreOpenDetails === 'function') {
+      _restoreOpenDetails(container);
+    } else {
+      container.innerHTML = '';
     }
-
-    // 6. Container leeren
-    container.innerHTML = '';
   }
+  if (emptyState) emptyState.style.display = 'block';
 
-  // 7. Den "Bitte klicke auf einen Layer"-Text im Layer-Tab wieder anzeigen
-  if (emptyState) {
-    emptyState.style.display = 'block';
-  }
-
-  // 8. Die aktive Markierung von allen Layern in der rechten Leiste entfernen
   document.querySelectorAll('#layerList .layer-row').forEach(r => r.classList.remove('active'));
+  if (typeof _openLayerRow !== 'undefined') _openLayerRow = null;
 }
-
 // Initial den Setup-Tab in der Leiste anzeigen
 setTimeout(() => updateRailForView('view-setup'), 500);
 // ══════════════════════════════════════════════════════════════
