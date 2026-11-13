@@ -1808,7 +1808,8 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  width: 100%;
+  /*width: 100%;*/
+  min-width: 0;
   background: #ffffff;
   overflow: hidden;
   padding: 0;
@@ -10473,7 +10474,7 @@ try {
   }
 } catch(e) {}
 //neu
-function resizeScorePaper() {
+function resizeScorePaper(retry=0) {
   const paper     = document.getElementById('scorePaper');
   const scaleWrap = paper?.parentElement;
   const scrollArea = document.querySelector('.score-scroll-area');
@@ -10485,6 +10486,12 @@ function resizeScorePaper() {
   scaleWrap.style.height = '';
 
   const availW = scrollArea.clientWidth - 16;
+  // NEU: Wenn die Breite unplausibel klein ist, ist das Layout noch nicht fertig.
+  // Bis zu 5-mal alle 50ms erneut versuchen.
+  if (availW < 100 && retry < 5) {
+    setTimeout(() => resizeScorePaper(retry + 1), 50);
+    return;
+  }
   if (availW <= 0) return; 
 
   const naturalH = paper.scrollHeight;
@@ -18087,8 +18094,17 @@ document.querySelectorAll('.tab-btn[data-target]').forEach(btn => {
     } else {
       // Nicht mehr per Timeout rätseln – der ResizeObserver übernimmt das!
       requestAnimationFrame(() => {
+        if (typeof resizeScorePaper === 'function') resizeScorePaper();
         if (typeof scoreDrawBeams === 'function') scoreDrawBeams();
       });
+      // Sicherheitsnetz: nochmals nach 150ms und 400ms
+      setTimeout(() => {
+        if (typeof resizeScorePaper === 'function') resizeScorePaper();
+      }, 150);
+      setTimeout(() => {
+        if (typeof resizeScorePaper === 'function') resizeScorePaper();
+        if (typeof scoreDrawBeams === 'function') scoreDrawBeams();
+      }, 400);
     }
   });
 });
@@ -18395,7 +18411,7 @@ setTimeout(() => updateRailForView('view-setup'), 500);
 // ══════════════════════════════════════════════════════════════
 // SPLASH SCREEN LOGIK
 // ══════════════════════════════════════════════════════════════
-window.startApp = function() {
+window.startApp = async function() {
   const splash = document.getElementById('splash-screen');
   if (!splash || splash.classList.contains('fade-out')) return;
 
@@ -18407,9 +18423,22 @@ window.startApp = function() {
     window.initAudio();
   }
 
-  // 3. Ggf. Fullscreen triggern (da wir uns in einem User-Klick befinden)
+  // 3. Ggf. Fullscreen triggern (da wir uns in einem User-Klick befinden) & Querformat erzwingen
   if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(() => {});
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      } else if (document.documentElement.webkitRequestFullscreen) {
+        await document.documentElement.webkitRequestFullscreen();
+      }
+
+      // Querformat nach erfolgreichem Fullscreen erzwingen
+      if (screen.orientation && screen.orientation.lock) {
+        await screen.orientation.lock('landscape');
+      }
+    } catch (e) {
+      console.warn("Fullscreen oder Orientierungs-Sperre fehlgeschlagen:", e);
+    }
   }
 
   // 4. Nach der Animation komplett aus dem DOM nehmen, damit es nicht stört
@@ -18417,7 +18446,9 @@ window.startApp = function() {
     splash.style.display = 'none';
   }, 600);
 };
-// Repariert das Notenlayout, wenn der Vollbildmodus beendet oder gestartet wird
+
+  
+  // Repariert das Notenlayout, wenn der Vollbildmodus beendet oder gestartet wird
 document.addEventListener('fullscreenchange', () => {
   if (document.getElementById('view-notes')?.classList.contains('active')) {
     // Kurz warten, bis der Browser den Vollbild-Status verarbeitet hat
