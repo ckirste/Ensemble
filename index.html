@@ -5435,8 +5435,9 @@ function renderLayers() {
     presetLabel.style.flex = '1';
     presetLabel.style.minWidth = '0'; // Verhindert, dass zu lange Namen das Layout sprengen
     legend.appendChild(legendDot);
-    legend.appendChild(presetLabel);
     legend.appendChild(favBtn);
+    legend.appendChild(presetLabel);
+    
     row.style.borderColor = color + '66';
 
     // ── Compact: Zeile 1 (Slider) + Zeile 2 (Buttons) ────────────
