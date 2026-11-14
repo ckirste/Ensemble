@@ -2680,6 +2680,8 @@ input[type=range]::-webkit-slider-thumb {
 <div id="app-grid">
   <!-- TABS (Oben) -->
   <nav id="app-tabs">
+        <button class="tab-btn" id="forceLandscapeBtn" style="color:var(--accent2); border:1px solid var(--accent2); border-radius:5px; margin: 5px 0; padding: 0 10px; height: 30px;flex-shrink:0;">📱 Quer + Voll</button>
+
     <button class="tab-btn active" data-target="view-setup">⚙️ Setup</button>
     <button class="tab-btn" data-target="view-play">🎹 Spielen</button>
 	<button class="tab-btn" data-target="view-layer">🎵 Layer</button>
@@ -2687,7 +2689,6 @@ input[type=range]::-webkit-slider-thumb {
     <button class="tab-btn" data-target="view-fx">🎛 Effekte</button>
     <button class="tab-btn" data-target="view-notes">🎼 Noten</button>
     <div style="flex:1"></div>
-    <button class="tab-btn" id="forceLandscapeBtn" style="color:var(--accent2); border:1px solid var(--accent2); border-radius:5px; margin: 5px 0; padding: 0 10px; height: 30px;">📱 Querformat</button>
   </nav>
 <aside id="app-rail"></aside>
   <!-- MITTLERER BEREICH (Arbeitsfläche) -->
@@ -18035,11 +18036,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 (function initPanelToggles() {
   // SETUP
-  addPanelToggle('settingsPanel', '⚙️ Einstellungen', 'settings', false, [], '⚙️');
+  
   addPanelToggle('ancSF2',        '📁 Soundfonts',    'sf2',      true,  [], '📁');
   addPanelToggle('sessionPanel',  '💾 Session',       'session',  true,  [], '💾');
   addPanelToggle('midiPanel',     '🎹 MIDI Input',    'midi',     false, [], '🎹');
   addPanelToggle('jamPanel',      '🌐 Live Jam',      'jam',      false, [], '🌐');
+  addPanelToggle('settingsPanel', '⚙️ Einstellungen', 'settings', false, [], '⚙️');
   
   // SPIELEN
   addPanelToggle('ancKeys',       '🎹 Klaviatur 1',   'keys1',    true,  [], '🎹');
@@ -18531,6 +18533,84 @@ function initAllSliders() {
 }
 initAllSliders();
 new MutationObserver(initAllSliders).observe(document.body, { childList: true, subtree: true });
+
+// ══════════════════════════════════════════════════════════════
+// HINWEIS: Android Datei-Manager im Querformat
+// ══════════════════════════════════════════════════════════════
+(function() {
+  const HINT_KEY = 'ensemble_orient_hint_shown_v1';
+
+  function isAndroid() {
+    return /Android/i.test(navigator.userAgent);
+  }
+
+  function showOrientationHint() {
+    if (!isAndroid()) return;
+    if (localStorage.getItem(HINT_KEY)) return;
+    localStorage.setItem(HINT_KEY, '1');
+
+    const toast = document.createElement('div');
+    toast.id = 'orientHintToast';
+    toast.style.cssText = `
+      position: fixed; bottom: 16px; left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel2); border: 1.5px solid var(--accent);
+      border-radius: 10px; padding: 14px 18px 14px 14px;
+      max-width: min(92vw, 460px); z-index: 10000;
+      box-shadow: 0 6px 28px rgba(0,0,0,.7), 0 0 20px rgba(0,229,255,.2);
+      color: var(--textbright); font-family: 'Share Tech Mono', monospace;
+      font-size: .72rem; line-height: 1.55;
+      display: flex; gap: 10px; align-items: flex-start;
+      animation: orientHintIn .35s ease-out;
+    `;
+    toast.innerHTML = `
+      <span style="font-size:1.4rem;flex-shrink:0;line-height:1">📱</span>
+      <div style="flex:1">
+        <b style="color:var(--accent);display:block;margin-bottom:4px;font-size:.78rem">
+          Datei-Manager bleibt hochkant?
+        </b>
+        Falls sich der Android-Datei-Manager im <b>Hochformat</b> öffnet:
+        Aktiviere <b>Automatische Rotation</b> (Schnelleinstellungen-Leiste
+        nach unten ziehen&nbsp;→&nbsp;„Auto-Rotate"). Danach folgt der
+        Picker der Geräteausrichtung – genau wie die App selbst.
+      </div>
+      <button id="orientHintClose"
+        style="background:none;border:none;color:var(--dim);
+               font-size:1rem;cursor:pointer;padding:0 2px;
+               flex-shrink:0;line-height:1">
+        ✕
+      </button>
+    `;
+
+    if (!document.getElementById('orientHintStyles')) {
+      const s = document.createElement('style');
+      s.id = 'orientHintStyles';
+      s.textContent = `
+        @keyframes orientHintIn {
+          from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        #orientHintClose:hover { color: var(--accent2) !important; }
+      `;
+      document.head.appendChild(s);
+    }
+
+    document.body.appendChild(toast);
+    toast.querySelector('#orientHintClose').onclick = () => toast.remove();
+
+    // Nach 14 s automatisch ausblenden
+    setTimeout(() => {
+      if (toast.isConnected) {
+        toast.style.transition = 'opacity .4s';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 400);
+      }
+    }, 30000);
+  }
+
+  const sfAddBtn = document.getElementById('sfAddBtn');
+  if (sfAddBtn) sfAddBtn.addEventListener('click', showOrientationHint);
+})();
 </script>
 </body>
 </html>
