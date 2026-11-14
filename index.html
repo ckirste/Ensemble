@@ -1995,9 +1995,9 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
    Liegt hinter Notensystem/Noten (z-index:0) und reagiert nicht auf
    Klicks (pointer-events:none). */
 .score-layer-watermark{
-  position:absolute;
+  position:sticky;/*absolute;*/
   left:90px;                 /* nach der Clef-Area (~80px) */
-  bottom:4px;
+  /*bottom:4px;*/
   font-family:'Orbitron',monospace;
   font-size:2rem;
   font-weight:900;
@@ -2008,6 +2008,10 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   pointer-events:none;
   user-select:none;
   z-index:0;
+  /* NEU: Flexbox nutzen, um den Text nach unten zu schieben */
+  display: flex;
+  align-items: flex-end; /* Richtet den Inhalt unten aus */
+  padding-bottom: 4px;   /* Der gewünschte Abstand nach unten */
 }
 /* ── Druckvorschau: Seitenformat per CSS-Variablen (wählbar), im Browser auf Bildschirmbreite skaliert ── */
 .score-print-page {
