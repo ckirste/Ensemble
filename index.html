@@ -594,11 +594,11 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .layer-row.layer-muted{opacity:.45}
 
 /* Group-box legend: preset name floats in the top border */
-.layer-legend{position:absolute;top:-10px;left:14px;display:flex;align-items:center;gap:5px;background:#07070f;padding:0 4px;max-width:calc(100% - 80px)}
+.layer-legend{position:absolute;top:-10px;left:14px;display:flex;align-items:center;gap:5px;background:#07070f;padding:0 4px;max-width:calc(100% - 0px)}
 .layer-legend-name{font-family:'Share Tech Mono',monospace;font-size:.72rem;font-weight:600;
   letter-spacing:.04em;color:var(--textbright);
   background:#07070f;padding:0 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  border-radius:4px;line-height:1.6;cursor:pointer;pointer-events:all;max-width:160px}
+  border-radius:4px;line-height:1.6;cursor:pointer;pointer-events:all;max-width:100%}
 .layer-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;
   box-shadow:0 0 5px currentColor;background:#07070f;pointer-events:none}
 
@@ -1279,11 +1279,12 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .score-voice-step .score-acc {
     left: 1px !important;   /* Abstand nach links, damit es nicht den Kopf überlappt */
 /* Haltebogen an den neuen Notenkopf anpassen */
+              }
 .score-step .score-tie-svg,
 .score-voice-step .score-tie-svg {
   left: 20px !important;
   }
-                                      }
+                                      
 
 .score-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;
   padding:0;margin-bottom:12px;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column;height: 100vh;               /* oder flex:1 im Container */
@@ -2385,9 +2386,10 @@ body.score-focus #app-grid { grid-template-columns: 1fr; }
   padding: 0 !important; 
   border: none !important; 
   display: flex !important; 
-  justify-content: space-between !important; /* <-- Zwingt den Stern nach ganz rechts */
+  /*justify-content: space-between !important;*/ /* <-- Zwingt den Stern nach ganz rechts */
   align-items: center !important;
   width: 100% !important;
+  max-width: none !important;
 }
 #layerList .layer-legend-name { 
   font-size: 0.75rem !important; 
@@ -2395,6 +2397,7 @@ body.score-focus #app-grid { grid-template-columns: 1fr; }
   padding: 0 5px !important;
   flex: 1 !important; /* <-- Der Name nimmt den ganzen Platz links ein */
   text-align: left !important;
+  min-width: 0 !important;
 }
 #layerList .layer-compact { 
   padding: 0 !important; 
@@ -5274,9 +5277,15 @@ function renderLayers() {
   masterRow.style.cssText = 'display: block; padding: 16px 8px 10px 8px; box-sizing: border-box;';
   
   // Header (Legende)
-  const mLegend = document.createElement('div');
+    const mLegend = document.createElement('div');
   mLegend.className = 'layer-legend';
-  mLegend.innerHTML = `<div class="layer-legend-dot"></div><div class="layer-legend-name" style="flex: 1; text-align: left;">⭐ MASTER</div>`;
+  // WICHTIG: max-width:100% überschreibt das 160px-Limit aus dem CSS.
+  // min-width:0 sorgt dafür, dass Flexbox den Text sauber mit "..." abschneidet.
+  mLegend.innerHTML = `
+    <div class="layer-legend-dot"></div>
+    <div class="layer-legend-name" style="flex: 1; min-width: 0; max-width: 100%; text-align: left;">
+      ⭐ MASTER-Layer Test test test test
+    </div>`;
   masterRow.appendChild(mLegend);
 
   // Eigener Container für die Steuerelemente (NICHT layer-compact nennen!)
