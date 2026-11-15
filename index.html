@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Ensemble v120</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/bravura@5.0.0/index.min.css">
+
 <style>
 :root {
   --bg:#0b0b10; --panel:#10101a; --panel2:#14141f; --border:#1f1f35;
@@ -1983,10 +1985,10 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
   background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);
   background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;
   background-size:100% 1px;background-color:#fff}/*Test*/
-.score-clef-area{width:80px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid rgba(0,0,0,.2);position:sticky;left:0;z-index:100;background-color:#fff;gap:4px;
+.score-clef-area{overflow:visible !important;width:80px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:none/*1px solid rgba(0,0,0,.2)*/;position:sticky;left:0;z-index:100;background-color:#fff;gap:4px;
   background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);
   background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;background-size:100% 1px}
-.score-key-sig{display:flex;align-items:flex-end;padding:0 4px;height:100%;border-right:2px solid rgba(0,0,0,.25);background-color:#fff;z-index:90;
+.score-key-sig{display:flex;align-items:flex-end;padding:0 4px;height:100%;border-right:none/*2px solid rgba(0,0,0,.25)*/;background-color:#fff;z-index:90;min-width: 110px;
   background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);
   background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;background-size:100% 1px}
 .score-timeline{display:flex;position:relative;height:100%;z-index:50;min-width: max-content;
@@ -1996,26 +1998,22 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
    Track-Zeile. Zeigt Track-Nummer, Layer-Position und Preset-Namen.
    Liegt hinter Notensystem/Noten (z-index:0) und reagiert nicht auf
    Klicks (pointer-events:none). */
-.score-layer-watermark{
-  position:sticky;/*absolute;*/
-  left:90px;                 /* nach der Clef-Area (~80px) */
-  /*bottom:4px;*/
-  font-family:'Orbitron',monospace;
-  font-size:2rem;
-  font-weight:900;
-  letter-spacing:.12em;
-  color:rgba(0,0,0,.07);     /* sehr dezent, wird auf Weiß kaum sichtbar */
-  text-transform:uppercase;
-  white-space:nowrap;
-  pointer-events:none;
-  user-select:none;
-  z-index:0;
-  /* NEU: Flexbox nutzen, um den Text nach unten zu schieben */
-  display: flex;
-  align-items: flex-end; /* Richtet den Inhalt unten aus */
-  padding-bottom: 4px;   /* Der gewünschte Abstand nach unten */
+.score-layer-watermark {
+  position: absolute;
+  left: 85px;                /* Startet direkt hinter dem Notenschlüssel */
+  bottom: 4px;
+  font-family: 'Orbitron', monospace;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+  color: rgba(0,0,0,.07);    /* sehr dezent */
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
 }
-/* ── Druckvorschau: Seitenformat per CSS-Variablen (wählbar), im Browser auf Bildschirmbreite skaliert ── */
+  /* ── Druckvorschau: Seitenformat per CSS-Variablen (wählbar), im Browser auf Bildschirmbreite skaliert ── */
 .score-print-page {
   background:#fff; color:#000; margin:0 auto 20px; position:relative;
   width:100%; max-width:900px; aspect-ratio:var(--pg-ar, 297/210);
@@ -2677,6 +2675,22 @@ input[type=range]::-webkit-slider-thumb {
 .sf-name,
 .sf-count {
   font-size: var(--ui-mono-size) !important;
+}
+/* Musik-Symbole (Bravura) */
+.music-glyph {
+  font-family: 'Bravura', serif !important;
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1 !important;
+  display: inline-block;
+  text-align: center;
+  -webkit-font-smoothing: antialiased;
+  color: #000 !important;
+}
+.score-rest {
+  position: absolute;
+  line-height: 1;
+  transform: translateY(-50%); /* Zwingt das Symbol exakt auf den top-Wert in die Mitte */
 }
 </style>
 </head>
@@ -9401,10 +9415,11 @@ const factor  = DUR_MAP[s.len] / minDurValue; // Skaliert relativ zum kleinsten 
 
 // ── SVGs ─────────────────────────────────────────────────────
 // Exakt wie Original Editor.html — class="score-acc" setzt Größe+Position
+// SMuFL Unicode für Vorzeichen (Bravura)
 const svgAcc = {
-  '#':`<svg class="score-acc" width="14" height="32" viewBox="0 0 12 30"><path d="M3 12 L10 10 M3 20 L10 18 M5 6 L5 24 M8 6 L8 24" stroke="black" stroke-width="1.8" fill="none"/></svg>`,
-  'b':`<svg class="score-acc" width="14" height="32" viewBox="0 0 12 30"><path d="M4 6 L4 22 Q 10 22 10 18 Q 10 14 4 16" stroke="black" stroke-width="1.8" fill="none"/></svg>`,
-  'n': `<svg class="score-acc" width="14" height="32" viewBox="0 0 12 30"><path d="M4 10 L4 24 M8 12 L8 22 M4 14 L8 14 M4 22 L8 22" stroke="black" stroke-width="1.8" fill="none"/></svg>`,
+  '#': `<span class="music-glyph score-acc" style="font-size:36px; position:absolute; left:2px; pointer-events:none;">&#xE262;</span>`,
+  'b': `<span class="music-glyph score-acc" style="font-size:36px; position:absolute; left:2px; pointer-events:none;">&#xE260;</span>`,
+  'n': `<span class="music-glyph score-acc" style="font-size:36px; position:absolute; left:2px; pointer-events:none;">&#xE261;</span>`
 };
 // Violinschlüssel — detaillierter Pfad (Wikipedia-Vorlage)
 /*const svgClefT = `<svg viewBox="0 0 80 230" height="90" width="34">
@@ -9642,22 +9657,9 @@ function scoreNoteTopOffset(y, stemDown) {
 // von scoreDrawBeams() gezeichnet wird (Länge hängt vom Balkenverlauf ab)
 const NOTEHEAD_ONLY = `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse class="note-head" cx="10" cy="40" rx="6" ry="4" fill="black"/></svg>`;
 const NOTEHEAD_ONLY_DOWN = `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><ellipse class="note-head" cx="10" cy="10" rx="6" ry="4" fill="black"/></svg>`;
-const restIconsStaff = {
-  '1n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><rect x="5" y="30" width="20" height="6" fill="black"/></svg>`,
-  '2n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><rect x="5" y="24" width="20" height="6" fill="black"/></svg>`,
-  '4n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><path d="M10 15 L20 25 L10 30 L15 40 Q 10 45 5 40" stroke="black" stroke-width="2.5" fill="none"/></svg>`,
-  '8n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="20" r="3" fill="black"/><path d="M10 20 Q 20 20 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
-  '16n':`<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="20" r="3" fill="black"/><circle cx="10" cy="30" r="3" fill="black"/><path d="M10 20 Q 20 20 20 40 M10 30 Q 20 30 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
-  '32n':`<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none"><circle cx="10" cy="15" r="2" fill="black"/><circle cx="10" cy="25" r="2" fill="black"/><circle cx="10" cy="35" r="2" fill="black"/><path d="M10 15 Q 20 15 20 40 M10 25 Q 20 25 20 40 M10 35 Q 20 35 20 40" stroke="black" stroke-width="2" fill="none"/></svg>`,
-  '64n': `<svg viewBox="0 0 30 50" width="36" height="60" style="height:60px;width:36px;position:absolute;left:18px;pointer-events:none">
-<circle cx="10" cy="10" r="2" fill="black"/>
-<circle cx="10" cy="20" r="2" fill="black"/>
-<circle cx="10" cy="30" r="2" fill="black"/>
-<circle cx="10" cy="40" r="2" fill="black"/>
-<path d="M10 10 Q 20 10 20 40 M10 20 Q 20 20 20 40 M10 30 Q 20 30 20 40 M10 40 Q 20 40 20 40" stroke="black" stroke-width="2" fill="none"/>
-</svg>`,
-};
-// Toolbar-Icons (klein, für Notenwert-Buttons) — dunkle Farbe auf dunklem Hintergrund
+// SMuFL Unicode für Pausen im Notensystem (Bravura)
+// SMuFL Unicode für Pausen im Notensystem (Bravura)
+  // Toolbar-Icons (klein, für Notenwert-Buttons) — dunkle Farbe auf dunklem Hintergrund
 const noteIcons = {
   '1n': `<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="15" cy="40" rx="9" ry="6" fill="none" stroke="#000" stroke-width="2.5"/></svg>`,
   '2n': `<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="10" cy="40" rx="8" ry="5" fill="none" stroke="#000" stroke-width="2"/><path d="M17 40 L17 5" stroke="#000" stroke-width="2"/></svg>`,
@@ -9667,16 +9669,28 @@ const noteIcons = {
   '32n':`<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="10" cy="40" rx="7" ry="5" fill="#000"/><path d="M17 40 L17 5" stroke="#000" stroke-width="2.5"/><path d="M17 5 Q 28 15 28 18" fill="none" stroke="#000" stroke-width="3.5"/><path d="M17 10 Q 28 20 28 23" fill="none" stroke="#000" stroke-width="3.5"/><path d="M17 15 Q 28 25 28 28" fill="none" stroke="#000" stroke-width="3.5"/></svg>`,
   '64n': `<svg viewBox="0 0 30 50" height="44" width="28"><ellipse cx="10" cy="40" rx="7" ry="5" fill="#000"/><path d="M17 40 L17 5" stroke="#000" stroke-width="2.5"/><path d="M17 5 Q 28 15 28 15" fill="none" stroke="#000" stroke-width="3"/><path d="M17 10 Q 28 20 28 20" fill="none" stroke="#000" stroke-width="3"/><path d="M17 15 Q 28 25 28 25" fill="none" stroke="#000" stroke-width="3"/><path d="M17 20 Q 28 30 28 30" fill="none" stroke="#000" stroke-width="3"/></svg>`,
 };
-const restIcons = {
-  '1n': `<svg viewBox="0 0 30 50" height="44" width="28"><rect x="5" y="30" width="20" height="6" fill="#000"/></svg>`,
-  '2n': `<svg viewBox="0 0 30 50" height="44" width="28"><rect x="5" y="24" width="20" height="6" fill="#000"/></svg>`,
-  '4n': `<svg viewBox="0 0 30 50" height="44" width="28"><path d="M10 15 L20 25 L10 30 L15 40 Q 10 45 5 40" stroke="#000" stroke-width="2.5" fill="none"/></svg>`,
-  '8n': `<svg viewBox="0 0 30 50" height="44" width="28"><circle cx="10" cy="20" r="3" fill="#000"/><path d="M10 20 Q 20 20 20 40" stroke="#000" stroke-width="2" fill="none"/></svg>`,
-  '16n':`<svg viewBox="0 0 30 50" height="44" width="28"><circle cx="10" cy="20" r="3" fill="#000"/><circle cx="10" cy="30" r="3" fill="#000"/><path d="M10 20 Q 20 20 20 40 M10 30 Q 20 30 20 40" stroke="#000" stroke-width="2" fill="none"/></svg>`,
-  '32n':`<svg viewBox="0 0 30 50" height="44" width="28"><circle cx="10" cy="15" r="2" fill="#000"/><circle cx="10" cy="25" r="2" fill="#000"/><circle cx="10" cy="35" r="2" fill="#000"/><path d="M10 15 Q 20 15 20 40 M10 25 Q 20 25 20 40 M10 35 Q 20 35 20 40" stroke="#000" stroke-width="2" fill="none"/></svg>`,
-  '64n': `<svg viewBox="0 0 30 50" height="44" width="28"><circle cx="10" cy="15" r="2" fill="#000"/><circle cx="10" cy="25" r="2" fill="#000"/><circle cx="10" cy="35" r="2" fill="#000"/><circle cx="10" cy="45" r="2" fill="#000"/><path d="M10 15 Q 20 15 20 40 M10 25 Q 20 25 20 40 M10 35 Q 20 35 20 40 M10 45 Q 20 45 20 40" stroke="#000" stroke-width="2" fill="none"/></svg>`,
-};
 
+// SMuFL Unicode für Pausen im Notensystem (Bravura)
+// Die Werte top: 85px und 90px entsprechen exakt den Notenlinien in deinem System
+const restIconsStaff = {
+  '1n': `<span class="music-glyph score-rest" style="font-size:42px; top:75px; left:8px;">&#xE4E3;</span>`, // Ganze Pause
+  '2n': `<span class="music-glyph score-rest" style="font-size:42px; top:82px; left:8px;">&#xE4E4;</span>`, // Halbe Pause
+  '4n': `<span class="music-glyph score-rest" style="font-size:42px; top:80px; left:8px;">&#xE4E5;</span>`, // Viertel Pause
+  '8n': `<span class="music-glyph score-rest" style="font-size:42px; top:80px; left:8px;">&#xE4E6;</span>`, // Achtel Pause
+  '16n':`<span class="music-glyph score-rest" style="font-size:42px; top:80px; left:8px;">&#xE4E7;</span>`,
+  '32n':`<span class="music-glyph score-rest" style="font-size:42px; top:80px; left:8px;">&#xE4E8;</span>`,
+  '64n':`<span class="music-glyph score-rest" style="font-size:42px; top:80px; left:8px;">&#xE4E9;</span>`
+};
+  // SMuFL Unicode für Pausen in der Toolbar (Bravura)
+const restIcons = {
+  '1n': `<span class="music-glyph" style="font-size:32px;">&#xE4E3;</span>`,
+  '2n': `<span class="music-glyph" style="font-size:32px;">&#xE4E4;</span>`,
+  '4n': `<span class="music-glyph" style="font-size:32px;">&#xE4E5;</span>`,
+  '8n': `<span class="music-glyph" style="font-size:32px;">&#xE4E6;</span>`,
+  '16n':`<span class="music-glyph" style="font-size:32px;">&#xE4E7;</span>`,
+  '32n':`<span class="music-glyph" style="font-size:32px;">&#xE4E8;</span>`,
+  '64n':`<span class="music-glyph" style="font-size:32px;">&#xE4E9;</span>`
+};
 // ── State ─────────────────────────────────────────────────────
 let scoreTracks = [{ clef:'treble', key:'C-Dur', timeSigNum:4, timeSigDen:4, layerIdx:0, data:[
   {notes:[{p:'C4',a:null}],len:'4n',rest:false,dot:false}
@@ -11075,7 +11089,7 @@ scoreTracks.forEach(t => {
       wrap.style.cssText = 'position:relative;width:14px;height:100%';
       const accEl = document.createElement('div');
       accEl.innerHTML = svgAcc[sig.t];
-      accEl.firstChild.style.top = `${sig.t === '#' ? 153-(pm[bpk]||70) : 150-(pm[bpk]||70)}px`;
+      accEl.firstChild.style.top = `${sig.t === '#' ? 153-(pm[bpk]||70) : 152-(pm[bpk]||70)}px`;
       wrap.appendChild(accEl.firstChild);
       keyArea.appendChild(wrap);
     });
@@ -11100,7 +11114,8 @@ scoreTracks.forEach(t => {
       const wm = document.createElement('div');
       wm.className = 'score-layer-watermark';
       wm.textContent = `T${tIdx+1} · L${_wmLayerIdx+1} · ${_wmPreset}`;
-      row.appendChild(wm);
+      clefArea.appendChild(wm);
+      //row.appendChild(wm);
     }
 
     // Timeline
@@ -11454,7 +11469,7 @@ num.setAttribute('font-style', 'italic');
           if (n.a) {
             const ac = document.createElement('div');
             ac.innerHTML = svgAcc[n.a];
-            ac.firstChild.style.top = `${n.a === '#' ? 153-y : 150-y}px`;
+            ac.firstChild.style.top = `${n.a === '#' ? 153-y : 152-y}px`;
             step.appendChild(ac.firstChild);
           }
           const stemDown = scoreStemIsDown(track, track.activeVoiceIdx ?? 0, y);
@@ -11766,7 +11781,7 @@ notationWrapper.style.cssText = `
       wrap.style.cssText = 'position:relative;width:14px;height:100%';
       const accEl = document.createElement('div');
       accEl.innerHTML = svgAcc[sig.t];
-      accEl.firstChild.style.top = `${sig.t === '#' ? 153-(pm[bpk]||70) : 150-(pm[bpk]||70)}px`;
+      accEl.firstChild.style.top = `${sig.t === '#' ? 153-(pm[bpk]||70) : 155-(pm[bpk]||70)}px`;
       wrap.appendChild(accEl.firstChild);
       keyArea.appendChild(wrap);
     });
