@@ -1287,8 +1287,9 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
                                       
 
 .score-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;
-  padding:0;margin-bottom:12px;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column;height: 100vh;               /* oder flex:1 im Container */
-  max-height: 100vh;
+  padding:0;margin-bottom:12px;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column;flex:1;
+  height: auto;             /* oder flex:1 im Container */
+  max-height: 100%;
   overflow: hidden;
 }
 /* Vollbildmodus: Panel darf höher werden als der Viewport */
@@ -2426,11 +2427,27 @@ body.score-focus #app-grid { grid-template-columns: 1fr; }
   margin: 0 !important;
 }
 #layerDetailContainer .layer-compact { display: none !important; }
-
 /* Vollbild-Modus für den Noteneditor */
-body.score-focus #app-tabs, body.score-focus #app-mixer { display: none; }
-body.score-focus #app-grid { grid-template-columns: 1fr; grid-template-rows: 1fr; }
-body.score-focus #app-main { padding: 0; }
+body.score-focus #app-tabs, body.score-focus #app-mixer, body.score-focus #app-rail { 
+  display: none !important; 
+}
+body.score-focus #app-grid { 
+  grid-template-columns: 1fr; 
+  grid-template-rows: 1fr; 
+}
+/* DAS IST DER FIX: Zwingt das Main-Element in Zeile 1, Spalte 1 */
+body.score-focus #app-main { 
+  grid-column: 1 / -1; 
+  grid-row: 1 / -1; 
+  padding: 0; 
+}
+/* Verhindert, dass das Score-Panel im Vollbild über den Rand hinausragt */
+body.score-focus .score-panel {
+  margin-bottom: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  height: 100% !important;
+  }
   
 /* ── GANZ WICHTIG: Tabs ausblenden ── */
 .app-view {
@@ -5284,7 +5301,7 @@ function renderLayers() {
   mLegend.innerHTML = `
     <div class="layer-legend-dot"></div>
     <div class="layer-legend-name" style="flex: 1; min-width: 0; max-width: 100%; text-align: left;">
-      ⭐ MASTER-Layer Test test test test
+      ⭐ MASTER
     </div>`;
   masterRow.appendChild(mLegend);
 
@@ -18133,20 +18150,26 @@ if (scoreHeader && !document.getElementById('scoreFullscreenBtn')) {
   fsBtn.className = 'score-btn';
   fsBtn.textContent = '⛶ Vollbild';
   fsBtn.style.cssText = 'background:var(--accent);color:#000;font-weight:bold;margin-left:auto;';
-      fsBtn.addEventListener('click', () => {
+    fsBtn.addEventListener('click', () => {
     // Nur das App-interne Layout umschalten
     const isFocus = document.body.classList.toggle('score-focus');
     fsBtn.textContent = isFocus ? '✕ Verkleinern' : '⛶ Vollbild';
 
-    // (Der try/catch-Block für das Browser-Vollbild ist hier komplett entfernt!)
-
-    // Nach dem Layout-Wechsel das Notenblatt neu skalieren
+    // Wir rufen einfach scoreRender() auf – genau wie der Play-Button. 
+    // Das zwingt den Browser, das Layout komplett neu zu berechnen.
     setTimeout(() => {
-      if (typeof resizeScorePaper === 'function') resizeScorePaper();
-      if (typeof scoreDrawBeams === 'function') scoreDrawBeams();
+      if (typeof window.scoreRender === 'function') {
+        window.scoreRender();
+      } else {
+        // Fallback, falls scoreRender nicht gefunden wird
+        if (typeof resizeScorePaper === 'function') resizeScorePaper();
+        if (typeof scoreDrawBeams === 'function') scoreDrawBeams();
+      }
+      
+      // Scrollen wieder ganz nach oben links
       const scrollArea = document.querySelector('.score-scroll-area');
       if (scrollArea) { scrollArea.scrollLeft = 0; scrollArea.scrollTop = 0; }
-    }, 250);
+    }, 100); 
   });
   scoreHeader.appendChild(fsBtn);
 }
