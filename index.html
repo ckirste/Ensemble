@@ -1988,7 +1988,8 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .score-clef-area{overflow:visible !important;width:80px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:none/*1px solid rgba(0,0,0,.2)*/;position:sticky;left:0;z-index:100;background-color:#fff;gap:4px;
   background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);
   background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;background-size:100% 1px}
-.score-key-sig{display:flex;align-items:flex-end;padding:0 4px;height:100%;border-right:none/*2px solid rgba(0,0,0,.25)*/;background-color:#fff;z-index:90;min-width: 110px;
+.score-key-sig{display:flex;align-items:flex-end;padding:0 4px;height:100%;border-right:none/*2px solid rgba(0,0,0,.25)*/;background-color:#fff;z-index:90;/*min-width: 110px;*/width: var(--keysig-width, 110px); /* NEU: Dynamische Breite */
+  flex-shrink: 0;
   background-image:linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.22) 1px,transparent 1px);
   background-repeat:repeat-x;background-position:0 70px,0 80px,0 90px,0 100px,0 110px;background-size:100% 1px}
 .score-timeline{display:flex;position:relative;height:100%;z-index:50;min-width: max-content;
@@ -3432,6 +3433,16 @@ input[type=range]::-webkit-slider-thumb {
   </div>
   <div id="scorePrintPages"></div>
 </div>
+<!-- Custom Confirm Modal -->
+<div id="customConfirmModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:99999; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);">
+  <div style="background:var(--panel); border:1px solid var(--accent); border-radius:12px; padding:20px; max-width:400px; width:100%; text-align:center; box-shadow:0 4px 24px rgba(0,229,255,0.2);">
+    <div id="customConfirmText" style="color:var(--textbright); font-family:'Share Tech Mono',monospace; font-size:0.9rem; margin-bottom:20px; line-height:1.5;"></div>
+    <div style="display:flex; gap:10px; justify-content:center;">
+      <button id="customConfirmCancel" class="score-btn" style="padding:8px 20px; border-color:var(--dim); color:var(--dim);">Abbrechen</button>
+      <button id="customConfirmOk" class="score-btn active" style="padding:8px 20px; background:var(--accent); color:#000; border-color:var(--accent);">OK</button>
+    </div>
+  </div>
+</div>
 <script type="module">
 // SpessaSynth asynchron laden — blockiert NICHT das UI
 let WorkletSynthesizer = null, audioBufferToWav = null;
@@ -3464,7 +3475,29 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-
+window.showCustomConfirm = function(message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('customConfirmModal');
+    const textEl = document.getElementById('customConfirmText');
+    const okBtn = document.getElementById('customConfirmOk');
+    const cancelBtn = document.getElementById('customConfirmCancel');
+    
+    textEl.innerHTML = message.replace(/\n/g, '<br>');
+    modal.style.display = 'flex';
+    
+    const cleanup = () => {
+      modal.style.display = 'none';
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+    };
+    
+    const onOk = () => { cleanup(); resolve(true); };
+    const onCancel = () => { cleanup(); resolve(false); };
+    
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+  });
+};
 window.onerror = (msg, url, line) => {
     debugDiv.innerHTML += `<div style="color:red">ERR: ${msg} (L:${line})</div>`;
     debugDiv.scrollTop = debugDiv.scrollHeight;
@@ -10283,28 +10316,46 @@ window.scoreOctaveShift = function(tIdx, direction) {
   });
   scoreRender();
 };
-
-window.scoreChangeKey = function(tIdx, newKey, selectEl) {
+async function forceAppFullscreenLandscape() {
+  try {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    }
+    if (screen.orientation && screen.orientation.lock) {
+      await screen.orientation.lock('landscape');
+    }
+  } catch (e) {
+    console.warn("Vollbild/Querformat-Wechsel nicht möglich", e);
+  }
+      }
+window.scoreChangeKey = async function(tIdx, newKey, selectEl) {
   const track  = scoreTracks[tIdx];
   const oldKey = track.key ?? 'C-Dur';
   if (oldKey === newKey) return;
 
   const hasNotes = track.data.some(s => !s.rest && s.notes.length > 0);
+  
   if (hasNotes) {
-    if (confirm(`Tonart von ${oldKey} → ${newKey} wechseln?\n\nNoten werden automatisch transponiert.`)) {
+    // NEU: Custom Modal statt nativem confirm()
+    const proceed = await window.showCustomConfirm(`Tonart von ${oldKey} → ${newKey} wechseln?<br><br>Noten werden automatisch transponiert.`);
+    
+    if (proceed) {
       transposeTrackToKey(track, oldKey, newKey);
       track.key = newKey;
+      
+      // Jetzt bleibt der User im Vollbild, daher klappt der Wechsel!
+      forceAppFullscreenLandscape(); 
+      
     } else {
-      // Zurücksetzen des Dropdowns
       if (selectEl) selectEl.value = oldKey;
       return;
     }
   } else {
     track.key = newKey;
+    forceAppFullscreenLandscape(); 
   }
   scoreRender();
 };
-
 window.scoreChangePitch = function(tIdx, sIdx, nIdx, newP) {
   const track = window.scoreTracks[tIdx];
   const note  = track.data[sIdx].notes[nIdx];
@@ -10891,6 +10942,17 @@ setTimeout(resizeScorePaper, 100); // nach dem ersten Rendern
 function scoreRender() {
   const container = document.getElementById('scoreTracksContainer');
   if (!container) return;
+  // NEU: Maximale Anzahl an Vorzeichen über alle Tracks ermitteln
+  let maxAccidentals = 0;
+  scoreTracks.forEach(t => {
+    const sig = KEY_SIGS[t.key] || [];
+    if (sig.length > maxAccidentals) maxAccidentals = sig.length;
+  });
+  
+  // Breite berechnen: Jedes Vorzeichen braucht 14px. Dazu 16px Puffer (für Ränder).
+  // Mindestens 50px, damit auch bei C-Dur etwas Platz zum Schlüssel bleibt.
+  const keySigWidth = Math.max(50, (maxAccidentals * 14) + 16);
+  container.style.setProperty('--keysig-width', keySigWidth + 'px');
 // --- NEU: Globalen minimalen Notenwert berechnen (über alle Tracks & Stimmen) ---
   let minDurValue = Infinity;
   scoreTracks.forEach(t => {
