@@ -3314,7 +3314,8 @@ input[type=range]::-webkit-slider-thumb {
               <button class="score-ctrl-btn" id="scoreTieBtn" onclick="scoreToggleTie()" style="display:none">⌒</button>
               <button class="score-ctrl-btn" id="scoreRangeBtn" onclick="scoreSelFillRange()" style="display:none">↔</button>
               <button class="score-ctrl-btn" id="scoreBeamBtn" onclick="scoreSelToggleBeam()" style="display:none">🎵</button>
-              <button class="score-ctrl-btn" onclick="scoreSelCopyPaste()">📋</button>
+              <button class="score-ctrl-btn" id="scoreCopyBtn" onclick="scoreSelCopy()">📋</button>
+			  <button class="score-ctrl-btn" id="scorePasteBtn" onclick="scoreSelPaste()">📋p</button>
               <button class="score-ctrl-btn" onclick="scoreSelDelete()">🗑</button>
               <button class="score-ctrl-btn score-sel-clear" onclick="scoreSelClearAll()">✕</button>
               <button class="score-ctrl-btn" id="scoreTupletBtn" onclick="scoreSelMakeTuplet()" title="Auswahl zu N-tole zusammenfassen" style="display:none">÷n</button>
@@ -10731,12 +10732,12 @@ function resizeScorePaper(retry=0) {
 
   // Bei jeder Auswahländerung die UI aktualisieren
   // (scoreSelUpdateToolbar wird bei jeder Änderung aufgerufen)
-  /*
+  
   const _origScoreSelUpdateToolbar = scoreSelUpdateToolbar;
   window.scoreSelUpdateToolbar = function() {
     _origScoreSelUpdateToolbar();
     updateGateUI();
-  };*/
+  };
   // Die IIFE-lokale Referenz ersetzt der Aufrufer selbst — das reicht,
   // weil alle internen Stellen scoreSelUpdateToolbar() direkt aufrufen
   // (und das ist jetzt der Wrapper).
