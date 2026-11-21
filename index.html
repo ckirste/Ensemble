@@ -2708,7 +2708,7 @@ input[type=range]::-webkit-slider-thumb {
   <div class="splash-content">
     
     <h1 class="splash-title">Ensemble</h1>
-    <div class="splash-version">v124</div>
+    <div class="splash-version">v124-1</div>
     <div class="splash-author">by c. kirste</div>
     <div class="splash-hint">Tippen zum Starten</div>
   </div>
@@ -13044,7 +13044,7 @@ function scoreKbNoteInput(noteName) {
 // Jeder Track hat seinen eigenen Timer und Step-Zeiger — vollständig unabhängig.
 
 function scoreStopPlay() {
-  scoreRecFlushOffs();   // NEU
+  if (typeof scoreRecFlushOffs === 'function') { try { scoreRecFlushOffs(); } catch(e) { console.warn('scoreRecFlushOffs:', e); } }   // NEU
   // 0. Lauf-ID erhöhen: alle noch ausstehenden ensureCtx().then()-Callbacks
   //    des alten Laufs erkennen daran, dass sie veraltet sind, und spielen nichts mehr.
   scorePlayRunId++;
@@ -15360,7 +15360,7 @@ function recTrackLabel() {
 function recStop() {
   if (rec.state==='armed') { rec.state='idle'; cancelAnimationFrame(rec.animFrame); recUpdateUI(); return; }
   if (rec.state!=='recording') return;
-  scoreRecFlushOffs();   // NEU
+  if (typeof scoreRecFlushOffs === 'function') { try { scoreRecFlushOffs(); } catch(e) { console.warn('scoreRecFlushOffs:', e); } }   // NEU
   for (const midi of heldNotes)
     rec.events.push({ t: performance.now()-rec.startT, type:'off', midi });
   const dur = performance.now()-rec.startT;
@@ -15550,7 +15550,7 @@ function recStopOverdub() {
     recUpdateUI();
     return;
   }
-  scoreRecFlushOffs();   // NEU
+  if (typeof scoreRecFlushOffs === 'function') { try { scoreRecFlushOffs(); } catch(e) { console.warn('scoreRecFlushOffs:', e); } }   // NEU
   for (const midi of heldNotes)
     rec.overdubEvents.push({ t: performance.now()-rec.startT, type:'off', midi });
   const odDur = Math.max(rec.duration,
