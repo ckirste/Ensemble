@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v123</title>
+<title>Ensemble v124</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/bravura@5.0.0/index.min.css">
 
@@ -2708,7 +2708,7 @@ input[type=range]::-webkit-slider-thumb {
   <div class="splash-content">
     
     <h1 class="splash-title">Ensemble</h1>
-    <div class="splash-version">v123</div>
+    <div class="splash-version">v124</div>
     <div class="splash-author">by c. kirste</div>
     <div class="splash-hint">Tippen zum Starten</div>
   </div>
@@ -13044,6 +13044,7 @@ function scoreKbNoteInput(noteName) {
 // Jeder Track hat seinen eigenen Timer und Step-Zeiger — vollständig unabhängig.
 
 function scoreStopPlay() {
+  scoreRecFlushOffs();   // NEU
   // 0. Lauf-ID erhöhen: alle noch ausstehenden ensureCtx().then()-Callbacks
   //    des alten Laufs erkennen daran, dass sie veraltet sind, und spielen nichts mehr.
   scorePlayRunId++;
@@ -13118,7 +13119,43 @@ window.scoreTogglePlay = function() {
   if (scorePlayTimer !== null) { scoreStopPlay(); return; }
   scoreStartPlay(null, 0);
 };
+// ── Recorder-Hook für den Noteneditor ─────────────────────────
+// Schreibt Score-Noten in die laufende Aufnahme (wie playMidi/stopMidi und der
+// Sequenzer-Hook). Gespeichert wird die Basisnote; recPlayEvent addiert
+// globalTranspose + snap.transpose beim Abspielen wieder dazu.
+var _scoreRecOpen = new Map();   // offene Noten, damit beim Stop ein Note-Off geschrieben wird
+function scoreRecHook(type, midiPlayed, vel, layer, layerId, sfIdx, pIdx, vol) {
+  if (typeof rec === 'undefined') return;
+  if (rec.state === 'armed' && type === 'on') {   // Aufnahme startet mit dem ersten Ton
+    rec.startT = performance.now();
+    rec.state  = 'recording';
+  }
+  if (rec.state !== 'recording' && rec.state !== 'overdubbing') return;
+  const tr   = layer?.transpose ?? 0;
+  const snap = [{ id: layerId, sfIdx, presetIdx: pIdx, vol, transpose: tr, envOverride: layer?.envOverride ?? {} }];
+  const ev = { t: performance.now() - rec.startT, type, midi: midiPlayed - globalTranspose - tr,
+               vel: type === 'on' ? vel : undefined, ch: null, source: 'score', layerSnap: snap };
+  (rec.state === 'recording' ? rec.events : rec.overdubEvents).push(ev);
+  const key = layerId + '_' + midiPlayed;
+  if (type === 'on') _scoreRecOpen.set(key, { midiPlayed, snap });
+  else _scoreRecOpen.delete(key);
+}
+// Offene Score-Noten beim Stop (Score oder Recorder) sauber beenden
+function scoreRecFlushOffs() {
+  if (!_scoreRecOpen) return;
+  if (typeof rec !== 'undefined' && (rec.state === 'recording' || rec.state === 'overdubbing')) {
+    const target = rec.state === 'recording' ? rec.events : rec.overdubEvents;
+    const t = performance.now() - rec.startT;
+    _scoreRecOpen.forEach(o => target.push({ t, type: 'off',
+      midi: o.midiPlayed - globalTranspose - o.snap[0].transpose,
+      ch: null, source: 'score', layerSnap: o.snap }));
+  }
+  _scoreRecOpen.clear();
+}
 
+
+
+                              
 // elapsedMs = kumulierte SOLL-Zeit seit Wiedergabestart (nicht die tatsächlich
 // verstrichene Zeit). Der tatsächliche setTimeout-Delay wird bei JEDEM Step neu
 // aus der Differenz zwischen SOLL-Zeitpunkt und aktueller Ist-Zeit berechnet —
@@ -13210,11 +13247,14 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
                 const tAbs = engine.ctx.currentTime + 0.012;
                 try {
                   engine.playSync(midi, layerId, sfIdx, pIdx, stepVel, vol, tAbs, layer?.envOverride ?? {});
+                  scoreRecHook('on', midi, stepVel, layer, layerId, sfIdx, pIdx, vol);
                 } catch(e) {}
               }, offsetMs);
 
               scoreSetTimeout(() => {
                 engine.stop(midi, layerId);
+                scoreRecHook('off', midi, 0, layer, layerId, sfIdx, pIdx, vol);
+                scoreRecHook('off', midi, 0, layer, layerId, sfIdx, pIdx, vol);
               }, offsetMs + subNoteDurMs);
             });
           });
@@ -13246,6 +13286,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
                 const midi = noteToMidi(n.p, n.a)+ globalTranspose + (layer?.transpose ?? 0);
                 try {
                   engine.playSync(midi, layerId, sfIdx, pIdx, stepVel, vol, tAbs, layer?.envOverride ?? {});
+                  scoreRecHook('on', midi, stepVel, layer, layerId, sfIdx, pIdx, vol);
                 } catch(e) {}
               });
             });
@@ -13255,6 +13296,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
               s.notes.forEach(n => {
                 const midi = noteToMidi(n.p, n.a)+ globalTranspose + (layer?.transpose ?? 0);
                 engine.stop(midi, layerId);
+                scoreRecHook('off', midi, 0, layer, layerId, sfIdx, pIdx, vol);
               });
             }, noteOffDelay);
 
@@ -13263,6 +13305,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
                 s.notes.forEach(n => {
                   const midi = noteToMidi(n.p, n.a)+ globalTranspose + (layer?.transpose ?? 0);
                   engine.stop(midi, layerId);
+                  scoreRecHook('off', midi, 0, layer, layerId, sfIdx, pIdx, vol);
                 });
               }, noteOffMs);
             }
@@ -15317,6 +15360,7 @@ function recTrackLabel() {
 function recStop() {
   if (rec.state==='armed') { rec.state='idle'; cancelAnimationFrame(rec.animFrame); recUpdateUI(); return; }
   if (rec.state!=='recording') return;
+  scoreRecFlushOffs();   // NEU
   for (const midi of heldNotes)
     rec.events.push({ t: performance.now()-rec.startT, type:'off', midi });
   const dur = performance.now()-rec.startT;
@@ -15506,6 +15550,7 @@ function recStopOverdub() {
     recUpdateUI();
     return;
   }
+  scoreRecFlushOffs();   // NEU
   for (const midi of heldNotes)
     rec.overdubEvents.push({ t: performance.now()-rec.startT, type:'off', midi });
   const odDur = Math.max(rec.duration,
