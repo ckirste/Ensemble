@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ensemble v120-stable</title>
+<title>Ensemble v123</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/bravura@5.0.0/index.min.css">
 
@@ -2708,7 +2708,7 @@ input[type=range]::-webkit-slider-thumb {
   <div class="splash-content">
     
     <h1 class="splash-title">Ensemble</h1>
-    <div class="splash-version">v120</div>
+    <div class="splash-version">v123</div>
     <div class="splash-author">by c. kirste</div>
     <div class="splash-hint">Tippen zum Starten</div>
   </div>
@@ -6715,12 +6715,25 @@ function renderSoundfonts() {
 
 // ── IndexedDB SF2 cache ────────────────────────────────────────
 const sfDB = (() => {
-  const DB = 'sf2player', STORE = 'soundfonts', VER = 1;
+  // v2: zusätzlicher kleiner Meta-Store (Name/Größe/Datum). Dadurch muss die Liste
+  // NICHT mehr alle SF2-Dateien komplett in den RAM laden (getAll() tat das und
+  // scheiterte bei 2 großen SF2s auf Android still → "Cache wird nicht angezeigt").
+  const DB = 'sf2player', STORE = 'soundfonts', META = 'soundfonts_meta', VER = 2;
   function open() {
     return new Promise((res, rej) => {
       const req = indexedDB.open(DB, VER);
-      req.onupgradeneeded = e => e.target.result.createObjectStore(STORE, {keyPath:'name'});
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, {keyPath:'name'});
+        if (!db.objectStoreNames.contains(META))  db.createObjectStore(META,  {keyPath:'name'});
+      };
       req.onsuccess = e => res(e.target.result);
+      req.onerror   = e => rej(e.target.error);
+    });
+  }
+  function reqP(req) {
+    return new Promise((res, rej) => {
+      req.onsuccess = () => res(req.result);
       req.onerror   = e => rej(e.target.error);
     });
   }
@@ -6728,32 +6741,44 @@ const sfDB = (() => {
     async save(name, ab) {
       const db = await open();
       return new Promise((res,rej) => {
-        const tx = db.transaction(STORE,'readwrite');
-        tx.objectStore(STORE).put({name, data: ab, savedAt: Date.now()});
-        tx.oncomplete = res; tx.onerror = e => rej(e.target.error);
+        const tx = db.transaction([STORE, META], 'readwrite');
+        const savedAt = Date.now();
+        tx.objectStore(STORE).put({name, data: ab, savedAt});
+        tx.objectStore(META).put({name, savedAt, bytes: ab.byteLength});
+        tx.oncomplete = res; tx.onerror = e => rej(e.target.error); tx.onabort = e => rej(e.target.error);
       });
     },
     async load(name) {
       const db = await open();
-      return new Promise((res,rej) => {
-        const req = db.transaction(STORE,'readonly').objectStore(STORE).get(name);
-        req.onsuccess = e => res(e.target.result?.data ?? null);
-        req.onerror   = e => rej(e.target.error);
-      });
+      const rec = await reqP(db.transaction(STORE,'readonly').objectStore(STORE).get(name));
+      return rec?.data ?? null;
     },
     async list() {
       const db = await open();
-      return new Promise((res,rej) => {
-        const req = db.transaction(STORE,'readonly').objectStore(STORE).getAll();
-        req.onsuccess = e => res(e.target.result.map(r=>({name:r.name, savedAt:r.savedAt, bytes:r.data.byteLength})));
-        req.onerror   = e => rej(e.target.error);
-      });
+      const keys  = await reqP(db.transaction(STORE,'readonly').objectStore(STORE).getAllKeys());
+      const metas = await reqP(db.transaction(META,'readonly').objectStore(META).getAll());
+      const byName = new Map(metas.map(m => [m.name, m]));
+      const out = [];
+      for (const name of keys) {
+        let m = byName.get(name);
+        if (!m) {
+          // Altbestand ohne Meta: einmalig EINZELN lesen (immer nur 1 SF2 im RAM) und Meta nachtragen
+          try {
+            const rec = await reqP(db.transaction(STORE,'readonly').objectStore(STORE).get(name));
+            m = { name, savedAt: rec?.savedAt ?? 0, bytes: rec?.data?.byteLength ?? 0 };
+            db.transaction(META,'readwrite').objectStore(META).put(m);
+          } catch(e) { console.warn('SF2-Meta konnte nicht gelesen werden:', name, e); m = { name, savedAt: 0, bytes: 0 }; }
+        }
+        out.push({ name, savedAt: m.savedAt, bytes: m.bytes });
+      }
+      return out;
     },
     async del(name) {
       const db = await open();
       return new Promise((res,rej) => {
-        const tx = db.transaction(STORE,'readwrite');
+        const tx = db.transaction([STORE, META], 'readwrite');
         tx.objectStore(STORE).delete(name);
+        tx.objectStore(META).delete(name);
         tx.oncomplete = res; tx.onerror = e => rej(e.target.error);
       });
     },
@@ -6771,7 +6796,7 @@ async function renderCachedSF2s() {
   }
   wrap.innerHTML = '';
   let cached = [];
-  try { cached = await sfDB.list(); } catch(e) { return; }
+  try { cached = await sfDB.list(); } catch(e) { console.warn('SF2-Cache-Liste fehlgeschlagen:', e); return; }
   if (!cached.length) return;
   const hdr = document.createElement('div');
   hdr.style.cssText = 'font-size:.52rem;letter-spacing:.1em;color:var(--text);opacity:.4;margin-top:2px';
@@ -6841,7 +6866,11 @@ async function loadFile(file) {
     // Save to IndexedDB in background (don't await — don't block UI)
     // Nur kleine SF2s (< 150MB) im Browser-Speicher cachen
     if (ab.byteLength < 150 * 1024 * 1024) {
-      sfDB.save(shortName, ab.slice(0)).then(()=>renderCachedSF2s()).catch(()=>{});
+      sfDB.save(shortName, ab.slice(0)).then(()=>renderCachedSF2s()).catch(e => {
+        console.warn('SF2 konnte nicht im Browser gespeichert werden:', shortName, e);
+        const si = document.getElementById('sessionInfo');
+        if (si) si.textContent = '⚠ ' + shortName + ' konnte nicht im Browser-Speicher abgelegt werden (Speicher voll?)';
+      });
     } else {
       console.log(`SF2 zu groß für Browser-Cache (${(ab.byteLength/1048576).toFixed(0)}MB) — nur im RAM`);
     }
@@ -7377,7 +7406,7 @@ renderCachedSF2s();
     setTimeout(autoRestoreSession, 100);
   }
 })();
-document.getElementById('addLayerBtn').addEventListener('click', () => addLayer(0, 0));
+document.getElementById('addLayerBtn').addEventListener('click', () => { window._autoRestorePending = false; addLayer(0, 0); });
 const sfAddBtn = document.getElementById('sfAddBtn');
 const fi = document.getElementById('fileInput');
 const sfLoaderPanel = document.querySelector('.sf-loader-panel');
@@ -9816,6 +9845,7 @@ let scoreActive      = null;
 let scoreCursor      = null;
 let scoreTool        = { len:'4n', rest:false, dot:false };
 let scorePlayTimer   = null;
+let scorePlayRunId   = 0; // wird bei jedem Stop/Start erhöht → verwirft verspätete Promise-Callbacks alter Läufe
 let scorePlayStartTime = 0; // absoluter Zeit-Nullpunkt der aktuellen Wiedergabe (performance.now())
 let scorePlayPos     = null;
 let scorePlayTrackFilter = null;
@@ -12370,6 +12400,11 @@ function scoreDrawBeams() {
     const timeline = unit.querySelector('.score-timeline');
     if (!timeline) return;
 
+    // Alte Balken zuerst entfernen: scoreDrawBeams() wird von mehreren Stellen
+    // aufgerufen (Render, ResizeObserver, Vollbild-Wechsel) und hängte bisher bei
+    // jedem Aufruf neue Balken-SVGs an, ohne die alten zu löschen.
+    timeline.querySelectorAll('.score-beam-svg').forEach(el => el.remove());
+
     // Aktive Stimme
     const steps = unit.querySelectorAll('.score-step');
     if (steps.length) scoreDrawBeamsForVoice(timeline, steps, track.data);
@@ -12506,6 +12541,11 @@ function scoreDrawBeams() {
     if (!unit) return;
     const timeline = unit.querySelector('.score-timeline');
     if (!timeline) return;
+
+    // Alte Balken zuerst entfernen: scoreDrawBeams() wird von mehreren Stellen
+    // aufgerufen (Render, ResizeObserver, Vollbild-Wechsel) und hängte bisher bei
+    // jedem Aufruf neue Balken-SVGs an, ohne die alten zu löschen.
+    timeline.querySelectorAll('.score-beam-svg').forEach(el => el.remove());
 
     // Aktive Stimme
     const steps = unit.querySelectorAll('.score-step');
@@ -13004,6 +13044,10 @@ function scoreKbNoteInput(noteName) {
 // Jeder Track hat seinen eigenen Timer und Step-Zeiger — vollständig unabhängig.
 
 function scoreStopPlay() {
+  // 0. Lauf-ID erhöhen: alle noch ausstehenden ensureCtx().then()-Callbacks
+  //    des alten Laufs erkennen daran, dass sie veraltet sind, und spielen nichts mehr.
+  scorePlayRunId++;
+
   // 1. Haupt-Scheduler canceln
   scoreTrackTimers.forEach(t => { if (t) clearTimeout(t); });
   scoreTrackTimers = [];
@@ -13084,11 +13128,12 @@ window.scoreTogglePlay = function() {
 // zwischen den Tracks führte, da jeder Step-Delay einfach an den vorherigen
 // verketteten setTimeout-Aufruf angehängt wurde, ohne Korrektur).
 function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
+  const runId       = scorePlayRunId;
   const targetTime  = scorePlayStartTime + elapsedMs;
   const actualDelay = Math.max(0, targetTime - performance.now());
 
   scoreTrackTimers[ti] = scoreSetTimeout(() => {
-    if (scorePlayTimer === null) return; // gestoppt
+    if (scorePlayTimer === null || runId !== scorePlayRunId) return; // gestoppt / veralteter Lauf
     const sIdx = scoreTrackPos[ti];
     const s    = track.data[sIdx];
 
@@ -13152,7 +13197,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
                     const subNoteDurMs = Math.max(40, subDurMs * gate);
 
           engine.ensureCtx().then(() => {
-            if (scorePlayTimer === null) return;
+            if (scorePlayTimer === null || runId !== scorePlayRunId) return;
             engine.ensureChannel(layerId, sfIdx, pIdx);
 
             s.subNotes.forEach((sub, i) => {
@@ -13161,7 +13206,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
               if (midi < 0 || midi > 127) return;
 
               scoreSetTimeout(() => {
-                if (scorePlayTimer === null) return;
+                if (scorePlayTimer === null || runId !== scorePlayRunId) return;
                 const tAbs = engine.ctx.currentTime + 0.012;
                 try {
                   engine.playSync(midi, layerId, sfIdx, pIdx, stepVel, vol, tAbs, layer?.envOverride ?? {});
@@ -13194,7 +13239,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
           if (!isTiedTo) {
             const noteOffDelay = noteOffMs;
             engine.ensureCtx().then(() => {
-              if (scorePlayTimer === null) return;
+              if (scorePlayTimer === null || runId !== scorePlayRunId) return;
               const tAbs = engine.ctx.currentTime + 0.012;
               engine.ensureChannel(layerId, sfIdx, pIdx);
               s.notes.forEach(n => {
@@ -13216,7 +13261,7 @@ function scheduleTrackStep(ti, track, msPerBeat, delayMs, elapsedMs) {
             if (s.tie && nextS) {
               scoreSetTimeout(() => {
                 s.notes.forEach(n => {
-                  const midi = noteToMidi(n.p, n.a);
+                  const midi = noteToMidi(n.p, n.a)+ globalTranspose + (layer?.transpose ?? 0);
                   engine.stop(midi, layerId);
                 });
               }, noteOffMs);
@@ -15981,6 +16026,9 @@ const AUTO_SAVE_KEY = 'sf2player_autosave';
 
 function autoSaveSession() {
   if (!engine.soundfonts.length || !layers.length) return;
+  // Gespeicherte Session wartet noch auf weitere SF2s → NICHT mit dem Zwischenstand
+  // (z.B. nur 1 von 2 SF2s + Default-Layer) überschreiben.
+  if (window._autoRestorePending) return;
   try {
     const fxState  = sessionCollectFx();
     const masterVol = parseInt(document.getElementById('volSlider').value);
@@ -16021,27 +16069,43 @@ function autoSaveSession() {
       })),
     };
     localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(data));
-  } catch(e) {}
+  } catch(e) { console.warn('Autosave fehlgeschlagen:', e); }
 }
 function autoRestoreSession() {
+  let d;
   try {
     const raw = localStorage.getItem(AUTO_SAVE_KEY);
     if (!raw) return false;
-    const d = JSON.parse(raw);
+    d = JSON.parse(raw);
     if (!d.layers?.length || !d.version) return false;
     // Only restore if the same SF2s are loaded
     const needed = (d.soundfonts ?? []).map(s => s.name);
-    const allLoaded = needed.every(n => engine.soundfonts.some(s => s.name === n));
-    if (!allLoaded) return false;
+    const missing = needed.filter(n => !engine.soundfonts.some(s => s.name === n));
+    if (missing.length) {
+      // Session bleibt unangetastet im Speicher, bis alle SF2s da sind
+      window._autoRestorePending = true;
+      const infoEl = document.getElementById('sessionInfo');
+      if (infoEl) infoEl.textContent = 'ℹ Gespeicherte Layer warten auf SF2: ' + missing.join(', ');
+      return false;
+    }
+  } catch(e) { console.warn('Autorestore: Lesen fehlgeschlagen:', e); return false; }
+
+  try {
     applySessionLayers(d);
-    document.getElementById('sessionInfo').textContent =
-      '✓ Letzte Konfiguration wiederhergestellt';
+  } catch(e) {
+    console.warn('Autorestore: Anwenden fehlgeschlagen:', e);
+  }
+  // Wurden Layer angelegt, gilt der Restore als erfolgreich (sonst legt loadFile
+  // zusätzlich einen Default-Layer an).
+  if (!layers.length) return false;
+  const infoEl = document.getElementById('sessionInfo');
+  if (infoEl) {
+    infoEl.textContent = '✓ Letzte Konfiguration wiederhergestellt';
     setTimeout(() => {
-      const el = document.getElementById('sessionInfo');
-      if (el.textContent.startsWith('✓ Letzte')) el.textContent = '';
+      if (infoEl.textContent.startsWith('✓ Letzte')) infoEl.textContent = '';
     }, 3000);
-    return true;
-  } catch(e) { return false; }
+  }
+  return true;
 }
 
 function sessionSave() {
@@ -16237,6 +16301,7 @@ function sessionLoad(file) {
 }
 
 function applySessionLayers(d) {
+  window._autoRestorePending = false; // Session wird jetzt angewendet → Autosave wieder freigeben
   engine.stopAll();
   layers = [];
   nextLayerId = 1;
@@ -16311,8 +16376,8 @@ if (d.fx?.adsr) {
     const sf = engine.soundfonts[l.sfIdx];
     return sf?.presets[l.presetIdx]?.name ?? '?';
   }).join(', ');
-  document.getElementById('sessionInfo').textContent =
-    `✓ ${layers.length} Layer geladen: ${info}`;
+  const _si = document.getElementById('sessionInfo');
+  if (_si) _si.textContent = `✓ ${layers.length} Layer geladen: ${info}`;
 }
 // After SF2 load, apply pending session automatically
 const _origLoadFile = window.loadFile;
