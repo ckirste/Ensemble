@@ -787,7 +787,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .rec-track-del:hover{border-color:var(--accent2);color:var(--accent2);background:rgba(255,64,96,.08)}
 
 /* ── Trombone ────────────────────────────────────────────────── */
-.tbone-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px}
+.tbone-panel{display: none !important; background:var(--panel);border:1px solid var(--border);border-radius:12px}
 .tbone-header{display:flex;align-items:center;gap:8px;padding:10px 16px;user-select:none}
 
 .tbone-title{font-size:.62rem;letter-spacing:.2em;color:#d4a017;text-transform:uppercase;font-weight:700;white-space:nowrap;flex:1}
@@ -799,12 +799,12 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .tbone-toggle.open{transform:rotate(180deg)}
 .tbone-body{display:none;padding:10px 16px 16px;gap:8px;touch-action:none}
 /* Blow area: taller, more prominent */
-.tbone-blow-area{min-height:64px;display:flex;align-items:center;justify-content:center;
+.tbone-blow-area{min-height:64px;display:none/*flex*/;align-items:center;justify-content:center;
   border-radius:10px;border:2px dashed #b8860b55;background:#0d0900;
   font-size:1.1rem;letter-spacing:.15em;color:#b8860b;cursor:pointer;
   user-select:none;-webkit-tap-highlight-color:transparent;transition:all .12s;
   touch-action:none}
-.tbone-blow-area.blowing{background:#1a1000;border-color:#ffd700;color:#ffd700;
+.tbone-blow-area.blowing{display:none;background:#1a1000;border-color:#ffd700;color:#ffd700;
   box-shadow:0 0 18px rgba(255,215,0,.3)}
 /* Scroll strips: thin touch-through zones on left+right of fullArea */
 .tbone-scroll-strip{position:absolute;top:0;bottom:0;width:14%;z-index:50;
@@ -823,7 +823,7 @@ body.light-mode #qz-chord-overlay td { color: var(--text) !important; border-col
 .tbone-size-val{font-size:.62rem;color:#d4a017;font-family:"Share Tech Mono",monospace;width:40px;text-align:right;flex-shrink:0}
 
 /* ── Zugposaune – neues Design ── */
-.tbone-full-area{position:relative;width:100%;height:150px;background:#08080e;
+.tbone-full-area{display: none;position:relative;width:100%;height:150px;background:#08080e;
   display:flex;align-items:center;justify-content:center;touch-action:none;
   border-radius:12px;overflow:visible}
 .tbone-base-unit{position:relative;width:82%;height:66px;flex-shrink:0}
@@ -3000,7 +3000,7 @@ input[type=range]::-webkit-slider-thumb {
       </div>
 
       <!-- Trombone -->
-      <div id="tboneWrap">
+      <div id="tboneWrap" style="display: none !important">
         <div class="tbone-panel" id="tbonePanel">
           <div class="tbone-header" id="tboneHeader">
             <span class="tbone-title">🎺 Zugposaune</span>
@@ -3012,7 +3012,7 @@ input[type=range]::-webkit-slider-thumb {
               <button class="tbone-toggle" id="tboneToggle" style="display:none">▾</button>
             </div>
           </div>
-          <div class="tbone-body open" id="tboneBody">
+          <div class="tbone-body open" id="tboneBody" style="display: none;">
             <input type="range" id="tboneHandleW" min="30" max="140" value="56" style="display:none">
             <div class="tbone-full-area" id="tboneFullArea">
               <div class="tbone-scroll-strip left"  id="tboneScrollL"></div>
@@ -3034,8 +3034,8 @@ input[type=range]::-webkit-slider-thumb {
           </div>
         </div>
       </div>
-      <div class="tbone-mega-blow" id="tbone-megaBlow">
-        <div class="tbone-mega-blow-inner">💨 BLASEN</div>
+      <div class="tbone-mega-blow" id="tbone-megaBlow" style="display: none !important">
+        <div class="tbone-mega-blow-inner" style="display: none !important">💨 BLASEN</div>
       </div>
 
       <!-- Drums -->
@@ -3226,20 +3226,7 @@ input[type=range]::-webkit-slider-thumb {
       <!-- Viz -->
       <div class="viz" id="viz"></div>
 
-      <!-- Quintenzirkel -->
-      <div class="qz-panel" id="qzPanel">
-        <div class="qz-header">
-          <span class="qz-title">🎸 Quintenzirkel</span>
-          <span style="font-size:.55rem;color:var(--dim);font-family:'Share Tech Mono',monospace">Klick auf Dur oder Moll → Griffe</span>
-        </div>
-        <div id="qz-circle-wrapper">
-          <div id="qz-circle-container"></div>
-          <div id="qz-chord-overlay">
-            <button class="qz-close-btn" id="qz-close-overlay">✕</button>
-            <div id="qz-overlay-content"></div>
-          </div>
-        </div>
-      </div>
+      
 
       <!-- Registers & Favs -->
       <div class="reg-panel" id="regPanel">
@@ -3282,6 +3269,20 @@ input[type=range]::-webkit-slider-thumb {
         <div class="pdf-drop-hint" id="pdfDropHint">PDF hierher ziehen oder „PDF laden" klicken</div>
       </div>
 
+      <!-- Quintenzirkel -->
+      <div class="qz-panel" id="qzPanel">
+        <div class="qz-header">
+          <span class="qz-title">🎸 Quintenzirkel</span>
+          <span style="font-size:.55rem;color:var(--dim);font-family:'Share Tech Mono',monospace">Klick auf Dur oder Moll → Griffe</span>
+        </div>
+        <div id="qz-circle-wrapper">
+          <div id="qz-circle-container"></div>
+          <div id="qz-chord-overlay">
+            <button class="qz-close-btn" id="qz-close-overlay">✕</button>
+            <div id="qz-overlay-content"></div>
+          </div>
+        </div>
+      </div>
       <!-- Score Editor -->
       <div class="score-panel panel" id="scorePanel">
         <div class="score-header">
@@ -11608,12 +11609,18 @@ num.setAttribute('font-style', 'italic');
           const nw = document.createElement('div');
           
           // 4. SVG auswählen
+          // 4. SVG auswählen
           if (isStemNote && !s.beamId) {
             nw.innerHTML = iconSet[s.len]; 
             stemNoteSvg = nw.firstChild; // WICHTIG: Das SVG-Element für die spätere Messung merken
+          } else if (s.len === '1n' || s.len === '2n') {
+            // NEU: ganze/halbe Noten brauchen auch bei den übrigen Akkordnoten einen
+            // hohlen Kopf. Dazu das Notenwert-Symbol nehmen und den eigenen Hals entfernen
+            // (den Hals zeichnet die Hals-Note bzw. die Verbindungslinie).
+            nw.innerHTML = iconSet[s.len].replace(/<path class="note-stem"[^>]*\/>/g, '');
           } else {
             nw.innerHTML = notehead;       
-          }
+  }
           
           nw.firstChild.style.top = `${scoreNoteTopOffset(y, stemDown)}px`;
           
@@ -11636,7 +11643,7 @@ num.setAttribute('font-style', 'italic');
 
         // 6. Verbindungslinie für Akkorde zeichnen (Werte werden aus dem SVG gelesen)
                 // 6. Verbindungslinie für Akkorde zeichnen
-        if (s.notes.length > 1 && !s.beamId) {
+          if (s.notes.length > 1 && !s.beamId && s.len !== '1n') {   // ganze Noten haben keinen Hals
           // Skalierungsfaktor des SVGs: 60px Höhe / 50 Einheiten viewBox = 1.2
           // Die Notenmitte im CSS ist bei 40*1.2 = 48px (hoch) bzw. 10*1.2 = 12px (runter)
           const centerOffset = stemDown ? 12 : 48;
@@ -13360,7 +13367,14 @@ function scoreAutoRestore() {
 }
 
 window.scoreExportJSON = function() {
-  const blob = new Blob([JSON.stringify(scoreTracks, null, 2)], {type:'application/json'});
+  // NEU: Layer-Name zusätzlich zum Index mitschreiben. Reine Info für den Export,
+  // der Import nutzt weiterhin layerIdx.
+  const out = scoreTracks.map(t => {
+    const l = (typeof layers !== 'undefined') ? layers[t.layerIdx ?? 0] : null;
+    const presetName = l ? (engine.soundfonts[l.sfIdx]?.presets[l.presetIdx]?.name ?? null) : null;
+    return { ...t, layerName: l ? (l.label || presetName) : null, layerPreset: presetName };
+  });
+  const blob = new Blob([JSON.stringify(out, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'noten_' + new Date().toISOString().slice(0,10) + '.json';
@@ -18334,7 +18348,7 @@ document.addEventListener('DOMContentLoaded', () => {
   addPanelToggle('kbWrap2',       '🎹 Klaviatur 2',   'keys2',    true,  [], '🎹');
   addPanelToggle('chordPanel',    '🎸 Akkorde',       'chord',    true,  [], '🎸');
   addPanelToggle('drawbarPanel',  '🎛️ Zugriegel 1',   'drawbar',  false, [], '🎚️');
-  addPanelToggle('tbonePanel',    '🎺 Posaune',       'tbone',    true,  ['tbone-megaBlow'], '🎺');
+    /*addPanelToggle('tboneWrap',     '🎺 Posaune',       'tbone',    true,  ['tbone-megaBlow'], '🎺');   // Wrapper statt inneres Panel*/
   addPanelToggle('drumPanel',     '🥁 Drum Pads',     'drums',    true,  [], '🥁');
   
   // AUFNAHME
@@ -18346,18 +18360,20 @@ document.addEventListener('DOMContentLoaded', () => {
   addPanelToggle('ancFX',         '🎛️ Effekte & EQ',  'fx',       true,  [], '🎛️');
   addPanelToggle('masterPanel',   '🔊 Master',        'master',   true,  [], '🔊');
   addPanelToggle('viz',           '📊 Visualizer',    'viz',      false, [], '📊');
-  addPanelToggle('qzPanel',       '🎸 Quintenzirkel', 'qz',       false, [], '🎸');
+  
   addPanelToggle('regPanel',      '🔘 Register',      'reg',      true,  [], '🔘');
   addPanelToggle('favPanel',      '⭐ Favoriten',     'fav',      false, [], '⭐');
   
   // NOTEN
-  addPanelToggle('pdfPanel',      '📄 Noten (PDF)',   'pdf',      false, [], '📄');
+  
   addPanelToggle('scorePanel',    '🎼 Noten-Editor',  'score',    false, [], '🎼');
+  addPanelToggle('qzPanel',       '🎸 Quintenzirkel', 'qz',       false, [], '🧭');
+  addPanelToggle('pdfPanel',      '📄 Noten (PDF)',   'pdf',      false, [], '📄');
   
   // VERSTECKTE (nur falls noch irgendwo verlinkt)
   addPanelToggle('ancLayer',      '🎵 Preset-Layer',  'layer',    true,  [], '🎵');
   addPanelToggle('drawbarPanel2', '🎛️ Zugriegel 2',   'drawbar2', false, [], '🎚️');
-  addPanelToggle('tboneWrap',     '🎺 Zugosaune',     'tbone2',   false, [], '🎺');
+  
 })();
 
 // ══════════════════════════════════════════════════════════════
